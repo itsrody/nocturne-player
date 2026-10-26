@@ -48,7 +48,7 @@ choice is remembered for the next film.
 - **Tap** shows or hides the controls. Only the play button pauses.
 - **Pinch** to fill the screen and crop black bars.
 - **Swipe** up or down through TikTok / Reels / Shorts feeds.
-- **Follows the phone** — portrait or landscape, turning mid-film included.
+- **Follows the window** — portrait or landscape, resizing mid-film included.
 - **Quality, audio track, speed, subtitles** (site tracks or your own
   `.srt` / `.vtt`) in the settings sheet.
 - **Seasons and episodes** picker, and chapter marks on the seek bar.
@@ -70,7 +70,8 @@ See [PRIVACY.md](PRIVACY.md).
 - **Quality** works with `<source>` lists, YouTube, hls.js, dash.js, Shaka and
   Playerjs. Elsewhere the row shows what is playing.
 - **Rewind** is stepped seeking — browsers cannot play backwards.
-- **Volume** stays on the phone's buttons; the web has no access to it.
+- **Volume** stays where the site put it; on Android it follows the hardware
+  buttons.
 - **Saving a frame** is impossible: Firefox for Android does not let any
   script read a video frame.
 - **Skip intro** needs two episodes to learn an opening and offers to skip it
@@ -80,8 +81,8 @@ See [PRIVACY.md](PRIVACY.md).
 
 ## Install
 
-From [addons.mozilla.org](https://addons.mozilla.org). Needs Firefox for
-Android 142+ (desktop 140+).
+From [addons.mozilla.org](https://addons.mozilla.org). Needs Firefox 158+,
+on desktop and Android alike.
 
 ## Development
 

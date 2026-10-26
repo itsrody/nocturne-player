@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased][unreleased]
 
+### Changed
+
+- The player is offered to Firefox on desktop as well as Android, under one
+  floor for both: Firefox 158.
+
 ## [0.9.1][] - 2026-10-20
 
 ### Changed
