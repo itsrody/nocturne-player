@@ -60,13 +60,15 @@ export const createBadge = () => {
     anchored = null;
   };
 
-  // Halfway up the right edge, which is the one part of a video that no player
-  // puts a control on: the bottom corner sat on top of the site's own buttons
-  // and swallowed taps meant for them. This is the fallback's own answer — a
-  // film pinned by hand, one rect read per frame it stands still.
+  // In the corner, down and to the right: the looked-at corner a fullscreen
+  // affordance reads like, where a viewer's eye goes first. Its tap is its
+  // own — a shadow-hosted button that stops propagation — so the site's
+  // controls that most skins paint into this corner stay reachable around
+  // it. This is the fallback's own answer — a film pinned by hand, one rect
+  // read per frame it stands still.
   const placement = (rect) => {
     const left = rect.right - SIZE_PX - INSET_PX;
-    const top = rect.top + rect.height / 2 - SIZE_PX / 2;
+    const top = rect.bottom - SIZE_PX - INSET_PX;
     const maxTop = window.innerHeight - SIZE_PX - INSET_PX;
     return {
       left: `${Math.max(INSET_PX, left)}px`,
@@ -143,7 +145,7 @@ export const createBadge = () => {
       pinStyle(shell.host, {
         'position-anchor': ANCHOR_NAME,
         left: `calc(anchor(right) - ${SIZE_PX + INSET_PX}px)`,
-        top: `calc(anchor(50%) - ${SIZE_PX / 2}px)`,
+        top: `calc(anchor(bottom) - ${SIZE_PX + INSET_PX}px)`,
       });
       // The anchor answers the scrolling page itself; a scroll listener would
       // only wake the fallback's redraw for no reason.
