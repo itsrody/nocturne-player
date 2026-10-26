@@ -1,4 +1,5 @@
 import { el } from '../shell.js';
+import { createColourRows } from './colorpanel.js';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // The speeds a held finger can run at — the same range the setting validates.
@@ -89,6 +90,7 @@ export const createMenu = ({
   holdSpeed,
   onHoldSpeed,
   onNotice,
+  onColourChange,
 }) => {
   const speedRow = buildChipRow('Speed');
   const setSpeed = paintChips(
@@ -128,6 +130,34 @@ export const createMenu = ({
   const subtitleRow = buildChipRow('Subtitles', [
     el('div', { class: 'menu-cells' }, [loadCell, nativeCell]),
   ]);
+
+  // Colour is a page of this sheet, not a panel of its own: the cell drills
+  // into the sheet's second page, and the sheet's frame stays where it is.
+  const colourRow = el('div', { class: 'menu-row' }, [
+    el('span', { class: 'menu-label', text: 'Picture' }),
+    el('div', { class: 'menu-cells' }, [
+      buildActionCell('Colour', () => setPage('colour')),
+    ]),
+  ]);
+
+  // The colour page: a back header, the rows, nothing else. One sheet on
+  // screen — one DOM, one anchor, two pages under it.
+  const colourRows = createColourRows(onColourChange);
+  const colourPage = el('div', { class: 'colour-page' }, [
+    el('button', { class: 'menu-cell', type: 'button' }, [
+      // Icon leads the label — the arrow points back out of the page, so it
+      // sits where the eye arrives first, the reverse of the forward
+      // chevrons on the drill-in cells whose label comes first.
+      el('svg', { class: 'menu-cell-icon', viewBox: '0 0 24 24' }, [
+        el('path', { d: 'M15 5l-7 7 7 7' }),
+      ]),
+      el('span', { class: 'menu-cell-label', text: 'Back' }),
+    ]),
+    colourRows.root,
+  ]);
+  colourPage.querySelector('.menu-cell').addEventListener('click', () => {
+    setPage('settings');
+  });
   let setSubtitle = () => {};
 
   const paintSubtitles = () => {
@@ -187,13 +217,29 @@ export const createMenu = ({
   // Quality leads. It is the row people open this sheet for, it is the longest,
   // and on a phone held sideways the sheet scrolls — so anything below the
   // first two rows is a row somebody has to go looking for.
-  const root = el('div', { class: 'panel menu' }, [
+  // One sheet, two pages: the settings list and the colour page are states of
+  // the same panel DOM — `data-page` picks the shown one, and both live under
+  // the single anchor the gear button gives the cluster.
+  const settingsPage = el('div', { class: 'menu-page' }, [
     qualityRow.row,
     audioRow.row,
     speedRow.row,
     holdRow.row,
     subtitleRow.row,
+    colourRow,
   ]);
+  const root = el('div', { class: 'panel menu', 'data-page': 'settings' }, [
+    settingsPage,
+    colourPage,
+  ]);
+
+  // A page is whichever the sheet's data attribute names. Closing and
+  // reopening the sheet returns to the settings list: a sheet is opened for
+  // its settings, not for the page it was last left on. A hoisted name,
+  // because the page cells above hand it their clicks.
+  function setPage(next) {
+    root.setAttribute('data-page', next);
+  }
 
   // Both lists can grow while the film plays — a caption track switched on in
   // the site's own player, a quality ladder that finished loading — so they are
@@ -210,7 +256,9 @@ export const createMenu = ({
     root.classList.add('is-open');
     // Opened at the top, always. The sheet scrolls, and a chip that still has
     // focus from the last time drags the view down to itself, which hides the
-    // row the sheet was opened for.
+    // row the sheet was opened for. Drilled-in state is reset with it: the
+    // sheet opens for its settings page, not the one it was left on.
+    setPage('settings');
     root.scrollTop = 0;
   };
 
@@ -222,8 +270,12 @@ export const createMenu = ({
       if (root.classList.contains('is-open')) root.classList.remove('is-open');
       else open();
     },
-    close: () => root.classList.remove('is-open'),
+    close: () => {
+      root.classList.remove('is-open');
+      setPage('settings');
+    },
     isOpen: () => root.classList.contains('is-open'),
     setSubtitle: (id) => setSubtitle(id),
+    setColour: (key, value) => colourRows.setValue(key, value),
   };
 };

@@ -549,14 +549,10 @@
   animation: panel-in 260ms var(--ease);
 }
 
-/* Anchor names, registered by the buttons that open the panels. The sheets
+/* Anchor names, registered by the elements that open the panels. The sheets
    used to sit at guessed offsets — 60px down, a held-off right edge — that
    had to be maintained against whatever the topbar's own padding did. The
    browser can answer exactly. */
-.anchor-colour {
-  anchor-name: --anchor-colour;
-}
-
 .anchor-menu {
   anchor-name: --anchor-menu;
 }
@@ -803,12 +799,34 @@
   transform-origin: top left;
 }
 
-/* The colour panel hangs under the palette button, mirroring the way the
-   settings sheet hangs under the gear. */
-.colour-panel {
-  position-anchor: --anchor-colour;
-  top: calc(anchor(--anchor-colour bottom, 60px) + 8px);
-  right: anchor(--anchor-colour right, max(30px, env(safe-area-inset-right)));
+/* One sheet, two pages: the settings list and the colour page are states of
+   the same panel, so the sheet keeps one frame, one anchor, one scroll. */
+.menu-page,
+.colour-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.colour-page,
+.menu[data-page='colour'] .menu-page {
+  display: none;
+}
+
+.menu[data-page='colour'] .colour-page {
+  display: flex;
+  animation: page-in 220ms var(--ease);
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .menu-cell.is-current {
@@ -1026,6 +1044,7 @@
   }
 
   .panel.is-open,
+  .menu .colour-page,
   .feed-loader,
   .skip-ripple.is-rippling,
   .is-visible .skip-arrow {

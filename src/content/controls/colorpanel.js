@@ -101,7 +101,7 @@ const buildStepper = (spec, onChange) => {
   };
 };
 
-export const createColorPanel = (onChange) => {
+export const createColourRows = (onChange) => {
   const steppers = ROWS.map((spec) => buildStepper(spec, onChange));
   const byKey = new Map(steppers.map((stepper) => [stepper.key, stepper]));
 
@@ -115,16 +115,15 @@ export const createColorPanel = (onChange) => {
     for (const stepper of steppers) onChange(stepper.key, stepper.reset());
   });
 
-  const root = el('div', { class: 'panel colour-panel' }, [
+  // The colour rows are a page's contents, not a sheet of their own: the
+  // settings sheet hosts them as its second page and owns the framing.
+  const root = el('div', { class: 'colour-rows' }, [
     ...steppers.map((stepper) => stepper.root),
     reset,
   ]);
 
   return {
     root,
-    toggle: () => root.classList.toggle('is-open'),
-    close: () => root.classList.remove('is-open'),
-    isOpen: () => root.classList.contains('is-open'),
     setValue: (key, value) => byKey.get(key)?.set(value),
   };
 };

@@ -20,8 +20,9 @@ Works on any site that plays a plain `<video>`, and on YouTube.
 
 ### Colour
 
-The palette button tunes the picture: **brightness**, **contrast**,
-**saturation**, and a warm **night light** for watching in the dark. The
+The settings sheet's **Picture → Colour** row drills into a colour page of
+the same sheet: **brightness**, **contrast**, **saturation**, and a warm
+**night light** for watching in the dark, with a back row to return. The
 choice is remembered for the next film.
 
 ## Everything else

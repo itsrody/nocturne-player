@@ -1,5 +1,4 @@
 import { readSiteChapters } from './video/chapters.js';
-import { createColorPanel } from './controls/colorpanel.js';
 import { createMenu } from './controls/menu.js';
 import { createPlaylistPanel } from './controls/playlistpanel.js';
 import { createAudioTracks } from './video/audiotracks.js';
@@ -73,10 +72,6 @@ const buildGearPath = () => {
 const ICON = {
   exit: 'M6 6l12 12M18 6L6 18',
   chevron: 'M7 10l5 5 5-5',
-  palette:
-    'M12 3c-5 0-9 3.7-9 8.4 0 4.9 4 8.6 8.7 8.6 1.4 0 2.1-.9 2.1-1.9 ' +
-    '0-.6-.3-1-.6-1.4-.3-.4-.6-.8-.6-1.4 0-1 .8-1.8 1.8-1.8H16 ' +
-    'c2.8 0 5-2.2 5-5C21 6.5 17 3 12 3z',
   settings: buildGearPath(),
   play: 'M8 5 19 12 8 19z',
   fullscreen: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
@@ -95,29 +90,6 @@ const buildButton = (label, icon, onClick, className = 'button') => {
   button.addEventListener('click', onClick);
   return button;
 };
-
-// Paint on a palette, each blob its own colour: a lone outline read as a
-// blank shape, and colour is what the panel behind it is about.
-const PAINTS = [
-  { x: 7.4, y: 11.6, colour: '#ff6b6b' },
-  { x: 9.4, y: 7.3, colour: '#ffd166' },
-  { x: 14.2, y: 6.9, colour: '#6ee7a8' },
-  { x: 17.4, y: 10.4, colour: '#6cb8ff' },
-];
-
-const buildPaletteIcon = () =>
-  el('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
-    el('path', { d: ICON.palette }),
-    ...PAINTS.map(({ x, y, colour }) =>
-      el('circle', {
-        cx: String(x),
-        cy: String(y),
-        r: '1.5',
-        fill: colour,
-        stroke: 'none',
-      }),
-    ),
-  ]);
 
 // A ring with an arrowhead and the number inside, the way phone players draw
 // their skip controls.
@@ -214,13 +186,13 @@ export const createOverlay = ({
   // because a grab — when the hook runs — lands long after this whole
   // stretch of the file has been declared.
   let isHeadScrubbing = false;
-  let onScrubChrome = null;
+  // The chrome washer, named here as a slot and handed its value once the
+  // washer exists: the hoisted hook that needs it — the head ball's grab —
+  // only ever runs long after this whole stretch of the file is declared.
+  let showChrome = null;
   function onHeadScrub(isOn) {
     isHeadScrubbing = isOn;
-    // Shown at both ends: at the grab the idle timer may be near expiry,
-    // and at the release the frozen timer has skipped its hiding, so being
-    // shown is how the chrome gets its fade schedule back.
-    onScrubChrome?.();
+    showChrome?.();
   }
 
   const seekBar = createSeekBar(video, seek, { onScrub: onHeadScrub });
@@ -264,12 +236,6 @@ export const createOverlay = ({
     layers.warm.style.opacity = String(value);
   };
 
-  const colorPanel = createColorPanel((key, value) => {
-    if (key === 'warmth') applyWarmth(value);
-    else visuals.setColour({ [key]: value });
-    onPersist({ [key]: value });
-  });
-
   const menu = createMenu({
     video,
     tracks,
@@ -283,12 +249,18 @@ export const createOverlay = ({
       onPersist({ holdSpeed: value });
     },
     onNotice: (text) => showToast(text, HINT_MS),
+    // The sheet's colour page reports the steppers straight through: warmth
+    // is the warm layer's opacity, the rest are the picture's own filters.
+    onColourChange: (key, value) => {
+      if (key === 'warmth') applyWarmth(value);
+      else visuals.setColour({ [key]: value });
+      onPersist({ [key]: value });
+    },
   });
 
   menuRef.setSubtitle = menu.setSubtitle;
 
-  const isPanelOpen = () =>
-    colorPanel.isOpen() || menu.isOpen() || playlistRef.isOpen();
+  const isPanelOpen = () => menu.isOpen() || playlistRef.isOpen();
 
   // The chrome must never fade out from under an open panel: the panel lives
   // inside it, and hiding it mid-adjustment looked like the player had frozen.
@@ -335,14 +307,12 @@ export const createOverlay = ({
   // What the ball's grab reaches, given to the hook above now that it has a
   // name: showing again rewinds the idle timer, and the freeze flag the hook
   // sets is what keeps the timer from hiding anything while the ball is held.
-  onScrubChrome = setChromeVisible;
+  showChrome = setChromeVisible;
 
   const closePanels = () => {
     playlistRef.close();
-    colorPanel.close();
     menu.close();
     buttons.playlist?.setAttribute('aria-pressed', 'false');
-    buttons.colour?.setAttribute('aria-pressed', 'false');
     buttons.menu?.setAttribute('aria-pressed', 'false');
     setChromeVisible(true);
   };
@@ -585,28 +555,11 @@ export const createOverlay = ({
     buildSkipButton(SKIP_SECONDS),
   ]);
 
-  buttons.colour = buildButton(
-    'Colour',
-    buildPaletteIcon(),
-    () => {
-      menu.close();
-      playlistPanel.close();
-      buttons.menu.setAttribute('aria-pressed', 'false');
-      buttons.playlist.setAttribute('aria-pressed', 'false');
-      colorPanel.toggle();
-      buttons.colour.setAttribute('aria-pressed', String(colorPanel.isOpen()));
-      setChromeVisible(true);
-    },
-    'button anchor-colour',
-  );
-
   buttons.menu = buildButton(
     'Settings',
     ICON.settings,
     () => {
-      colorPanel.close();
       playlistPanel.close();
-      buttons.colour.setAttribute('aria-pressed', 'false');
       buttons.playlist.setAttribute('aria-pressed', 'false');
       menu.toggle();
       buttons.menu.setAttribute('aria-pressed', String(menu.isOpen()));
@@ -630,9 +583,7 @@ export const createOverlay = ({
     [playlistLabel, buildIcon(ICON.chevron)],
   );
   buttons.playlist.addEventListener('click', () => {
-    colorPanel.close();
     menu.close();
-    buttons.colour.setAttribute('aria-pressed', 'false');
     buttons.menu.setAttribute('aria-pressed', 'false');
     playlistPanel.toggle();
     const isOpen = playlistPanel.isOpen();
@@ -662,12 +613,7 @@ export const createOverlay = ({
     setChromeVisible(false);
   });
 
-  const fullOnly = [
-    buttons.exit,
-    buttons.playlist,
-    buttons.colour,
-    buttons.menu,
-  ];
+  const fullOnly = [buttons.exit, buttons.playlist, buttons.menu];
   for (const node of fullOnly) node.classList.add('is-full-only');
   buttons.fullscreen.classList.add('is-windowed-only');
 
@@ -675,7 +621,6 @@ export const createOverlay = ({
     buttons.exit,
     buttons.playlist,
     el('div', { class: 'spacer' }),
-    buttons.colour,
     buttons.menu,
     buttons.fullscreen,
   );
@@ -690,14 +635,7 @@ export const createOverlay = ({
     if (isCompact && isPanelOpen()) closePanels();
   };
 
-  chrome.append(
-    scrim,
-    topbar,
-    colorPanel.root,
-    menu.root,
-    playlistPanel.root,
-    seekBar.root,
-  );
+  chrome.append(scrim, topbar, menu.root, playlistPanel.root, seekBar.root);
 
   // Reading a file the user picked themselves, straight into the cue list.
   // Nothing leaves the device and nothing is parsed as markup.
@@ -746,7 +684,7 @@ export const createOverlay = ({
       saturate: settings.saturate,
     });
     for (const key of ['brightness', 'contrast', 'saturate', 'warmth']) {
-      colorPanel.setValue(key, settings[key]);
+      menu.setColour(key, settings[key]);
     }
     applyWarmth(settings.warmth);
   };
