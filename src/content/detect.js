@@ -3,18 +3,35 @@ const MIN_HEIGHT = 150;
 const RESCAN_DELAY_MS = 250;
 const HAVE_METADATA = 1;
 
+// The shadow walk is the expensive branch, so it only runs when the light DOM
+// turned up nothing — which is the only case where it can help. And it is
+// bounded: a page whose web components nest deeply can hand the walk a tree
+// without end, and every scroll would send the walk down it again. The
+// budget keeps one rescan from sitting on the main thread for longer than a
+// moment; a video the budget went past is found by the next rescan instead,
+// the way a page still being built is found in pieces.
+const MAX_WALK_ELEMENTS = 5000;
+
 const collectFromShadowRoots = (root, found) => {
-  for (const element of root.querySelectorAll('*')) {
-    if (!element.shadowRoot) continue;
-    for (const video of element.shadowRoot.querySelectorAll('video')) {
-      found.add(video);
+  let budget = MAX_WALK_ELEMENTS;
+
+  const walk = (node) => {
+    if (budget <= 0) return;
+    for (const element of node.querySelectorAll('*')) {
+      budget -= 1;
+      if (budget <= 0) return;
+      const { shadowRoot } = element;
+      if (!shadowRoot) continue;
+      for (const video of shadowRoot.querySelectorAll('video')) {
+        found.add(video);
+      }
+      walk(shadowRoot);
     }
-    collectFromShadowRoots(element.shadowRoot, found);
-  }
+  };
+
+  walk(root);
 };
 
-// The shadow walk is the expensive branch, so it only runs when the light DOM
-// turned up nothing — which is the only case where it can help.
 const collectVideos = () => {
   const found = new Set(document.querySelectorAll('video'));
   if (found.size === 0) collectFromShadowRoots(document, found);
