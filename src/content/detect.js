@@ -3,6 +3,28 @@ const MIN_HEIGHT = 150;
 const RESCAN_DELAY_MS = 250;
 const HAVE_METADATA = 1;
 
+// A scroll used to schedule a rescan of its own, every tick of the debounce,
+// for as long as the page kept moving — the same sweep paid over and over on
+// the way to a video it would only reach at the end. What the scroll was
+// really saying is that the neighbourhood of the viewport has changed, which
+// is what the approach observer watches instead: every video the last sweep
+// found is kept under observation with a margin past the screen, and their
+// drawing nearer — alone, and not the scroll itself — asks for the next
+// sweep. A scroll that goes nowhere near a film costs nothing.
+const APPROACH_MARGIN = '25%';
+
+const makeApproachObserver = (onApproach) => {
+  if (typeof IntersectionObserver !== 'function') return null;
+  const observer = new IntersectionObserver(onApproach, {
+    scrollMargin: APPROACH_MARGIN,
+  });
+  // An option the browser did not know is dropped, so the presence of the
+  // reading is what says the margin was understood; without it the observer
+  // would watch the true viewport and fire late.
+  if (!('scrollMargin' in observer)) return null;
+  return observer;
+};
+
 // The shadow walk is the expensive branch, so it only runs when the light DOM
 // turned up nothing — which is the only case where it can help. And it is
 // bounded: a page whose web components nest deeply can hand the walk a tree
@@ -91,6 +113,8 @@ export const createVideoWatcher = (onPrimaryChange) => {
   let primary = null;
   let observer = null;
   let rescanTimer = null;
+  let approacher = null;
+  const watched = new Set();
   let isRunning = false;
 
   const rescan = () => {
@@ -98,6 +122,22 @@ export const createVideoWatcher = (onPrimaryChange) => {
     playable.clear();
     for (const video of collectVideos()) {
       if (isPlayable(video)) playable.add(video);
+      // Position changes of known films come through the approach observer
+      // rather than through scrolls, so every video the sweep meets is kept
+      // on watch. An element the page has let go of is one it has forgotten:
+      // the watch is dropped with it, which is what keeps the set of watched
+      // elements from growing without end across a long visit.
+      if (approacher !== null && !watched.has(video)) {
+        watched.add(video);
+        approacher.observe(video);
+      }
+    }
+    if (approacher !== null) {
+      for (const video of watched) {
+        if (video.isConnected) continue;
+        approacher.unobserve(video);
+        watched.delete(video);
+      }
     }
     const next = pickPrimary(playable);
     if (next === primary) return;
@@ -122,7 +162,12 @@ export const createVideoWatcher = (onPrimaryChange) => {
     document.addEventListener('pause', scheduleRescan, true);
     document.addEventListener('loadedmetadata', scheduleRescan, true);
     window.addEventListener('resize', scheduleRescan);
-    window.addEventListener('scroll', scheduleRescan, true);
+    approacher = makeApproachObserver(scheduleRescan);
+    // Without an approach observer — an old browser, or a promise the page
+    // keeps none of — the scroll itself stands in, coarse as ever.
+    if (approacher === null) {
+      window.addEventListener('scroll', scheduleRescan, true);
+    }
     rescan();
   };
 
@@ -131,6 +176,9 @@ export const createVideoWatcher = (onPrimaryChange) => {
     isRunning = false;
     if (observer) observer.disconnect();
     observer = null;
+    if (approacher !== null) approacher.disconnect();
+    approacher = null;
+    watched.clear();
     if (rescanTimer !== null) clearTimeout(rescanTimer);
     rescanTimer = null;
     document.removeEventListener('play', scheduleRescan, true);
