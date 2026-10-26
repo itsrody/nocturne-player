@@ -46,7 +46,13 @@ const unpack = (entry) => {
   return { ...recording, id: entry.id, seenAt: entry.seenAt };
 };
 
-const empty = () => ({ version: VERSION, nextId: 1, intros: [], previous: [] });
+const empty = () => ({
+  version: VERSION,
+  nextId: 1,
+  intros: [],
+  previous: [],
+  revision: 0,
+});
 
 // A store from another version, or one that no longer parses, is dropped:
 // the worst that costs is one more opening heard in full.
@@ -74,22 +80,32 @@ export const readIntroStore = async () => {
 };
 
 // Called once an episode is done with: what it taught, and what it leaves
-// for the next episode to be compared with.
-const writeEpisode = async ({ found, recording }) => {
-  const raw = await readRaw();
+// for the next episode to be compared with. The changes are worked out from
+// the store it was given and nothing else, so a change lost in a race can be
+// applied again on top of whatever the store is now — and so that applying
+// it twice cannot double anything: the same sound already in the store is a
+// fresher timestamp, not a second copy.
+const sameTune = (entry, cells) => entry.cells === cells;
+
+const merged = (raw, { found, recording }) => {
   const now = Date.now();
   let { intros } = raw;
   let { nextId } = raw;
 
   if (found?.kind === 'learned') {
-    const entry = {
-      id: nextId,
-      length: found.recording.length,
-      cells: packCells(found.recording),
-      seenAt: now,
-    };
-    nextId += 1;
-    intros = [entry, ...intros];
+    const cells = packCells(found.recording);
+    const twin = intros.find((entry) => sameTune(entry, cells));
+    if (twin === undefined) {
+      intros = [
+        { id: nextId, length: found.recording.length, cells, seenAt: now },
+        ...intros,
+      ];
+      nextId += 1;
+    } else {
+      intros = intros.map((entry) =>
+        entry === twin ? { ...entry, seenAt: now } : entry,
+      );
+    }
   } else if (found?.kind === 'known') {
     intros = intros.map((entry) =>
       entry.id === found.recording.id ? { ...entry, seenAt: now } : entry,
@@ -103,27 +119,67 @@ const writeEpisode = async ({ found, recording }) => {
 
   let { previous } = raw;
   if (recording !== null && countHeard(recording) >= MIN_HEARD_CELLS) {
-    const entry = {
-      id: nextId,
-      length: recording.length,
-      cells: packCells(recording),
-      heard: toBase64(recording.heard),
-      seenAt: now,
-    };
-    nextId += 1;
-    previous = [entry, ...previous].slice(0, MAX_PREVIOUS);
+    const cells = packCells(recording);
+    const twin = previous.find((entry) => sameTune(entry, cells));
+    if (twin === undefined) {
+      previous = [
+        {
+          id: nextId,
+          length: recording.length,
+          cells,
+          heard: toBase64(recording.heard),
+          seenAt: now,
+        },
+        ...previous,
+      ].slice(0, MAX_PREVIOUS);
+      nextId += 1;
+    } else {
+      previous = previous.map((entry) =>
+        entry === twin ? { ...entry, seenAt: now } : entry,
+      );
+    }
   }
 
-  const next = { version: VERSION, nextId, intros, previous };
-  try {
-    await browser.storage.local.set({ [STORAGE_KEY]: next });
-  } catch (error) {
-    console.error('Nocturne: could not save learned intros', error);
-  }
+  return { version: VERSION, nextId, intros, previous };
 };
 
-// Every save reads the store, changes it and writes it back, so two at once
-// would lose one of them. They take turns.
+// Every save is a read, a change and a write of the whole store, so two at
+// once would lose one of them — and two really do happen at once, when a
+// player in an iframe and the page's own player are both on a film. Storage
+// keeps whoever wrote last; a revision is carried in the store so the last
+// writer can notice it has been overtaken, undo the loss, and apply what it
+// had on top of what is there now. They take turns within a frame, and take
+// notice of each other across them.
+const MAX_ATTEMPTS = 3;
+
+export const writeEpisode = async (episode) => {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const raw = await readRaw();
+    const revision = typeof raw.revision === 'number' ? raw.revision : 0;
+    const next = merged(raw, episode);
+    next.revision = revision + 1;
+
+    try {
+      await browser.storage.local.set({ [STORAGE_KEY]: next });
+    } catch (error) {
+      console.error('Nocturne: could not save learned intros', error);
+      return;
+    }
+
+    try {
+      const settled = await browser.storage.local.get(STORAGE_KEY);
+      // What landed decides. A writer whose revision is not the one it sent
+      // was overtaken between the read and the write, and owes the store one
+      // more pass.
+      if (settled[STORAGE_KEY]?.revision === next.revision) return;
+    } catch (error) {
+      console.error('Nocturne: could not confirm the learned intros', error);
+      return;
+    }
+  }
+  console.warn('Nocturne: the intro store kept being rewritten elsewhere');
+};
+
 let pending = Promise.resolve();
 
 export const saveEpisode = (episode) => {
