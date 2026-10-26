@@ -44,7 +44,9 @@ choice is remembered for the next film.
 - **Seek bar** — thick, grab it anywhere; drag away from it to scrub slower.
 - **Double-tap** the right side for +10 s, the left for −10 s. Keep tapping to
   go further.
-- **Hold** the right side for 2x, the left to rewind.
+- **Hold** anywhere on the picture to run it at the hold-speed chip (2x at
+  default) for as long as the finger stays down; the old pace comes back on
+  lift. Rewind is the seek band's business.
 - **Tap** shows or hides the controls. Only the play button pauses.
 - **Pinch** to fill the screen and crop black bars.
 - **Swipe** up or down through TikTok / Reels / Shorts feeds.

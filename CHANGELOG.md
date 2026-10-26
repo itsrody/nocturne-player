@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   scroll that never goes near a film no longer costs a sweep.
 - One more fit after the first presented frame of a fresh source, so the
   crop and the picture agree on what is showing sooner.
+- **Hold anywhere runs the film.** A hold begins on any part of the picture —
+  middle and both sides included — and runs it at the hold-speed chip for as
+  long as the finger is down, as the right side alone used to. The rewind
+  hold is gone: rewind is the seek band's business again.
 
 ## [0.9.1][] - 2026-10-20
 
