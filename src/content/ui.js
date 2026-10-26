@@ -132,7 +132,6 @@ export const createOverlay = ({
   isChromeShown = true,
 }) => {
   const surface = el('div', { class: 'layer surface' });
-  const scrim = el('div', { class: 'layer scrim' });
   const toast = el('div', { class: 'toast' });
   const topbar = el('div', { class: 'topbar' });
   const chrome = el('div', { class: 'chrome' });
@@ -580,7 +579,7 @@ export const createOverlay = ({
     if (isCompact && isPanelOpen()) closePanels();
   };
 
-  chrome.append(scrim, topbar, menu.root, controlBar.root);
+  chrome.append(topbar, menu.root, controlBar.root);
 
   // Reading a file the user picked themselves, straight into the cue list.
   // Nothing leaves the device and nothing is parsed as markup.

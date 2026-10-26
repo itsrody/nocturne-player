@@ -109,6 +109,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   every tap that sought adds its step to one growing sum, the total stays
   open for a breath after the last tap, and a flip of sides starts a fresh
   sum — all of it matching what the film's own cumulative seek did.
+- **No dark layer under the controls.** The scrim's gradient wash — black
+  bands from both edges and a flat mist over the whole frame, shown whenever
+  the controls were — is gone. The film runs at full strength behind the
+  bar, the pill and the sheets; their glass and shadows carry their own
+  legibility.
 
 ## [0.9.1][] - 2026-10-20
 
