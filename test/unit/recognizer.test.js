@@ -111,3 +111,35 @@ test('holding a side reports the start and the end of the hold', () => {
   );
   mock.timers.reset();
 });
+
+test('a hold begins anywhere on the picture, the middle included', () => {
+  const { events, surface } = setUp();
+  surface.fire('pointerdown', 0.5, 0.4);
+  mock.timers.tick(400);
+  surface.fire('pointerup', 0.5, 0.4);
+  assert.deepEqual(
+    events.map((event) => [event.name, event.zone]),
+    [
+      ['holdStart', 'dead'],
+      ['holdEnd', 'dead'],
+    ],
+  );
+  mock.timers.reset();
+});
+
+test('the seek band is for scrubbing, never for a hold', () => {
+  const { events, surface } = setUp();
+  surface.fire('pointerdown', 0.5, 0.8);
+  mock.timers.tick(400);
+  surface.fire('pointerup', 0.5, 0.8);
+  mock.timers.tick(400);
+  assert.equal(
+    events.some((event) => event.name.startsWith('hold')),
+    false,
+  );
+  assert.deepEqual(
+    events.map((event) => [event.name, event.zone]),
+    [['tap', 'seek']],
+  );
+  mock.timers.reset();
+});

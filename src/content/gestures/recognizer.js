@@ -1,6 +1,12 @@
 import { hitTest, isDragZone, isHoldZone, ZONE } from './zones.js';
 import { isVerticalMove, readSwipe } from './swipe.js';
 
+// A hold can begin anywhere on the picture — the way a long-press means "run
+// it fast" everywhere the surface is worth touching. The one exception is the
+// seek band: a press there is the start of a scrub, and the two meanings
+// cannot share a finger.
+const canHold = (zone) => zone !== ZONE.SEEK;
+
 const HOLD_DELAY_MS = 350;
 // How long a lone tap on a side waits for a second one before it is taken to
 // mean "show the controls". Acting on it at once turned a double-tap that was
@@ -143,7 +149,7 @@ export const createRecognizer = (
     mode = MODE.PENDING;
     holdTimer = setTimeout(() => {
       holdTimer = null;
-      if (mode !== MODE.PENDING || !isHoldZone(anchor.zone)) return;
+      if (mode !== MODE.PENDING || !canHold(anchor.zone)) return;
       mode = MODE.HOLD;
       emit('holdStart', { zone: anchor.zone });
     }, HOLD_DELAY_MS);

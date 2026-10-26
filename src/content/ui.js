@@ -19,14 +19,8 @@ import { ZONE } from './gestures/zones.js';
 
 const CHROME_IDLE_MS = 3000;
 // Hold speed is a setting, chosen from the sheet's chips (1.5x–4x). A held
-// side forward runs at that rate; backward — which no browser can play —
-// steps through the film at the same pace instead.
-// Rewinding waits for each step to land before taking the next one. Firing a
-// seek every tenth of a second, as it used to, aborted every seek before the
-// one in flight could paint a frame: on a real film the picture froze and
-// nothing moved until the finger came off.
-const REWIND_SETTLE_MS = 90;
-const REWIND_STALL_MS = 600;
+// picture runs at that rate for as long as the finger stays down, wherever
+// the hold began; the pace before the hold comes back when it lifts.
 const TOAST_MS = 900;
 const HINT_MS = 2200;
 // The same distance both ways, as on every other phone player: five seconds
@@ -366,7 +360,9 @@ export const createOverlay = ({
   video.addEventListener('ratechange', assertHoldRate);
 
   // Exactly what the hold-speed chip in the sheet does, for as long as the
-  // finger is down, and the speed that was set before comes back when it lifts.
+  // finger is down, and the speed that was set before comes back when it
+  // lifts. The film is woken from a pause and put back to sleep the same
+  // way, on the hold's own account.
   const holdForward = () => {
     const previousRate = video.playbackRate;
     const previousDefault = video.defaultPlaybackRate;
@@ -379,44 +375,6 @@ export const createOverlay = ({
       video.defaultPlaybackRate = previousDefault;
       video.playbackRate = previousRate;
       if (wasPaused) video.pause();
-    };
-  };
-
-  // Each step is worked out from the time the finger has been down, not added
-  // to the last one, so the picture goes back at hold pace however long each
-  // seek takes — a slow stream just shows fewer frames on the way.
-  const holdBack = () => {
-    const wasPlaying = !video.paused;
-    const origin = video.currentTime;
-    const startedAt = performance.now();
-    let timer = null;
-    let isHeld = true;
-
-    video.pause();
-
-    const step = () => {
-      timer = null;
-      if (!isHeld) return;
-      const elapsed = (performance.now() - startedAt) / 1000;
-      seek(origin - elapsed * holdSpeed);
-      // In case the seek never reports back, the next one is not held up by it.
-      timer = setTimeout(step, REWIND_STALL_MS);
-    };
-
-    const handleSeeked = () => {
-      if (!isHeld) return;
-      if (timer !== null) clearTimeout(timer);
-      timer = setTimeout(step, REWIND_SETTLE_MS);
-    };
-
-    video.addEventListener('seeked', handleSeeked);
-    step();
-
-    return () => {
-      isHeld = false;
-      if (timer !== null) clearTimeout(timer);
-      video.removeEventListener('seeked', handleSeeked);
-      if (wasPlaying) video.play().catch(() => {});
     };
   };
 
@@ -462,12 +420,11 @@ export const createOverlay = ({
         skip(seconds);
         skipFeedback.show(seconds, x, y);
       },
-      holdStart: ({ zone }) => {
+      holdStart: () => {
         if (isPanelOpen()) return;
         stopHold();
-        const isForward = zone === ZONE.HOLD_RIGHT;
-        releaseHold = isForward ? holdForward() : holdBack();
-        showToast(isForward ? `${holdSpeed}x ▶▶` : `◀◀ ${holdSpeed}x`, null);
+        releaseHold = holdForward();
+        showToast(`${holdSpeed}x ▶▶`, null);
       },
       holdEnd: () => stopHold(),
       dragStart: ({ zone }) => {
@@ -658,7 +615,7 @@ export const createOverlay = ({
   // thing wanted is usually one of them; a start only restarts their idle
   // timer if they are already up. A feed starts every video it moves on to,
   // and that is no reason to cover the picture.
-  // A hold pauses and resumes the film on its own account, and that is no
+  // A hold wakes and re-pauses the film on its own account, and that is no
   // reason to bring the controls up over the picture it is running through.
   const handlePlaybackChange = () => {
     playPath.setAttribute('d', video.paused ? ICON.play : ICON.pause);
