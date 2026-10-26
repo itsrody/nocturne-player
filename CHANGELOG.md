@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   it: play and pause, stepping forward and back by ten seconds, any position
   by name, and stop closes the player. The film's name and artwork are what
   the page itself declares.
+- **A tap works anywhere on the picture**, middle, sides and all — no more
+  aiming for the centre strip. A double-tap on a side still seeks, and the
+  first tap of it brings the controls up with the seek instead of waiting a
+  third of a second to guess which was meant.
+- **A mouse over the picture keeps the controls up.** On a desktop, moving
+  the pointer over the film holds them and rewinds their idle fade with the
+  pointer; a tap still brings them, and a finger's drift does not.
 - A record of the platform floor's decisions and rejections lives in
   `docs/platform-158.md`.
 

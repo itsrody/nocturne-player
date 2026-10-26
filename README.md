@@ -47,7 +47,10 @@ choice is remembered for the next film.
 - **Hold** anywhere on the picture to run it at the hold-speed chip (2x at
   default) for as long as the finger stays down; the old pace comes back on
   lift. Rewind is the seek band's business.
-- **Tap** shows or hides the controls. Only the play button pauses.
+- **Tap** anywhere on the picture shows or hides the controls — the first tap
+  of a double-tap too. Only the play button pauses.
+- On a desktop, **moving the mouse** over the picture keeps the controls up
+  and never lets them fade out from under the pointer.
 - **Pinch** to fill the screen and crop black bars.
 - **Swipe** up or down through TikTok / Reels / Shorts feeds.
 - **Follows the window** — portrait or landscape, resizing mid-film included.
