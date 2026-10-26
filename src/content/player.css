@@ -16,7 +16,10 @@
      way a sheet slides on a phone. */
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --chrome-fade: 280ms;
-  --glass: rgba(20, 19, 26, 0.62);
+  /* Four-fifths solid black, no glass of it: the one surface every spoken
+     word sits on. The blur was real compositing cost per frame on every GPU
+     for a look, and a flat ink keeps its kind over any scene alike. */
+  --ink: rgba(0, 0, 0, 0.8);
   --shadow-soft: 0 10px 34px rgba(0, 0, 0, 0.42);
   --shadow-deep: 0 18px 52px rgba(0, 0, 0, 0.55);
   --icon-shadow: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.65));
@@ -317,9 +320,8 @@
   transform: translate(-50%, -8px);
   padding: 10px 18px;
   border-radius: 16px;
-  background: var(--glass);
+  background: var(--ink);
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(18px);
   font-size: 16px;
   font-variant-numeric: tabular-nums;
   opacity: 0;
@@ -361,9 +363,9 @@
   }
 }
 
-/* The dark material of the iOS sheets before Liquid Glass: a deep, slightly
-   see-through grey with a heavy blur and the colour behind pushed up through
-   it, a hairline rim to lift it off a dark scene, and a soft shadow. */
+/* The dark material of the sheets: solid ink, four-fifths black, nothing
+   pushed up from behind and no blur to pay for the push. A hairline rim and
+   a soft shadow still lift it off a dark scene. */
 .panel {
   position: absolute;
   top: 60px;
@@ -371,11 +373,10 @@
   width: min(330px, 50vw);
   padding: 10px 12px;
   border-radius: 14px;
-  background: rgba(30, 30, 32, 0.72);
+  background: var(--ink);
   box-shadow:
     inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
     0 16px 48px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(30px) saturate(180%);
   display: none;
   flex-direction: column;
   gap: 6px;
@@ -839,7 +840,7 @@
   transform: translateX(-50%) scale(0.94);
   padding: 4px 10px;
   border-radius: 10px;
-  background: rgba(20, 19, 26, 0.82);
+  background: var(--ink);
   box-shadow: var(--shadow-soft);
   font-size: 14px;
   font-variant-numeric: tabular-nums;

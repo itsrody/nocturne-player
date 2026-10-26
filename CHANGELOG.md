@@ -114,6 +114,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the controls were — is gone. The film runs at full strength behind the
   bar, the pill and the sheets; their glass and shadows carry their own
   legibility.
+- **Ink instead of glass.** Every surface the player speaks from — the pill,
+  the sheets, the scrub-time bubble, the pre-player badge — is solid black
+  at four-fifths weight now, and the backdrop blurs behind them are gone,
+  with them the per-frame GPU cost of being able to see through. The
+  hairline rims and shadows that lifted the glass off dark scenes keep
+  their jobs.
 
 ## [0.9.1][] - 2026-10-20
 
