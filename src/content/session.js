@@ -49,6 +49,26 @@ const STAGE_STYLE = {
   'z-index': '2147483646',
 };
 
+// Everything the player shows — the picture and everything drawn over it —
+// lives in this wrapper rather than directly on the stage. The stage is the
+// fullscreen element, and the browser composites that one itself: a transform
+// applied to it is not reliably shown, while a transform applied to an
+// ordinary child of it always is. The pull-to-dismiss asks for the whole
+// player to move, so the frame exists to be the one element that carries the
+// motion. Its centring is the stage's own flex layout carried over, so the
+// picture sits precisely where it sat when the stage held it directly.
+const FRAME_STYLE = {
+  position: 'absolute',
+  inset: '0',
+  margin: '0',
+  padding: '0',
+  border: '0',
+  display: 'flex',
+  'align-items': 'center',
+  'justify-content': 'center',
+  overflow: 'hidden',
+};
+
 // A site's own player keeps rewriting the video's inline style — YouTube sets
 // a pixel width, height and offset on every layout pass — which is what used to
 // leave the picture stuck against the left edge or stretched across the screen
@@ -251,6 +271,9 @@ const watchForTeardown = (video, scope, onTornDown) => {
 // with auto-rotate switched off.
 export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
   const stage = document.createElement('div');
+  // The wrapper the pull-to-dismiss moves, and everything the player shows
+  // lives in (see FRAME_STYLE).
+  const frame = document.createElement('div');
   const ui = createShadowHost(playerCss);
   const scope = createScope();
 
@@ -380,7 +403,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
       anchorGuard.observe(anchor.parentNode, { childList: true });
     }
 
-    stage.prepend(video);
+    frame.prepend(video);
     watchForTeardown(video, own, () => actions.exit());
 
     // The metadata event can outrun the picture. A feed step recycles the
@@ -410,6 +433,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     overlay = createOverlay({
       video,
       stage,
+      frame,
       shadow: ui.shadow,
       layers,
       onExit: () => actions.exit(),
@@ -518,7 +542,9 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
   const openStage = () => {
     stage.dataset.nocturnePlayer = '';
     pinStyle(stage, STAGE_STYLE);
-    stage.append(ui.host);
+    pinStyle(frame, FRAME_STYLE);
+    stage.append(frame);
+    frame.append(ui.host);
     ui.shadow.append(layers.warm, layers.dim, loader);
     document.body.append(stage);
   };

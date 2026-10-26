@@ -37,6 +37,12 @@ const SIDE_SKIP_SECONDS = {
 };
 const PLAYLIST_SETTLE_MS = 600;
 const CHAPTER_TRIES_MS = [1200, 4000, 10000];
+// A pull on the picture is judged like a sheet being put away: far enough
+// down the screen, or flung fast enough, and it leaves; short of both, it
+// comes back. The slide itself is timed to be felt, not watched.
+const DISMISS_MS = 260;
+const DISMISS_COMMIT_TRAVEL = 0.3;
+const DISMISS_COMMIT_SPEED = 1.2;
 
 // A gear with eight teeth, worked out rather than pasted: drawn by hand the
 // path runs to six hundred characters that nobody can check by eye.
@@ -145,6 +151,7 @@ const buildSkipIcon = (seconds) => {
 export const createOverlay = ({
   video,
   stage,
+  frame,
   shadow,
   layers,
   onExit,
@@ -413,6 +420,62 @@ export const createOverlay = ({
     hideToast();
   };
 
+  // The player is put away the way a sheet is: it follows the finger down
+  // the screen while the pull lasts — never riding back above where the
+  // pull began, but down past the edge as freely as the finger goes. The
+  // pull does not wait for the finger to lift: the moment it has gone far
+  // enough down, the player is out. A lift that was flung hard counts as
+  // the same intent even at short travel; a slow short one is let go, and
+  // comes home in one spring.
+  //
+  // The transform lives on the frame, the wrapper that holds the picture
+  // and everything drawn over it, and not on the stage: the stage is the
+  // fullscreen element, and the browser draws that on its own — a transform
+  // asked of it is not reliably shown, where a transform asked of an
+  // ordinary child of it always is. It also keeps clear of the video's own
+  // inline style, which the style guard watches for the site: the picture
+  // rides because its house is moved, not because anything touched the
+  // picture's style. The frame dies with the session, so an unmade bed
+  // cannot meet the next one.
+  let dismissSettleTimer = null;
+
+  const clearDismissStage = () => {
+    frame.style.transition = '';
+    frame.style.transform = '';
+  };
+
+  const dismissMove = ({ progress }) => {
+    // No ceremony at the line: crossing it is the whole gesture. The player
+    // is already where the finger has dragged it, so it goes out there and
+    // then, with no fall of its own to watch afterwards.
+    if (progress >= DISMISS_COMMIT_TRAVEL) {
+      if (dismissSettleTimer !== null) {
+        clearTimeout(dismissSettleTimer);
+        dismissSettleTimer = null;
+      }
+      onExit();
+      return;
+    }
+    frame.style.transition = '';
+    frame.style.transform = `translateY(${Math.max(0, progress) * 100}%)`;
+  };
+
+  const dismissEnd = ({ velocity }) => {
+    // A flung lift says the same thing at short travel: a flick toward the
+    // bottom edge has spoken loudly enough.
+    if (velocity >= DISMISS_COMMIT_SPEED) {
+      onExit();
+      return;
+    }
+    frame.style.transition = `transform ${DISMISS_MS}ms ease-out`;
+    frame.style.transform = 'translateY(0%)';
+    if (dismissSettleTimer !== null) clearTimeout(dismissSettleTimer);
+    dismissSettleTimer = setTimeout(() => {
+      dismissSettleTimer = null;
+      clearDismissStage();
+    }, DISMISS_MS);
+  };
+
   const dragTargets = { [ZONE.SEEK]: seekBar };
 
   const canSwipe = () =>
@@ -460,6 +523,14 @@ export const createOverlay = ({
       },
       dragMove: (detail) => dragTargets[detail.zone]?.move(detail),
       dragEnd: ({ zone }) => dragTargets[zone]?.end(),
+      dismissStart: () => {
+        // A drag takes the whole player, sheets and all, off the screen;
+        // one already open is settled first, so nothing is twitching under
+        // the moving picture.
+        if (isPanelOpen()) closePanels();
+      },
+      dismissMove,
+      dismissEnd,
       pinchStart: () => {
         pinchBase = visuals.beginPinch();
       },
@@ -706,6 +777,7 @@ export const createOverlay = ({
       introSkip.destroy();
       tracks.destroy();
       stopHold();
+      if (dismissSettleTimer !== null) clearTimeout(dismissSettleTimer);
       if (chromeTimer !== null) clearTimeout(chromeTimer);
       if (toastTimer !== null) clearTimeout(toastTimer);
       for (const timer of chapterTimers) clearTimeout(timer);
