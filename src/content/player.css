@@ -328,6 +328,13 @@
    instead of stepping at the few times a second the element chooses to
    speak. Under the finger there is no easing: the tip must be exactly
    where the finger says, and the ball grows to be held. */
+/* The playback head rides the tip of the fill, the same percentage the
+   scrub-time bubble reads. It lives in the area rather than the track —
+   the track would clip its bulge at either edge of the film — and it eases
+   between the timeline's sparse updates while playing, so the ball glides
+   instead of stepping at the few times a second the element chooses to
+   speak. Under the finger there is no easing: the tip must be exactly
+   where the finger says, and the ball grows to be held. */
 .seek-head {
   position: absolute;
   top: 50%;
@@ -341,7 +348,21 @@
     inset 0 0 0 0.5px rgba(0, 0, 0, 0.08);
   transform: translate(-50%, -50%);
   transition: left 120ms linear;
-  pointer-events: none;
+  /* Alone in the strip the ball takes the finger; the rest of the bar stays
+     pass-through so a drag there still runs the anywhere-scrub, and a tap
+     still toggles the controls. */
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* The ball is far too small for a thumb on its own, so an invisible pad
+   around it does the catching: the finger lands on the ball it aimed at. */
+.seek-head::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
 }
 
 .seekbar.is-scrubbing .seek-head {

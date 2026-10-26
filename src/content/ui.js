@@ -210,7 +210,22 @@ export const createOverlay = ({
   );
 
   const seek = createSeeker(video, playerHost);
-  const seekBar = createSeekBar(video, seek);
+  // While the head ball on the bar is being dragged, the chrome must hold
+  // on: an idle fade mid-scrub walks the target out from under the finger.
+  // The hook is a hoisted name here and is only given its washer below,
+  // because a grab — when the hook runs — lands long after this whole
+  // stretch of the file has been declared.
+  let isHeadScrubbing = false;
+  let onScrubChrome = null;
+  function onHeadScrub(isOn) {
+    isHeadScrubbing = isOn;
+    // Shown at both ends: at the grab the idle timer may be near expiry,
+    // and at the release the frozen timer has skipped its hiding, so being
+    // shown is how the chrome gets its fade schedule back.
+    onScrubChrome?.();
+  }
+
+  const seekBar = createSeekBar(video, seek, { onScrub: onHeadScrub });
   const skipFeedback = createSkipFeedback();
   const introSkip = createIntroSkip(video, seek);
   const introWatch = createIntroWatch(video, {
@@ -295,11 +310,13 @@ export const createOverlay = ({
   // The chrome must never fade out from under an open panel: the panel lives
   // inside it, and hiding it mid-adjustment looked like the player had frozen.
   // The idle timer that puts an undisturbed picture away, in its own name:
-  // showing must never and rewinding must be able to reach it alone.
+  // showing must never and rewinding must be able to reach it alone. The
+  // flag read here alongside it is the head ball's: see onHeadScrub above,
+  // which indeed runs before this atom does.
   const scheduleFade = () => {
     chromeTimer = setTimeout(() => {
       chromeTimer = null;
-      if (isPanelOpen()) return;
+      if (isPanelOpen() || isHeadScrubbing) return;
       chrome.toggleAttribute('hidden', true);
     }, CHROME_IDLE_MS);
   };
@@ -331,6 +348,11 @@ export const createOverlay = ({
   };
   surface.addEventListener('pointermove', wakeChrome);
   chrome.addEventListener('pointermove', wakeChrome);
+
+  // What the ball's grab reaches, given to the hook above now that it has a
+  // name: showing again rewinds the idle timer, and the freeze flag the hook
+  // sets is what keeps the timer from hiding anything while the ball is held.
+  onScrubChrome = setChromeVisible;
 
   const closePanels = () => {
     playlistRef.close();
@@ -476,8 +498,6 @@ export const createOverlay = ({
     }, DISMISS_MS);
   };
 
-  const dragTargets = { [ZONE.SEEK]: seekBar };
-
   const canSwipe = () =>
     !isPanelOpen() &&
     isFeedShaped(
@@ -517,12 +537,12 @@ export const createOverlay = ({
         showToast(`${holdSpeed}x ▶▶`, null);
       },
       holdEnd: () => stopHold(),
-      dragStart: ({ zone }) => {
+      dragStart: ({ x, y }) => {
         setChromeVisible(true);
-        dragTargets[zone]?.start();
+        seekBar.start({ x, y });
       },
-      dragMove: (detail) => dragTargets[detail.zone]?.move(detail),
-      dragEnd: ({ zone }) => dragTargets[zone]?.end(),
+      dragMove: (detail) => seekBar.move(detail),
+      dragEnd: () => seekBar.end(),
       dismissStart: () => {
         // A drag takes the whole player, sheets and all, off the screen;
         // one already open is settled first, so nothing is twitching under

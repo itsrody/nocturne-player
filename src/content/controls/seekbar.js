@@ -4,8 +4,10 @@ import { el } from '../shell.js';
 
 const PREVIEW_INTERVAL_MS = 120;
 
-// Pull the finger away from the bar and the same swipe covers less time, so a
-// two-hour film can be landed on the exact scene.
+// Pull the finger away from where the drag took hold and the same swipe
+// covers less time, so a two-hour film can be landed on the exact scene.
+// The origin is wherever the drag began — the bar or anywhere on the
+// picture — by one rule for all of them.
 const PRECISION_STEPS = [
   { withinPx: 40, factor: 1 },
   { withinPx: 100, factor: 0.5 },
@@ -20,7 +22,10 @@ const precisionFor = (distancePx) => {
   return PRECISION_STEPS[PRECISION_STEPS.length - 1];
 };
 
-export const createSeekBar = (video, seek) => {
+// The third argument is a listener for the head ball's own grab: the
+// controls must hold on for as long as the ball is held, since a drag on
+// them otherwise walks off mid-scrub at the idle fade.
+export const createSeekBar = (video, seek, { onScrub } = {}) => {
   const elapsed = el('span', { class: 'time', text: '0:00' });
   const remaining = el('span', { class: 'time', text: '--:--' });
   const fill = el('div', { class: 'seek-fill' });
@@ -40,6 +45,9 @@ export const createSeekBar = (video, seek) => {
 
   let isScrubbing = false;
   let scrubTime = 0;
+  // Where the drag took hold. The bar is one such place and no longer the
+  // only one; every distance in the precision ladder is measured from here.
+  let scrubOriginY = null;
   let lastPreviewAt = 0;
   let chapters = [];
   let arePlaced = false;
@@ -106,7 +114,8 @@ export const createSeekBar = (video, seek) => {
     paint(video.currentTime);
   };
 
-  const start = () => {
+  const start = ({ y } = {}) => {
+    scrubOriginY = typeof y === 'number' ? y : null;
     scrubTime = video.currentTime;
     lastPreviewAt = 0;
     elapsed.textContent = formatClock(scrubTime);
@@ -114,19 +123,17 @@ export const createSeekBar = (video, seek) => {
     root.classList.add('is-scrubbing');
   };
 
-  // Measured rather than assumed: the bar sits a fifth of the way up the
-  // screen, and where exactly that lands depends on the phone.
-  const barCenter = (fallback) => {
-    const rect = track.getBoundingClientRect();
-    if (rect.height === 0) return fallback;
-    return rect.top + rect.height / 2;
-  };
-
-  const move = ({ dx, y, width, height }) => {
+  const move = ({ dx, y, width }) => {
     const total = duration();
     if (total === 0) return;
 
-    const step = precisionFor(Math.abs(y - barCenter(height)));
+    // Leaning away from the drag's origin trades reach for precision. For
+    // a grab that began on the bar, this is the rule it always had — the
+    // bar is the hold's own origin. For a grab that began anywhere, the
+    // same rule travels with the finger.
+    const step = precisionFor(
+      scrubOriginY === null ? 0 : Math.abs(y - scrubOriginY),
+    );
     scrubTime += (dx / width) * total * step.factor;
     scrubTime = Math.min(total, Math.max(0, scrubTime));
     paint(scrubTime);
@@ -144,6 +151,66 @@ export const createSeekBar = (video, seek) => {
     if (duration() > 0) seek(scrubTime);
     paint(scrubTime);
   };
+
+  // Grabbing the ball itself: a second way to scrub, for a finger that aims
+  // at the head rather than resting on the picture. The grab never jumps —
+  // the drag starts from where the film stands, and its reach maps onto the
+  // very same precision ladder the anywhere-scrub uses, measured from the
+  // drag's own start as its rule says. A finger lost mid-drag (a call or
+  // leaving the sheet) is an abort: the commit is refused and the film is
+  // left where it was grabbed, not painted at a place it never arrived at.
+  let headPointerId = null;
+  let headLastX = 0;
+  let headOriginY = 0;
+  let headWidth = 0;
+
+  const grabHead = (event) => {
+    // The film needs a length before a drag has anywhere to stand; a scrub
+    // another finger is already driving stays the other finger's alone.
+    if (isScrubbing || duration() === 0) return;
+    const rect = track.getBoundingClientRect();
+    if (rect.width === 0) return;
+    event.preventDefault();
+    // The surface must not also read the hold: one drag belongs to one owner.
+    event.stopPropagation();
+    headPointerId = event.pointerId;
+    headLastX = event.clientX;
+    headOriginY = event.clientY;
+    // Read once at the hold and no further: per-move layout reads are the
+    // price the old bar paid, and the finger does not rescale mid-drag.
+    headWidth = rect.width;
+    head.setPointerCapture(event.pointerId);
+    start({ y: headOriginY });
+    onScrub?.(true);
+  };
+
+  const dragHead = (event) => {
+    if (event.pointerId !== headPointerId) return;
+    const dx = event.clientX - headLastX;
+    headLastX = event.clientX;
+    move({ dx, y: event.clientY, width: headWidth });
+  };
+
+  const releaseHead = (event) => {
+    if (event.pointerId !== headPointerId) return;
+    headPointerId = null;
+    onScrub?.(false);
+    end();
+  };
+
+  const abortHead = (event) => {
+    if (event.pointerId !== headPointerId) return;
+    headPointerId = null;
+    onScrub?.(false);
+    isScrubbing = false;
+    root.classList.remove('is-scrubbing');
+    paint(video.currentTime);
+  };
+
+  head.addEventListener('pointerdown', grabHead);
+  head.addEventListener('pointermove', dragHead);
+  head.addEventListener('pointerup', releaseHead);
+  head.addEventListener('pointercancel', abortHead);
 
   video.addEventListener('timeupdate', sync);
   video.addEventListener('durationchange', sync);
@@ -171,6 +238,10 @@ export const createSeekBar = (video, seek) => {
       video.removeEventListener('durationchange', sync);
       video.removeEventListener('durationchange', placeZones);
       video.removeEventListener('seeked', sync);
+      head.removeEventListener('pointerdown', grabHead);
+      head.removeEventListener('pointermove', dragHead);
+      head.removeEventListener('pointerup', releaseHead);
+      head.removeEventListener('pointercancel', abortHead);
     },
   };
 };
