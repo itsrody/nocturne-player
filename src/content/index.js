@@ -4,11 +4,11 @@ import {
   readSettings,
   writeSettings,
 } from '../lib/settings.js';
-
-const PERSIST_DELAY_MS = 400;
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import { createSession } from './session.js';
+
+const PERSIST_DELAY_MS = 400;
 
 // A player embedded in an iframe should honour the decision the user made about
 // the page they can actually see, so the embedding host counts too.
@@ -40,21 +40,35 @@ const start = async () => {
 
   const hosts = resolveHosts();
   let session = null;
-  let current = await readSettings();
+  // One settings object stays put for the whole lifetime of this frame, and
+  // every change is merged into it. The session and the overlays it opens
+  // hold this same reference, so a value set on the film in hand is already
+  // in place when the feed moves on to the next video — rebinding, as a
+  // fresh object did, left the session carrying the value it opened with.
+  const current = await readSettings();
   let persistTimer = null;
+  let pendingPatch = null;
 
   const badge = createBadge();
 
   // Preferences are written back in one debounced batch: stepping a value five
-  // times should not mean five writes.
+  // times should not mean five writes. The values waiting to be written
+  // accumulate, because a timer that only carried the newest patch would have
+  // dropped every field touched before it — a warmth turned down and then a
+  // brightness turned up, and the warmth never reached storage at all.
   const persist = (patch) => {
-    current = { ...current, ...patch };
+    Object.assign(current, patch);
+    pendingPatch = { ...pendingPatch, ...patch };
     if (persistTimer !== null) clearTimeout(persistTimer);
     persistTimer = setTimeout(() => {
       persistTimer = null;
-      writeSettings(patch);
+      const patchToWrite = pendingPatch;
+      pendingPatch = null;
+      writeSettings(patchToWrite);
     }, PERSIST_DELAY_MS);
   };
+
+  const isWatched = () => hosts.every((host) => isHostEnabled(current, host));
 
   badge.onActivate = async (video) => {
     if (session) return;
@@ -78,20 +92,27 @@ const start = async () => {
     else badge.hide();
   });
 
-  const apply = (settings) => {
-    const isEnabled = hosts.every((host) => isHostEnabled(settings, host));
-    if (isEnabled) {
+  const apply = () => {
+    if (isWatched()) {
       watcher.start();
     } else {
       watcher.stop();
       badge.hide();
+      // A site that has been switched off while the player was on its film
+      // loses the player as well: the off switch in the popup cannot leave a
+      // film running on — and listening, while intro skip is its business —
+      // under it.
+      if (session) session.exit();
     }
   };
 
-  apply(current);
+  apply();
   onSettingsChanged((next) => {
-    current = next;
-    apply(next);
+    // The popup writes too, and the write also comes back here when it is
+    // our own: merged into the one shared object, never replaced, so the
+    // reference the session holds stays the same.
+    Object.assign(current, next);
+    apply();
   });
 
   browser.runtime.onMessage.addListener((message) => {

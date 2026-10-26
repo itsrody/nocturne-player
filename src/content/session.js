@@ -341,6 +341,44 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
       attributeFilter: ['style', 'width', 'height'],
     });
 
+    // The anchor is the film's address in the page, and the style guard above
+    // says nothing about whether the place still exists. A site clearing that
+    // spot — its own player rebuilt, a page using itself up — used to leave
+    // the release coming back to nothing and deleting the film outright. The
+    // parent's child list is cheap to watch (the anchor is a direct child, so
+    // nothing deeper can concern us), and the anchor is put back where the
+    // capture says it lived. Only the comment moves; the picture stays on the
+    // stage. Bounded, in case the site wants the spot empty more than once.
+    let anchorRepins = 0;
+    const anchorGuard = new MutationObserver(() => {
+      if (anchor.isConnected) return;
+      // A page that has left the film behind entirely has no house to put it
+      // back to; playback goes on until the viewer leaves for good.
+      if (state.parent === null || !state.parent.isConnected) return;
+      anchorRepins += 1;
+      if (anchorRepins > MAX_REPINS) {
+        anchorGuard.disconnect();
+        console.warn('Nocturne: the anchor keeps losing its place');
+        return;
+      }
+      if (
+        state.nextSibling !== null &&
+        state.nextSibling.parentNode === state.parent
+      ) {
+        state.parent.insertBefore(anchor, state.nextSibling);
+      } else {
+        state.parent.append(anchor);
+      }
+      // The house it is put back into may be a different one each time.
+      anchorGuard.disconnect();
+      if (anchor.parentNode !== null) {
+        anchorGuard.observe(anchor.parentNode, { childList: true });
+      }
+    });
+    if (anchor.parentNode !== null) {
+      anchorGuard.observe(anchor.parentNode, { childList: true });
+    }
+
     stage.prepend(video);
     watchForTeardown(video, own, () => actions.exit());
     own.listen(video, 'loadedmetadata', scheduleRelayout);
@@ -369,6 +407,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
       own.dispose();
       if (styleGuard) styleGuard.disconnect();
       styleGuard = null;
+      anchorGuard.disconnect();
       overlay.destroy();
       restoreVideoState(video, state);
       if (anchor.isConnected) anchor.replaceWith(video);
@@ -424,7 +463,11 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     loader.hidden = false;
 
     stepFeed(findFeedScroller(previous), direction);
-    const next = await waitForNextVideo(previous, previousSource);
+    const next = await waitForNextVideo(
+      previous,
+      previousSource,
+      () => !isActive,
+    );
 
     loader.hidden = true;
     isStepping = false;

@@ -58,11 +58,22 @@ export const stepFeed = (scroller, direction) => {
 // left — or is the same element playing something else, since some feeds keep
 // one element and swap its source. One that is already playing is taken at
 // once; a paused one only after the site has had a moment to start it itself.
-export const waitForNextVideo = (previous, previousSource) =>
+// isCancelled is asked every round: a player that has been closed out from
+// above must not spend the rest of the window polling a film it no longer
+// holds.
+export const waitForNextVideo = (
+  previous,
+  previousSource,
+  isCancelled = () => false,
+) =>
   new Promise((resolve) => {
     const startedAt = performance.now();
 
     const poll = () => {
+      if (isCancelled()) {
+        resolve(null);
+        return;
+      }
       const elapsed = performance.now() - startedAt;
       const candidate = findPrimaryVideo();
       const isNew =
