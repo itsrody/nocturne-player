@@ -80,6 +80,20 @@ const buildActionCell = (label, onClick) => {
   return cell;
 };
 
+// The back header every subpage opens with. The arrow points out of the page,
+// so it sits before the label — the reverse of the forward chevrons on the
+// drill-in cells it returns from.
+const buildBackCell = (onClick) => {
+  const cell = el('button', { class: 'menu-cell', type: 'button' }, [
+    el('svg', { class: 'menu-cell-icon', viewBox: '0 0 24 24' }, [
+      el('path', { d: 'M15 5l-7 7 7 7' }),
+    ]),
+    el('span', { class: 'menu-cell-label', text: 'Back' }),
+  ]);
+  cell.addEventListener('click', onClick);
+  return cell;
+};
+
 export const createMenu = ({
   video,
   tracks,
@@ -119,20 +133,18 @@ export const createMenu = ({
   );
   setHoldSpeed(currentHoldSpeed);
 
-  const loadCell = buildActionCell('Load .srt / .vtt file', onPickFile);
-  const nativeCell = buildToggleCell(
-    'Native rendering',
-    tracks.isNative(),
-    () => {
-      tracks.setNative(!tracks.isNative());
-    },
-  );
-  const subtitleRow = buildChipRow('Subtitles', [
-    el('div', { class: 'menu-cells' }, [loadCell, nativeCell]),
+  // Subtitles are a page too: the row on the settings list is only the door
+  // into it — the tracks, the local file and the native renderer live one
+  // drill in, where there is room for the track list to grow.
+  const subtitleRow = el('div', { class: 'menu-row' }, [
+    el('span', { class: 'menu-label', text: 'Subtitles' }),
+    el('div', { class: 'menu-cells' }, [
+      buildActionCell('Tracks', () => setPage('subtitles')),
+    ]),
   ]);
 
   // Colour is a page of this sheet, not a panel of its own: the cell drills
-  // into the sheet's second page, and the sheet's frame stays where it is.
+  // into that page, and the sheet's frame stays where it is.
   const colourRow = el('div', { class: 'menu-row' }, [
     el('span', { class: 'menu-label', text: 'Picture' }),
     el('div', { class: 'menu-cells' }, [
@@ -141,28 +153,36 @@ export const createMenu = ({
   ]);
 
   // The colour page: a back header, the rows, nothing else. One sheet on
-  // screen — one DOM, one anchor, two pages under it.
+  // screen — one DOM, one anchor, every page under it.
   const colourRows = createColourRows(onColourChange);
   const colourPage = el('div', { class: 'colour-page' }, [
-    el('button', { class: 'menu-cell', type: 'button' }, [
-      // Icon leads the label — the arrow points back out of the page, so it
-      // sits where the eye arrives first, the reverse of the forward
-      // chevrons on the drill-in cells whose label comes first.
-      el('svg', { class: 'menu-cell-icon', viewBox: '0 0 24 24' }, [
-        el('path', { d: 'M15 5l-7 7 7 7' }),
-      ]),
-      el('span', { class: 'menu-cell-label', text: 'Back' }),
-    ]),
+    buildBackCell(() => setPage('settings')),
     colourRows.root,
   ]);
-  colourPage.querySelector('.menu-cell').addEventListener('click', () => {
-    setPage('settings');
-  });
+
+  // The subtitles page: the tracks as chips, then the ways to feed and to
+  // draw them — the same cells the settings list used to carry, one drill
+  // deeper so a long track list cannot push the sheet's other rows down.
+  const loadCell = buildActionCell('Load .srt / .vtt file', onPickFile);
+  const nativeCell = buildToggleCell(
+    'Native rendering',
+    tracks.isNative(),
+    () => {
+      tracks.setNative(!tracks.isNative());
+    },
+  );
+  const subtitleChips = buildChipRow('Subtitles');
+  const subtitlePage = el('div', { class: 'subtitle-page' }, [
+    buildBackCell(() => setPage('settings')),
+    subtitleChips.row,
+    el('div', { class: 'menu-cells' }, [loadCell, nativeCell]),
+  ]);
+
   let setSubtitle = () => {};
 
   const paintSubtitles = () => {
     const options = [{ id: -1, label: 'Off' }, ...tracks.list()];
-    setSubtitle = paintChips(subtitleRow, options, (id) => tracks.select(id));
+    setSubtitle = paintChips(subtitleChips, options, (id) => tracks.select(id));
     setSubtitle(tracks.getSelected());
   };
 
@@ -217,20 +237,21 @@ export const createMenu = ({
   // Quality leads. It is the row people open this sheet for, it is the longest,
   // and on a phone held sideways the sheet scrolls — so anything below the
   // first two rows is a row somebody has to go looking for.
-  // One sheet, two pages: the settings list and the colour page are states of
-  // the same panel DOM — `data-page` picks the shown one, and both live under
-  // the single anchor the gear button gives the cluster.
+  // One sheet, three pages: the settings list and the two subpages are states
+  // of the same panel DOM — `data-page` picks the shown one, and all live
+  // under the single anchor the gear button gives the cluster.
   const settingsPage = el('div', { class: 'menu-page' }, [
     qualityRow.row,
     audioRow.row,
     speedRow.row,
     holdRow.row,
-    subtitleRow.row,
+    subtitleRow,
     colourRow,
   ]);
   const root = el('div', { class: 'panel menu', 'data-page': 'settings' }, [
     settingsPage,
     colourPage,
+    subtitlePage,
   ]);
 
   // A page is whichever the sheet's data attribute names. Closing and

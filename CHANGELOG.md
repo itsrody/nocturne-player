@@ -65,9 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - The settings, colour and episodes panels hang under the buttons that open
   them, read from the buttons by the browser rather than guessed from the
   topbar's padding.
-- **Colour is a page of settings.** The topbar loses its palette button; the
-  settings sheet's own Picture row drills into a colour page inside the same
-  sheet — one panel DOM, one anchor, a back row to return.
+- **Colour and subtitles are pages of settings.** The topbar loses its palette
+  button; the sheet's own Picture and Subtitles rows drill into pages inside
+  the same sheet — one panel DOM, one anchor, a back row to return. Subtitles
+  moves because its row carried the most content: the track chips, the local
+  file loader and the native renderer now share a page of their own instead
+  of pushing the rest of the sheet down.
 - The sheet headings' spaced capitals sit exactly in their line box.
 - Videos found by a sweep are watched with a margin past the screen, so a
   scroll that never goes near a film no longer costs a sweep.

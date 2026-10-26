@@ -54,7 +54,8 @@ choice is remembered for the next film.
   keyboard keys drive the player while it holds the film: play, pause, stepping
   forward and back, and stop closes the player.
 - **Quality, audio track, speed, subtitles** (site tracks or your own
-  `.srt` / `.vtt`) in the settings sheet.
+  `.srt` / `.vtt`) — subtitles drill into a page of the settings sheet, where
+  the tracks, the file loader and native rendering live together.
 - **Seasons and episodes** picker, and chapter marks on the seek bar.
 
 ## Privacy

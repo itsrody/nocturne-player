@@ -802,18 +802,22 @@
 /* One sheet, two pages: the settings list and the colour page are states of
    the same panel, so the sheet keeps one frame, one anchor, one scroll. */
 .menu-page,
-.colour-page {
+.colour-page,
+.subtitle-page {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
 .colour-page,
-.menu[data-page='colour'] .menu-page {
+.subtitle-page,
+.menu[data-page='colour'] .menu-page,
+.menu[data-page='subtitles'] .menu-page {
   display: none;
 }
 
-.menu[data-page='colour'] .colour-page {
+.menu[data-page='colour'] .colour-page,
+.menu[data-page='subtitles'] .subtitle-page {
   display: flex;
   animation: page-in 220ms var(--ease);
 }
@@ -1045,6 +1049,7 @@
 
   .panel.is-open,
   .menu .colour-page,
+  .menu .subtitle-page,
   .feed-loader,
   .skip-ripple.is-rippling,
   .is-visible .skip-arrow {
