@@ -41,7 +41,8 @@ choice is remembered for the next film.
 
 ## Everything else
 
-- **Seek bar** — thick, grab it anywhere; drag away from it to scrub slower.
+- **Seek bar** — thick, grab it anywhere; drag away from it to scrub slower,
+  with a white head riding the timeline's tip.
 - **Double-tap** the right side for +10 s, the left for −10 s. Keep tapping to
   go further.
 - **Hold** anywhere on the picture to run it at the hold-speed chip (2x at

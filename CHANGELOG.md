@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   of the screen's height, or when it is flung at the lift; a shorter, slower
   pull snaps back where it was. Downward used to mean the video before in
   feed pages; down now always means out, and up still means the next video.
+- **A playback head on the seek bar.** A white ball rides the tip of the
+  line as the film runs, glides between the timeline's own updates, and
+  grows under the finger while a scrub is under way.
 - A record of the platform floor's decisions and rejections lives in
   `docs/platform-158.md`.
 

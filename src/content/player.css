@@ -321,6 +321,37 @@
   transform: scaleX(0);
 }
 
+/* The playback head rides the tip of the fill, the same percentage the
+   scrub-time bubble reads. It lives in the area rather than the track —
+   the track would clip its bulge at either edge of the film — and it eases
+   between the timeline's sparse updates while playing, so the ball glides
+   instead of stepping at the few times a second the element chooses to
+   speak. Under the finger there is no easing: the tip must be exactly
+   where the finger says, and the ball grows to be held. */
+.seek-head {
+  position: absolute;
+  top: 50%;
+  left: var(--progress);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  transform: translate(-50%, -50%);
+  transition: left 120ms linear;
+  pointer-events: none;
+}
+
+.seekbar.is-scrubbing .seek-head {
+  width: 18px;
+  height: 18px;
+  transition:
+    width 160ms var(--ease),
+    height 160ms var(--ease);
+}
+
 .toast {
   position: absolute;
   top: 50%;
@@ -1045,7 +1076,8 @@
   .step-button,
   .play-button,
   .skip-button,
-  .seek-time {
+  .seek-time,
+  .seek-head {
     transition-duration: 1ms;
   }
 

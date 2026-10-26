@@ -28,7 +28,10 @@ export const createSeekBar = (video, seek) => {
   const zones = el('div', { class: 'seek-zones' });
   const track = el('div', { class: 'seek-track' }, [fill, zones, marks]);
   const headTime = el('span', { class: 'seek-time', text: '0:00' });
-  const area = el('div', { class: 'seek-area' }, [track, headTime]);
+  // The playback head: a ball riding the tip of the fill, inside the area
+  // and not the track, so the track cannot clip its bulge at either edge.
+  const head = el('div', { class: 'seek-head' });
+  const area = el('div', { class: 'seek-area' }, [track, head, headTime]);
   const chapterLabel = el('div', { class: 'chapter' });
   const root = el('div', { class: 'seekbar' }, [
     chapterLabel,
