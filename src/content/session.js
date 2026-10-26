@@ -382,7 +382,25 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
 
     stage.prepend(video);
     watchForTeardown(video, own, () => actions.exit());
-    own.listen(video, 'loadedmetadata', scheduleRelayout);
+
+    // The metadata event can outrun the picture. A feed step recycles the
+    // element while it is still painting the previous film's last frame, and
+    // an MSE stream is allowed to revise its dimensions after the metadata
+    // says them. One more fit, timed to the first frame that is actually
+    // presented, is the only moment the crop and the picture agree on what
+    // is showing — a frame the timeline reports at all only when one is
+    // playing; a paused film has its picture fitted as before, straight
+    // away.
+    own.listen(video, 'loadedmetadata', () => {
+      scheduleRelayout();
+      if (
+        video.paused ||
+        typeof video.requestVideoFrameCallback !== 'function'
+      ) {
+        return;
+      }
+      video.requestVideoFrameCallback(scheduleRelayout);
+    });
     own.listen(video, 'resize', scheduleRelayout);
 
     const mediaBridge = createMediaBridge(video, {
