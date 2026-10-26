@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **A mouse over the picture keeps the controls up.** On a desktop, moving
   the pointer over the film holds them and rewinds their idle fade with the
   pointer; a tap still brings them, and a finger's drift does not.
+- **Swipe down puts the player away.** The whole player follows the finger
+  down the screen like a sheet being put away, and the film goes back to the
+  page with it. The pull leaves the player out the moment it passes a third
+  of the screen's height, or when it is flung at the lift; a shorter, slower
+  pull snaps back where it was. Downward used to mean the video before in
+  feed pages; down now always means out, and up still means the next video.
 - A record of the platform floor's decisions and rejections lives in
   `docs/platform-158.md`.
 

@@ -51,8 +51,12 @@ choice is remembered for the next film.
   of a double-tap too. Only the play button pauses.
 - On a desktop, **moving the mouse** over the picture keeps the controls up
   and never lets them fade out from under the pointer.
+- **Swipe** up through TikTok / Reels / Shorts feeds for the next video.
+- **Swipe down** puts the player away, the way a sheet is put away: the whole
+  player — picture and controls — follows the finger down the screen, and the
+  moment the pull passes a third of the screen's height it is out; a shorter
+  pull snaps back to where it was.
 - **Pinch** to fill the screen and crop black bars.
-- **Swipe** up or down through TikTok / Reels / Shorts feeds.
 - **Follows the window** — portrait or landscape, resizing mid-film included.
 - **The system's media controls** — the Android notification and the desktop
   keyboard keys drive the player while it holds the film: play, pause, stepping
