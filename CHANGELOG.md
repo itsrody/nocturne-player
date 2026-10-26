@@ -29,7 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   feed pages; down now always means out, and up still means the next video.
 - **A playback head on the seek bar.** A white ball rides the tip of the
   line as the film runs, glides between the timeline's own updates, and
-  grows under the finger while a scrub is under way.
+  grows under the finger while a scrub is under way. It is itself a second
+  way to scrub: grab the ball and pull, and the film follows it one-to-one
+  from where it stands — no jump at the grab, the same lean-away precision,
+  and the controls hold on for as long as the ball is held.
+- **The scrub is its own everywhere gesture.** A horizontal drag on any part
+  of the picture scrubs the film exactly as grabbing the bar always did,
+  with the finger's lean away from its own start trading reach for
+  precision. A drag that lifts before it has engaged is a tap — including
+  on the bar itself, where a drifting tap used to be able to shove a long
+  film by minutes.
 - A record of the platform floor's decisions and rejections lives in
   `docs/platform-158.md`.
 

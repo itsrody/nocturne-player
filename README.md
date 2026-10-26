@@ -41,8 +41,11 @@ choice is remembered for the next film.
 
 ## Everything else
 
-- **Seek bar** — thick, grab it anywhere; drag away from it to scrub slower,
-  with a white head riding the timeline's tip.
+- **Seek bar** — scrub two ways: a horizontal drag on the picture is the
+  same as grabbing the bar itself, and the white head at the timeline's tip
+  can be grabbed and pulled directly. Leaning the finger away from where it
+  took hold trades reach for precision. A drag that lifts before it has
+  engaged was a tap.
 - **Double-tap** the right side for +10 s, the left for −10 s. Keep tapping to
   go further.
 - **Hold** anywhere on the picture to run it at the hold-speed chip (2x at
