@@ -49,6 +49,9 @@ choice is remembered for the next film.
 - **Pinch** to fill the screen and crop black bars.
 - **Swipe** up or down through TikTok / Reels / Shorts feeds.
 - **Follows the window** — portrait or landscape, resizing mid-film included.
+- **The system's media controls** — the Android notification and the desktop
+  keyboard keys drive the player while it holds the film: play, pause, stepping
+  forward and back, and stop closes the player.
 - **Quality, audio track, speed, subtitles** (site tracks or your own
   `.srt` / `.vtt`) in the settings sheet.
 - **Seasons and episodes** picker, and chapter marks on the seek bar.
@@ -74,6 +77,9 @@ See [PRIVACY.md](PRIVACY.md).
   buttons.
 - **Saving a frame** is impossible: Firefox for Android does not let any
   script read a video frame.
+- **Pages on the file system** are skipped until you grant them: Firefox
+  keeps `file://` behind its own permission, separate from an all-sites
+  grant.
 - **Skip intro** needs two episodes to learn an opening and offers to skip it
   from the third. It listens only to a video the site serves itself (most
   players, YouTube included); a film loaded from another domain is left

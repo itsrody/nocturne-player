@@ -7,10 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased][unreleased]
 
+### Added
+
+- **The system's media controls run the player.** While the player holds the
+  film, the Android notification controls and the desktop media keys speak to
+  it: play and pause, stepping forward and back by ten seconds, any position
+  by name, and stop closes the player. The film's name and artwork are what
+  the page itself declares.
+- A record of the platform floor's decisions and rejections lives in
+  `docs/platform-158.md`.
+
 ### Changed
 
 - The player is offered to Firefox on desktop as well as Android, under one
   floor for both: Firefox 158.
+- The settings, colour and episodes panels hang under the buttons that open
+  them, read from the buttons by the browser rather than guessed from the
+  topbar's padding.
+- The sheet headings' spaced capitals sit exactly in their line box.
+- Videos found by a sweep are watched with a margin past the screen, so a
+  scroll that never goes near a film no longer costs a sweep.
+- One more fit after the first presented frame of a fresh source, so the
+  crop and the picture agree on what is showing sooner.
 
 ## [0.9.1][] - 2026-10-20
 
