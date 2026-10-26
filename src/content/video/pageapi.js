@@ -8,7 +8,10 @@
 // raises, a method that is missing, or a value from a compartment we cannot
 // touch; every one of those means "this player cannot do that", not "the
 // player is broken".
-const MAX_SCANNED_KEYS = 500;
+// Bounded, but generously: the sweep is the sheet's opening question, and a
+// page that has outgrown the bound silently loses its engine to the cut. A
+// register of two thousand globals costs a moment once, when the sheet opens.
+const MAX_SCANNED_KEYS = 2000;
 
 // Null rather than a throw where there is no window at all, so that a sweep of
 // the page's globals is simply an empty answer instead of an error every caller

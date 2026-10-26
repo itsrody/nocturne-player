@@ -401,15 +401,26 @@ const BUILDERS = [
 
 const createEngineAdapter = (video, host) => {
   const engines = findEngines(video, host);
+  const found = [];
   for (const { kind, build } of BUILDERS) {
     const engine = engines[kind];
     if (engine === undefined) continue;
     if (kind === 'playerjs' && !hasPlayerjs()) continue;
-    const adapter = build(engine);
-    // A player with nothing to offer is not an answer; the next one might be.
-    if (adapter.list().length > 0) return adapter;
+    try {
+      const adapter = build(engine);
+      // A player with nothing to offer is not an answer; the next one might be.
+      if (adapter.list().length === 0) continue;
+      found.push(adapter);
+    } catch (error) {
+      console.warn('Nocturne: a quality adapter threw while probing', error);
+    }
   }
-  return null;
+  // More than one object on a page can answer to an engine's shape — a demo
+  // wired to nothing, a helper kept for the page's own stats. Of the ones
+  // with a ladder, the one that can also say what is playing now is the one
+  // wired to the film; the rest are probably talking about somebody else's.
+  const wired = found.find((adapter) => adapter.current() !== null);
+  return wired ?? found[0] ?? null;
 };
 
 // Cheapest and most certain first: a <source> list is unambiguous, a named

@@ -105,6 +105,22 @@ const tidy = (chapters) => {
   return sorted.length >= MIN_CHAPTERS ? sorted : [];
 };
 
+// The tries read the same blobs again: a page that has not changed hands the
+// same answer every time, and the walk over one of its 30 000 objects was
+// paid for anew with every attempt. What each blob was found to hold is
+// remembered against the blob itself, which also keeps the memory bounded —
+// a blob the page has replaced is a blob that goes away with the page.
+const walked = new WeakMap();
+
+const search = (source) => {
+  if (source === null || typeof source !== 'object') return [];
+  const known = walked.get(source);
+  if (known !== undefined) return known;
+  const found = tidy(collect(source));
+  walked.set(source, found);
+  return found;
+};
+
 // The player's own answer comes first: it is the only source that is certainly
 // about the video playing right now, rather than about whatever page happened
 // to be loaded before the viewer clicked through to this one.
@@ -117,8 +133,7 @@ export const readSiteChapters = (playerHost = null) => {
   ];
 
   for (const source of sources) {
-    if (source === null) continue;
-    const chapters = tidy(collect(source));
+    const chapters = search(source);
     if (chapters.length > 0) return chapters;
   }
   return [];
