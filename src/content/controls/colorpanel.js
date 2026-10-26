@@ -115,7 +115,7 @@ export const createColorPanel = (onChange) => {
     for (const stepper of steppers) onChange(stepper.key, stepper.reset());
   });
 
-  const root = el('div', { class: 'panel' }, [
+  const root = el('div', { class: 'panel colour-panel' }, [
     ...steppers.map((stepper) => stepper.root),
     reset,
   ]);

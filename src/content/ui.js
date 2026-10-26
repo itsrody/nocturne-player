@@ -514,25 +514,35 @@ export const createOverlay = ({
     buildSkipButton(SKIP_SECONDS),
   ]);
 
-  buttons.colour = buildButton('Colour', buildPaletteIcon(), () => {
-    menu.close();
-    playlistPanel.close();
-    buttons.menu.setAttribute('aria-pressed', 'false');
-    buttons.playlist.setAttribute('aria-pressed', 'false');
-    colorPanel.toggle();
-    buttons.colour.setAttribute('aria-pressed', String(colorPanel.isOpen()));
-    setChromeVisible(true);
-  });
+  buttons.colour = buildButton(
+    'Colour',
+    buildPaletteIcon(),
+    () => {
+      menu.close();
+      playlistPanel.close();
+      buttons.menu.setAttribute('aria-pressed', 'false');
+      buttons.playlist.setAttribute('aria-pressed', 'false');
+      colorPanel.toggle();
+      buttons.colour.setAttribute('aria-pressed', String(colorPanel.isOpen()));
+      setChromeVisible(true);
+    },
+    'button anchor-colour',
+  );
 
-  buttons.menu = buildButton('Settings', ICON.settings, () => {
-    colorPanel.close();
-    playlistPanel.close();
-    buttons.colour.setAttribute('aria-pressed', 'false');
-    buttons.playlist.setAttribute('aria-pressed', 'false');
-    menu.toggle();
-    buttons.menu.setAttribute('aria-pressed', String(menu.isOpen()));
-    setChromeVisible(true);
-  });
+  buttons.menu = buildButton(
+    'Settings',
+    ICON.settings,
+    () => {
+      colorPanel.close();
+      playlistPanel.close();
+      buttons.colour.setAttribute('aria-pressed', 'false');
+      buttons.playlist.setAttribute('aria-pressed', 'false');
+      menu.toggle();
+      buttons.menu.setAttribute('aria-pressed', String(menu.isOpen()));
+      setChromeVisible(true);
+    },
+    'button anchor-menu',
+  );
 
   // The playlist sits where a thumb reaches it while the phone is held
   // sideways — beside the way out, not buried in the settings sheet, which is
@@ -541,7 +551,11 @@ export const createOverlay = ({
   const playlistLabel = el('span', { class: 'playlist-current' });
   buttons.playlist = el(
     'button',
-    { class: 'playlist-button', type: 'button', title: 'Episodes' },
+    {
+      class: 'playlist-button anchor-playlist',
+      type: 'button',
+      title: 'Episodes',
+    },
     [playlistLabel, buildIcon(ICON.chevron)],
   );
   buttons.playlist.addEventListener('click', () => {
