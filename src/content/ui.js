@@ -592,7 +592,11 @@ export const createOverlay = ({
     return button;
   };
 
-  const centreRow = el('div', { class: 'centre-row' }, [
+  // The transport sits in the seek strip now — backward, play, forward to
+  // the bar's left, in one row with it — where a thumb reaches all three
+  // without leaving the bottom edge it already works. The middle of the
+  // picture belongs to the gestures alone.
+  seekBar.setControls([
     buildSkipButton(-SKIP_SECONDS),
     buttons.play,
     buildSkipButton(SKIP_SECONDS),
@@ -706,7 +710,6 @@ export const createOverlay = ({
   chrome.append(
     scrim,
     topbar,
-    centreRow,
     colorPanel.root,
     menu.root,
     playlistPanel.root,

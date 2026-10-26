@@ -26,9 +26,8 @@ const precisionFor = (distancePx) => {
 // controls must hold on for as long as the ball is held, since a drag on
 // them otherwise walks off mid-scrub at the idle fade.
 export const createSeekBar = (video, seek, { onScrub } = {}) => {
-  // One clock beside the bar, read as "current / duration": the place in
-  // the film and its whole length at one glance to the bar's left. The
-  // right end belongs to nothing — the bar itself runs to the screen edge.
+  // One clock at the bar's right end, read as "current / duration": the
+  // place in the film and its whole length at one glance.
   const timer = el('span', { class: 'time', text: '0:00' });
   const fill = el('div', { class: 'seek-fill' });
   const marks = el('div', { class: 'seek-marks' });
@@ -40,10 +39,8 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
   const head = el('div', { class: 'seek-head' });
   const area = el('div', { class: 'seek-area' }, [track, head, headTime]);
   const chapterLabel = el('div', { class: 'chapter' });
-  const root = el('div', { class: 'seekbar' }, [
-    chapterLabel,
-    el('div', { class: 'seek-row' }, [timer, area]),
-  ]);
+  const row = el('div', { class: 'seek-row' }, [area, timer]);
+  const root = el('div', { class: 'seekbar' }, [chapterLabel, row]);
 
   let isScrubbing = false;
   let scrubTime = 0;
@@ -244,12 +241,21 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
   video.addEventListener('seeked', sync);
   sync();
 
+  // The transport row lives inside the strip: the player's own buttons are
+  // handed over here once they exist and are re-set in front of the bar,
+  // with the clock trailing off its right end. The strip was built to be
+  // the whole bottom edge — the centre overlay it retired folded into it.
+  const setControls = (nodes = []) => {
+    row.replaceChildren(...nodes, area, timer);
+  };
+
   return {
     root,
     start,
     move,
     end,
     jumpToTap,
+    setControls,
     setZones: (list) => {
       spans = list;
       placeZones();

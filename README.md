@@ -46,7 +46,8 @@ choice is remembered for the next film.
   can be grabbed and pulled directly. A tap on the visible bar jumps to the
   moment under the finger. Leaning the finger away from where it took hold
   trades reach for precision. A drag that lifts before it has engaged was a
-  tap.
+  tap. Backward, play and forward sit in the strip to the bar's left; the
+  clock reads "current / duration" at its right end.
 - **Double-tap** the right side for +10 s, the left for −10 s. Keep tapping to
   go further.
 - **Hold** anywhere on the picture to run it at the hold-speed chip (2x at

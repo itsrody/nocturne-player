@@ -79,8 +79,7 @@
 /* Each band leaves in the direction it came from, so bringing the controls
    back reads as one movement instead of a flash. */
 .topbar,
-.seekbar,
-.centre-row {
+.seekbar {
   transition: transform 340ms var(--ease);
 }
 
@@ -90,10 +89,6 @@
 
 .chrome[hidden] .seekbar {
   transform: translateY(16px);
-}
-
-.chrome[hidden] .centre-row {
-  transform: translate(-50%, -50%) scale(0.94);
 }
 
 .topbar {
@@ -960,12 +955,12 @@
   opacity: 1;
 }
 
-/* A flex child of the centre row, so it lines up with the skip buttons. The
-   pause target is this button and nothing else — tapping the picture only
-   brings the controls up or puts them away. */
+/* A child of the seek strip, on the same 52px box the skip buttons ride.
+   The pause target is this button and nothing else — tapping the picture
+   only brings the controls up or puts them away. */
 .play-button {
-  width: 114px;
-  height: 114px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -980,8 +975,8 @@
 }
 
 .play-button svg {
-  width: 63px;
-  height: 63px;
+  width: 30px;
+  height: 30px;
   display: block;
   fill: currentColor;
   stroke: currentColor;
@@ -991,23 +986,9 @@
   filter: var(--icon-shadow);
 }
 
-.centre-row {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  gap: clamp(48px, 11vw, 128px);
-  pointer-events: none;
-}
-
-.centre-row > * {
-  pointer-events: auto;
-}
-
 /* Hidden controls must not swallow a tap meant for the picture underneath. */
-.chrome[hidden] .centre-row > *,
+.chrome[hidden] .play-button,
+.chrome[hidden] .skip-button,
 .chrome[hidden] .topbar {
   pointer-events: none;
 }
@@ -1031,6 +1012,10 @@
   background: none;
   color: #fff;
   cursor: pointer;
+  /* Ex-children of the centre row, they now stand in the strip alone and
+     name their own take of the pointer: the strip is blind, the buttons
+     are where taps are meant to land. */
+  pointer-events: auto;
   transition: transform 220ms var(--ease);
 }
 
@@ -1087,7 +1072,6 @@
   .chrome,
   .topbar,
   .seekbar,
-  .centre-row,
   .toast,
   .cue,
   .button,
