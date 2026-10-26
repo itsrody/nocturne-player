@@ -22,8 +22,10 @@
   --icon-shadow: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.65));
 
   /* The seek bar and everything that lines up with it stay clear of the
-     strip along the bottom where the Android home swipe lives. */
-  --seek-lift: 12%;
+     strip along the bottom where the Android home swipe lives. Seated a
+     little lower than before: the strip behind the bar is gesture land, and
+     a lift of 8% still keeps the row and the bubble above it. */
+  --seek-lift: 8%;
 }
 
 .layer {
@@ -170,7 +172,10 @@
 }
 
 .controlbar-lead {
-  gap: 12px;
+  /* A breath tighter than the row's own 12px: the transport reads as one
+     hand's cluster, the same spacing the clock and its gear keep in the
+     tail. */
+  gap: 8px;
 }
 
 .controlbar-tail {
@@ -746,12 +751,12 @@
   opacity: 1;
 }
 
-/* A child of the seek strip, on the same 52px box the skip buttons ride.
-   The pause target is this button and nothing else — tapping the picture
-   only brings the controls up or puts them away. */
+/* A child of the seek strip, on the same 44px box every button in the player
+   rides — the gear's own. The pause target is this button and nothing else —
+   tapping the picture only brings the controls up or puts them away. */
 .play-button {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -766,8 +771,8 @@
 }
 
 .play-button svg {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   display: block;
   fill: currentColor;
   stroke: currentColor;
@@ -794,8 +799,8 @@
 }
 
 .skip-button {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -852,8 +857,8 @@
 }
 
 .skip-button svg {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   display: block;
   fill: none;
   stroke: currentColor;
