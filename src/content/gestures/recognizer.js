@@ -1,4 +1,4 @@
-import { hitTest, isDragZone, isHoldZone, ZONE } from './zones.js';
+import { hitTest, isHoldZone, ZONE } from './zones.js';
 import { isVerticalMove, readSwipe } from './swipe.js';
 
 // A hold can begin anywhere on the picture — the way a long-press means "run
@@ -8,6 +8,14 @@ import { isVerticalMove, readSwipe } from './swipe.js';
 const canHold = (zone) => zone !== ZONE.SEEK;
 
 const HOLD_DELAY_MS = 350;
+// How far a drag must travel before the scrub stands up — the same boundary
+// for every part of the picture. The move tolerance frees the finger from
+// being a tap, but a finger that has gone twelve pixels may still be
+// drifting: double-taps wander, palms arrive at an angle, and the scrub's
+// whole screen-width sweep turns such wander into minutes of film. Below
+// the scrub line the drag simply stays pending, and a lift there is the
+// tap the finger meant.
+const SCRUB_ENGAGE_PX = 24;
 // How long a first tap is followed by the possibility of a second, whether a
 // run of side seeks begins there. Nothing waits on it: the tap already spoke,
 // so the window only decides whether the next tap joins it as a run.
@@ -204,10 +212,14 @@ export const createRecognizer = (
         if (dy < 0) {
           // Finger up means the next video, where the page is a feed at
           // all. An upward drag on any other page has no business of its
-          // own, and falls through to the zones as before — a slow scrub
-          // past the seek band included.
+          // own but the seek band's precision scrub, which the fall
+          // through carries.
           if (canSwipe()) {
             mode = MODE.SWIPE;
+            return;
+          }
+          if (anchor.zone !== ZONE.SEEK) {
+            mode = MODE.ABANDONED;
             return;
           }
         } else if (anchor.zone !== ZONE.SEEK) {
@@ -222,11 +234,18 @@ export const createRecognizer = (
           emit('dismissStart', {});
           return;
         }
+        // A vertical lead taken back by the seek band falls through, the
+        // way the horizontal ones below it do.
       }
-      if (!isDragZone(anchor.zone)) {
-        mode = MODE.ABANDONED;
-        return;
-      }
+      // Whatever arrives here is a scrub: horizontal from anywhere on the
+      // picture, or vertical where the band resumed it. Engagement waits a
+      // second boundary, and the same one for every zone. A grab is decided
+      // twice over — past the move tolerance, then past this line — because
+      // the first twelve pixels the finger travels may be a tap's own
+      // wander, and the bar's whole-width sweep would pay for it in film.
+      // Below the line the gesture stays pending, so a lift is registered
+      // as the tap it was, wherever the drag started.
+      if (Math.hypot(dx, dy) < SCRUB_ENGAGE_PX) return;
       mode = MODE.DRAG;
       emit('dragStart', { zone: anchor.zone, x: anchor.x, y: anchor.y });
     }

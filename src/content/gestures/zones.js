@@ -30,7 +30,5 @@ export const hitTest = (x, y, width, height) => {
   return ZONE.DEAD;
 };
 
-export const isDragZone = (zone) => zone === ZONE.SEEK;
-
 export const isHoldZone = (zone) =>
   zone === ZONE.HOLD_LEFT || zone === ZONE.HOLD_RIGHT;

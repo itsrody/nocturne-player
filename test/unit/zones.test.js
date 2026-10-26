@@ -1,12 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import {
-  hitTest,
-  isDragZone,
-  isHoldZone,
-  ZONE,
-} from '../../src/content/gestures/zones.js';
+import { hitTest, isHoldZone, ZONE } from '../../src/content/gestures/zones.js';
 
 const WIDTH = 800;
 const HEIGHT = 360;
@@ -54,9 +49,7 @@ test('the hold boxes stay clear of the seek band', () => {
   assert.equal(zoneAt(0.8, 0.8), ZONE.SEEK);
 });
 
-test('only the seek band drags and only the side boxes hold', () => {
-  assert.ok(isDragZone(ZONE.SEEK));
-  assert.ok(!isDragZone(ZONE.DEAD));
+test('only the side boxes hold', () => {
   assert.ok(isHoldZone(ZONE.HOLD_LEFT));
   assert.ok(isHoldZone(ZONE.HOLD_RIGHT));
   assert.ok(!isHoldZone(ZONE.DEAD));

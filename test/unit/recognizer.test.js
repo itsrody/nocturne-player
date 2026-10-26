@@ -157,6 +157,44 @@ test('a hold begins anywhere on the picture, the middle included', () => {
   mock.timers.reset();
 });
 
+test('a drifting tap stays a tap, wherever it started', () => {
+  const { events, surface } = setUp();
+  surface.fire('pointerdown', 0.5, 0.4);
+  surface.fire('pointermove', 0.52, 0.4);
+  surface.fire('pointerup', 0.52, 0.4);
+  assert.deepEqual(
+    events.map((event) => [event.name, event.zone]),
+    [['tap', 'dead']],
+  );
+  mock.timers.reset();
+});
+
+test('a drifting tap on the seek band stays a tap, not a timeline jump', () => {
+  const { events, surface } = setUp();
+  surface.fire('pointerdown', 0.5, 0.8);
+  surface.fire('pointermove', 0.52, 0.8);
+  surface.fire('pointerup', 0.52, 0.8);
+  assert.deepEqual(
+    events.map((event) => [event.name, event.zone]),
+    [['tap', 'seek']],
+  );
+  mock.timers.reset();
+});
+
+test('a horizontal drag anywhere scrubs once it has engaged', () => {
+  const { events, surface } = setUp();
+  surface.fire('pointerdown', 0.4, 0.4);
+  surface.fire('pointermove', 0.45, 0.4);
+  surface.fire('pointermove', 0.5, 0.4);
+  surface.fire('pointerup', 0.5, 0.4);
+  assert.deepEqual(
+    events.map((event) => event.name),
+    ['dragStart', 'dragMove', 'dragMove', 'dragEnd'],
+  );
+  assert.equal(events[0].zone, 'dead');
+  mock.timers.reset();
+});
+
 test('the seek band is for scrubbing, never for a hold', () => {
   const { events, surface } = setUp();
   surface.fire('pointerdown', 0.5, 0.8);
