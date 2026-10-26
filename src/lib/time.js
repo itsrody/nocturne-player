@@ -19,11 +19,6 @@ export const formatClock = (seconds) => {
   return `${hours}:${String(minutes).padStart(2, '0')}:${secs}`;
 };
 
-export const formatRemaining = (currentTime, duration) => {
-  if (!isFiniteTime(currentTime) || !isFiniteTime(duration)) return PLACEHOLDER;
-  return `-${formatClock(Math.max(0, duration - currentTime))}`;
-};
-
 export const formatOffset = (seconds) => {
   if (!isFiniteTime(seconds)) return PLACEHOLDER;
   const sign = seconds < 0 ? '-' : '+';

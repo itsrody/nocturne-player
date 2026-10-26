@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import {
-  formatClock,
-  formatOffset,
-  formatRemaining,
-} from '../../src/lib/time.js';
+import { formatClock, formatOffset } from '../../src/lib/time.js';
 
 test('formatClock omits hours for short durations', () => {
   assert.equal(formatClock(0), '0:00');
@@ -29,17 +25,6 @@ test('formatClock clamps negatives and rejects non-finite input', () => {
   assert.equal(formatClock(NaN), '--:--');
   assert.equal(formatClock(Infinity), '--:--');
   assert.equal(formatClock(undefined), '--:--');
-});
-
-test('formatRemaining counts down from the duration', () => {
-  assert.equal(formatRemaining(0, 5672), '-1:34:32');
-  assert.equal(formatRemaining(5672, 5672), '-0:00');
-  assert.equal(formatRemaining(6000, 5672), '-0:00');
-});
-
-test('formatRemaining reports a placeholder without a duration', () => {
-  assert.equal(formatRemaining(10, NaN), '--:--');
-  assert.equal(formatRemaining(10, Infinity), '--:--');
 });
 
 test('formatOffset always carries a sign', () => {

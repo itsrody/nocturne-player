@@ -245,11 +245,10 @@
   min-width: 58px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+  /* One label holding both readings: "current / duration" is a single
+     sentence, and a narrow row must never break it in two. */
+  white-space: nowrap;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-}
-
-.time:last-child {
-  text-align: right;
 }
 
 .seek-track {

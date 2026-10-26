@@ -48,6 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The clock reads as one sentence now.** To the left of the bar it says
+  "current / duration", the place in the film and its whole length together;
+  the remaining read that used to sit on the bar's right end is gone.
 - The player is offered to Firefox on desktop as well as Android, under one
   floor for both: Firefox 158.
 - The settings, colour and episodes panels hang under the buttons that open

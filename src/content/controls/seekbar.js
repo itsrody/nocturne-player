@@ -1,5 +1,5 @@
 import { chapterAt } from '../video/chapters.js';
-import { formatClock, formatRemaining } from '../../lib/time.js';
+import { formatClock } from '../../lib/time.js';
 import { el } from '../shell.js';
 
 const PREVIEW_INTERVAL_MS = 120;
@@ -26,8 +26,10 @@ const precisionFor = (distancePx) => {
 // controls must hold on for as long as the ball is held, since a drag on
 // them otherwise walks off mid-scrub at the idle fade.
 export const createSeekBar = (video, seek, { onScrub } = {}) => {
-  const elapsed = el('span', { class: 'time', text: '0:00' });
-  const remaining = el('span', { class: 'time', text: '--:--' });
+  // One clock beside the bar, read as "current / duration": the place in
+  // the film and its whole length at one glance to the bar's left. The
+  // right end belongs to nothing — the bar itself runs to the screen edge.
+  const timer = el('span', { class: 'time', text: '0:00' });
   const fill = el('div', { class: 'seek-fill' });
   const marks = el('div', { class: 'seek-marks' });
   const zones = el('div', { class: 'seek-zones' });
@@ -40,7 +42,7 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
   const chapterLabel = el('div', { class: 'chapter' });
   const root = el('div', { class: 'seekbar' }, [
     chapterLabel,
-    el('div', { class: 'seek-row' }, [elapsed, area, remaining]),
+    el('div', { class: 'seek-row' }, [timer, area]),
   ]);
 
   let isScrubbing = false;
@@ -94,9 +96,18 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     chapterLabel.classList.toggle('is-visible', title !== '');
   };
 
-  // While scrubbing the left label holds the moment the drag started, so the
+  // While scrubbing the clock holds the moment the drag started, so the
   // target time on the line is not simply repeated back to the user and they
   // can see where to return to.
+  // The clock reads as "current / duration" once the film has a length;
+  // while it is still unknown, the current time alone.
+  const timerText = (time) => {
+    const total = duration();
+    return total > 0
+      ? `${formatClock(time)} / ${formatClock(total)}`
+      : formatClock(time);
+  };
+
   const paint = (time) => {
     const total = duration();
     placeMarks();
@@ -105,8 +116,7 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     fill.style.transform = `scaleX(${ratio})`;
     area.style.setProperty('--progress', `${ratio * 100}%`);
     headTime.textContent = formatClock(time);
-    remaining.textContent = formatRemaining(time, video.duration);
-    if (!isScrubbing) elapsed.textContent = formatClock(time);
+    if (!isScrubbing) timer.textContent = timerText(time);
   };
 
   const sync = () => {
@@ -118,7 +128,7 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     scrubOriginY = typeof y === 'number' ? y : null;
     scrubTime = video.currentTime;
     lastPreviewAt = 0;
-    elapsed.textContent = formatClock(scrubTime);
+    timer.textContent = timerText(scrubTime);
     isScrubbing = true;
     root.classList.add('is-scrubbing');
   };
