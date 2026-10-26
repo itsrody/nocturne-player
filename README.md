@@ -1,4 +1,4 @@
-[![CI](https://github.com/kvachikk/nocturne-player/actions/workflows/ci.yml/badge.svg)](https://github.com/kvachikk/nocturne-player/actions/workflows/ci.yml)
+[![CI](https://github.com/itsrody/nocturne-player/actions/workflows/ci.yml/badge.svg)](https://github.com/itsrody/nocturne-player/actions/workflows/ci.yml)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
 [![No data collected](https://img.shields.io/badge/data%20collected-none-brightgreen.svg)](PRIVACY.md)
 

@@ -77,4 +77,4 @@ Git history of this file.
 ## Contact
 
 Open an issue at
-<https://github.com/kvachikk/nocturne-player/issues>.
+<https://github.com/itsrody/nocturne-player/issues>.

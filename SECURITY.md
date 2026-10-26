@@ -7,7 +7,7 @@ The latest release on addons.mozilla.org.
 ## Reporting a vulnerability
 
 Use [GitHub private vulnerability
-reporting](https://github.com/kvachikk/nocturne-player/security/advisories/new).
+reporting](https://github.com/itsrody/nocturne-player/security/advisories/new).
 Please do not open a public issue for a security problem.
 
 Expect a first reply within a week.

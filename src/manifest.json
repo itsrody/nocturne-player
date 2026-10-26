@@ -4,10 +4,10 @@
   "version": "0.9.1",
   "description": "A touch-first video player for streaming sites and YouTube: thick seek bar, gesture controls, quality and subtitle picker, night light and colour tuning.",
   "author": "Vlad Pohorilets",
-  "homepage_url": "https://github.com/kvachikk/nocturne-player",
+  "homepage_url": "https://github.com/itsrody/nocturne-player",
   "browser_specific_settings": {
     "gecko": {
-      "id": "nocturne-player@kvachikk.github.io",
+      "id": "nocturne-player@itsrody.github.io",
       "strict_min_version": "158.0",
       "data_collection_permissions": {
         "required": ["none"]

@@ -7,11 +7,11 @@
   "author": "Vlad Pohorilets",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kvachikk/nocturne-player.git"
+    "url": "git+https://github.com/itsrody/nocturne-player.git"
   },
-  "homepage": "https://github.com/kvachikk/nocturne-player",
+  "homepage": "https://github.com/itsrody/nocturne-player",
   "bugs": {
-    "url": "https://github.com/kvachikk/nocturne-player/issues"
+    "url": "https://github.com/itsrody/nocturne-player/issues"
   },
   "type": "module",
   "engines": {
