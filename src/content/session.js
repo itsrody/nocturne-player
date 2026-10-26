@@ -2,6 +2,7 @@ import { createOverlay } from './ui.js';
 import { createShadowHost, el, pinStyle } from './shell.js';
 import { findApiAncestor } from './video/pageapi.js';
 import { findFeedScroller, stepFeed, waitForNextVideo } from './video/feed.js';
+import { createMediaBridge } from './video/mediasession.js';
 import { lockPageFullscreen } from './fullscreenlock.js';
 import playerCss from './player.css';
 
@@ -384,6 +385,10 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     own.listen(video, 'loadedmetadata', scheduleRelayout);
     own.listen(video, 'resize', scheduleRelayout);
 
+    const mediaBridge = createMediaBridge(video, {
+      onExit: () => actions.exit(),
+    });
+
     overlay = createOverlay({
       video,
       stage,
@@ -405,6 +410,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
 
     const release = () => {
       own.dispose();
+      mediaBridge.release();
       if (styleGuard) styleGuard.disconnect();
       styleGuard = null;
       anchorGuard.disconnect();
