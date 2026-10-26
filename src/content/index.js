@@ -6,6 +6,12 @@ import {
 } from '../lib/settings.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
+import {
+  createClaimant,
+  createJudge,
+  isTopFrame,
+  mintTicket,
+} from './frames.js';
 import { createSession } from './session.js';
 
 const PERSIST_DELAY_MS = 400;
@@ -70,27 +76,56 @@ const start = async () => {
 
   const isWatched = () => hosts.every((host) => isHostEnabled(current, host));
 
-  badge.onActivate = async (video) => {
-    if (session) return;
-    badge.hide();
-    session = createSession(video, {
-      settings: current,
-      onPersist: persist,
-      // A feed may have moved on while the player was open, so the badge goes
-      // back on whichever video the player was showing last.
-      onExit: (lastVideo) => {
-        session = null;
-        badge.show(lastVideo);
-      },
-    });
-    await session.enter();
+  // The badge is mounted by one frame at a time. The frames take turns
+  // through the top frame: it seats one claimant at a time, and a seat is
+  // the only permission a frame outside the top one has to show a badge.
+  const isTop = isTopFrame();
+  const ticket = mintTicket();
+  let granted = isTop;
+
+  // Late-bound, the way the player session binds its own actions: the verdict
+  // and the arbitration both have to reach the watcher created below them,
+  // and the watcher has to reach the same things on events of its own.
+  const refs = {
+    wantsBadge: () => false,
+    onGrant: () => {},
+    announce: () => {},
   };
+
+  const claimant = isTop
+    ? null
+    : createClaimant(window, ticket, (next) => {
+        granted = next;
+        refs.onGrant();
+      });
+
+  const judge = isTop
+    ? createJudge(window, { ownWant: () => refs.wantsBadge() })
+    : null;
 
   const watcher = createVideoWatcher((primary) => {
     if (session) return;
-    if (primary) badge.show(primary);
+    if (primary && granted && isWatched()) badge.show(primary);
     else badge.hide();
+    refs.announce();
   });
+
+  refs.onGrant = () => {
+    const primary = watcher.getPrimary();
+    if (primary && granted && isWatched()) badge.show(primary);
+    else badge.hide();
+  };
+
+  refs.wantsBadge = () =>
+    !session && watcher.getPrimary() !== null && isWatched();
+
+  refs.announce = () => {
+    // One call covers both sides of the arrangement: the frame tells the
+    // judge what it wants, and the judge — when this frame is the judge —
+    // reconsiders its seating with that knowledge in hand.
+    claimant?.setWant(refs.wantsBadge());
+    judge?.decide();
+  };
 
   const apply = () => {
     if (isWatched()) {
@@ -104,13 +139,37 @@ const start = async () => {
       // under it.
       if (session) session.exit();
     }
+    refs.announce();
+  };
+
+  badge.onActivate = async (video) => {
+    if (session) return;
+    badge.hide();
+    session = createSession(video, {
+      settings: current,
+      onPersist: persist,
+      // A feed may have moved on while the player was open, so the badge goes
+      // back on whichever video the player was showing last. But only when
+      // the frame may still have it: the site may have been switched off, or
+      // the seat may have been handed to another frame while the player was
+      // on the film.
+      onExit: (lastVideo) => {
+        session = null;
+        if (granted && isWatched()) badge.show(lastVideo);
+        else badge.hide();
+        refs.announce();
+      },
+    });
+    refs.announce();
+    await session.enter();
   };
 
   apply();
   onSettingsChanged((next) => {
     // The popup writes too, and the write also comes back here when it is
     // our own: merged into the one shared object, never replaced, so the
-    // reference the session holds stays the same.
+    // reference the session holds stays the same. Everything is normalized
+    // before it is assigned, so the whole is safe.
     Object.assign(current, next);
     apply();
   });
