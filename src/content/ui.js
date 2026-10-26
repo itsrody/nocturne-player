@@ -17,6 +17,10 @@ import { el } from './shell.js';
 import { isFeedShaped } from './gestures/swipe.js';
 import { ZONE } from './gestures/zones.js';
 
+// Controls that show themselves are timed from the moment they show: three
+// seconds of nothing happening on them, and they step aside again. The
+// countdown is rewound — not restarted from scratch — by a pointer moving
+// over an already-shown chrome, so hover holds it and silence still hides it.
 const CHROME_IDLE_MS = 3000;
 // Hold speed is a setting, chosen from the sheet's chips (1.5x–4x). A held
 // picture runs at that rate for as long as the finger stays down, wherever
@@ -283,6 +287,16 @@ export const createOverlay = ({
 
   // The chrome must never fade out from under an open panel: the panel lives
   // inside it, and hiding it mid-adjustment looked like the player had frozen.
+  // The idle timer that puts an undisturbed picture away, in its own name:
+  // showing must never and rewinding must be able to reach it alone.
+  const scheduleFade = () => {
+    chromeTimer = setTimeout(() => {
+      chromeTimer = null;
+      if (isPanelOpen()) return;
+      chrome.toggleAttribute('hidden', true);
+    }, CHROME_IDLE_MS);
+  };
+
   const setChromeVisible = (isVisible) => {
     // Read again on the way in: an episode that finished and rolled on to the
     // next one has left the bar naming the one before it.
@@ -291,12 +305,25 @@ export const createOverlay = ({
     if (chromeTimer !== null) clearTimeout(chromeTimer);
     chromeTimer = null;
     if (!isVisible || video.paused || isPanelOpen()) return;
-    chromeTimer = setTimeout(() => {
-      chromeTimer = null;
-      if (isPanelOpen()) return;
-      chrome.toggleAttribute('hidden', true);
-    }, CHROME_IDLE_MS);
+    scheduleFade();
   };
+
+  // A mouse gliding over the picture keeps the controls up — but it may not
+  // pay a tap's price for it. Showing again runs the playlist's page walk,
+  // and the pointer moves hundreds of times a second. So a wake shows only
+  // what is actually hidden; everything else it does is to rewind the idle
+  // timer, so chrome the mouse rests on never fades out from under it, and
+  // one left alone fades on the schedule as ever. Touch fingers do not wake
+  // it: tapping the picture is how a hand brings the controls back, and the
+  // drift of a palm brushing the film must not summon them.
+  const wakeChrome = (event) => {
+    if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
+    if (chromeTimer !== null) clearTimeout(chromeTimer);
+    if (chrome.hasAttribute('hidden')) setChromeVisible(true);
+    else if (!video.paused && !isPanelOpen()) scheduleFade();
+  };
+  surface.addEventListener('pointermove', wakeChrome);
+  chrome.addEventListener('pointermove', wakeChrome);
 
   const closePanels = () => {
     playlistRef.close();
@@ -682,6 +709,8 @@ export const createOverlay = ({
       if (chromeTimer !== null) clearTimeout(chromeTimer);
       if (toastTimer !== null) clearTimeout(toastTimer);
       for (const timer of chapterTimers) clearTimeout(timer);
+      surface.removeEventListener('pointermove', wakeChrome);
+      chrome.removeEventListener('pointermove', wakeChrome);
       video.removeEventListener('pause', handlePlaybackChange);
       video.removeEventListener('play', handlePlaybackChange);
       video.removeEventListener('ratechange', assertHoldRate);
