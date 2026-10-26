@@ -5,7 +5,6 @@ import { createQuality } from './video/quality.js';
 import { createRecognizer } from './gestures/recognizer.js';
 import { createControlBar } from './controls/controlbar.js';
 import { createSeeker } from './video/seek.js';
-import { createSkipFeedback } from './controls/skipfeedback.js';
 import { createTrackManager } from './video/tracks.js';
 import { createVisuals } from './video/visuals.js';
 import { el } from './shell.js';
@@ -30,6 +29,10 @@ const SIDE_SKIP_SECONDS = {
   [ZONE.LEFT]: -SKIP_SECONDS,
   [ZONE.RIGHT]: SKIP_SECONDS,
 };
+// The pill's ledger stays open for one breath after the last reaching tap —
+// the half-moon's own rhythm, kept — so a sitting of quick side taps says one
+// growing sum instead of restarting at each run's border.
+const SKIP_LINGER_MS = 700;
 const CHAPTER_TRIES_MS = [1200, 4000, 10000];
 // A pull on the picture is judged like a sheet being put away: far enough
 // down the screen, or flung fast enough, and it leaves; short of both, it
@@ -184,12 +187,26 @@ export const createOverlay = ({
   }
 
   const controlBar = createControlBar(video, seek, { onScrub: onHeadScrub });
-  const skipFeedback = createSkipFeedback();
 
   let chromeTimer = null;
   let toastTimer = null;
   let pinchBase = 1;
   let skipTarget = null;
+  // The pill's ledger for a sitting of side seeks — the half-moon's old
+  // account, kept word for word: a direction's total grows by every tap that
+  // sought and stays open for one breath after the last one, and the other
+  // direction's total closes when this one speaks. It stands beside
+  // skipTarget, the piece that keeps the film's side of the same bargain
+  // cumulative while its last seek is still in flight.
+  const skipAccount = {
+    back: { total: 0, timer: null },
+    forward: { total: 0, timer: null },
+  };
+  const clearAccount = (side) => {
+    if (side.timer !== null) clearTimeout(side.timer);
+    side.timer = null;
+    side.total = 0;
+  };
   let releaseHold = null;
   // Read from the snapshot the overlay opened with and written by the sheet's
   // chip: a film in progress takes the new pace at once, and persistence
@@ -435,7 +452,7 @@ export const createOverlay = ({
         // the picture any more.
         setChromeVisible(chrome.hasAttribute('hidden'));
       },
-      multiTap: ({ zone, x, y }) => {
+      multiTap: ({ zone }) => {
         if (isPanelOpen()) {
           closePanels();
           return;
@@ -446,7 +463,18 @@ export const createOverlay = ({
           return;
         }
         skip(seconds);
-        skipFeedback.show(seconds, x, y);
+        // Every tap that reaches here sought once, so the ledger adds per
+        // seeking tap and nothing rides on the recognizer's run bookkeeping.
+        const side = seconds > 0 ? skipAccount.forward : skipAccount.back;
+        side.total += SKIP_SECONDS;
+        const text =
+          seconds > 0 ? `▶▶ ${side.total} seconds` : `◀◀ ${side.total} seconds`;
+        showToast(text);
+        // The other direction's ledger closes when this one speaks: a flip
+        // is a fresh walk, not a step of the old one.
+        clearAccount(seconds > 0 ? skipAccount.back : skipAccount.forward);
+        if (side.timer !== null) clearTimeout(side.timer);
+        side.timer = setTimeout(() => clearAccount(side), SKIP_LINGER_MS);
       },
       holdStart: () => {
         if (isPanelOpen()) return;
@@ -619,14 +647,7 @@ export const createOverlay = ({
   restoreSettings();
   // Kept as a list so the overlay can take itself off the screen again: the
   // shadow root outlives it when a feed moves on to its next video.
-  const roots = [
-    surface,
-    ...skipFeedback.roots,
-    cueBox,
-    chrome,
-    toast,
-    filePicker,
-  ];
+  const roots = [surface, cueBox, chrome, toast, filePicker];
   shadow.append(...roots);
   setChromeVisible(isChromeShown);
 
@@ -640,12 +661,13 @@ export const createOverlay = ({
       for (const node of roots) node.remove();
       recognizer.destroy();
       controlBar.destroy();
-      skipFeedback.destroy();
       tracks.destroy();
       stopHold();
       if (dismissSettleTimer !== null) clearTimeout(dismissSettleTimer);
       if (chromeTimer !== null) clearTimeout(chromeTimer);
       if (toastTimer !== null) clearTimeout(toastTimer);
+      clearAccount(skipAccount.back);
+      clearAccount(skipAccount.forward);
       for (const timer of chapterTimers) clearTimeout(timer);
       surface.removeEventListener('pointermove', wakeChrome);
       chrome.removeEventListener('pointermove', wakeChrome);

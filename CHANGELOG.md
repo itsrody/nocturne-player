@@ -101,6 +101,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   and being "mostly on screen" is an observation rather than an arithmetic.
   The one case left to the hand-held pin is a film living inside the site's
   shadow root, out of the anchor's reach.
+- **The player speaks through one pill.** The half-moon that lit up over the
+  double-tapped side is gone, machinery and all; a skip run now reports
+  through the same toast every other notice uses — hold speed, subtitle and
+  file notices, the feed's endpoints — as a pill under the top edge's
+  middle. The pill keeps the sitting's account the way the moon used to:
+  every tap that sought adds its step to one growing sum, the total stays
+  open for a breath after the last tap, and a flip of sides starts a fresh
+  sum — all of it matching what the film's own cumulative seek did.
 
 ## [0.9.1][] - 2026-10-20
 
