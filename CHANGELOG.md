@@ -48,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The player stopped learning openings.** The intro-skip feature — the
+  listening, the learned openings, the orange opening band on the bar and
+  its settings toggle — is gone. Settings learned before this release are
+  unaffected, and the sound records older releases kept on the device are
+  removed the next time the player runs on a page.
 - **The transport moved into the seek strip.** Backward, play and forward
   sit to the bar's left, the clock at its right end — one row at the bottom
   edge, where the thumb already works. The centre of the picture is the

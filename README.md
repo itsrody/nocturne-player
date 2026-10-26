@@ -18,21 +18,6 @@ Works on any site that plays a plain `<video>`, and on YouTube.
 
 ## Key features
 
-### Skip intro
-
-The player learns a series' opening by ear and offers to skip it — no
-internet, no database of shows, nothing to set up.
-
-- **Episode 1** — it listens.
-- **Episode 2** — it hears the stretch that sounds the same as the episode
-  before, and paints it on the seek bar as it plays.
-- **From episode 3** — **Skip intro** comes up a second into the opening,
-  wherever the opening falls, and lands where the story starts.
-
-A new opening mid-season is learned the same way. Only a coarse spectrum of
-the sound is kept, on the device, with no address or title, and the listening
-can be switched off in the settings sheet.
-
 ### Colour
 
 The palette button tunes the picture: **brightness**, **contrast**,
@@ -76,8 +61,6 @@ choice is remembered for the next film.
 - Permissions: `storage` (your settings, on the device) and `activeTab`.
 - No `fetch`, no `XMLHttpRequest`, no remote URLs — a CI check enforces it.
 - Nothing is collected or sent. Works offline. The build is not minified.
-- Skip intro keeps coarse spectra of what it heard, on the device, with no
-  address or title; no sound can be rebuilt from them.
 - It runs on all sites only to find the `<video>`; you can turn it off per
   site in the popup.
 
@@ -95,10 +78,6 @@ See [PRIVACY.md](PRIVACY.md).
 - **Pages on the file system** are skipped until you grant them: Firefox
   keeps `file://` behind its own permission, separate from an all-sites
   grant.
-- **Skip intro** needs two episodes to learn an opening and offers to skip it
-  from the third. It listens only to a video the site serves itself (most
-  players, YouTube included); a film loaded from another domain is left
-  alone, since the browser would silence it.
 
 ## Install
 
