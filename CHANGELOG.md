@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   way to scrub: grab the ball and pull, and the film follows it one-to-one
   from where it stands — no jump at the grab, the same lean-away precision,
   and the controls hold on for as long as the ball is held.
+- **Tapping the bar jumps.** With the controls out, a tap anywhere on the
+  seek bar plays the moment under the finger — read from the tap's own
+  landing, so a thumb's drift between down and lift changes nothing. With
+  the controls away the same tap is still the one that brings them.
 - **The scrub is its own everywhere gesture.** A horizontal drag on any part
   of the picture scrubs the film exactly as grabbing the bar always did,
   with the finger's lean away from its own start trading reach for
