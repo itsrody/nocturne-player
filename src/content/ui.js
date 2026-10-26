@@ -1,8 +1,6 @@
 import { readSiteChapters } from './video/chapters.js';
 import { createMenu } from './controls/menu.js';
-import { createPlaylistPanel } from './controls/playlistpanel.js';
 import { createAudioTracks } from './video/audiotracks.js';
-import { createPlaylist } from './video/playlist.js';
 import { createQuality } from './video/quality.js';
 import { createRecognizer } from './gestures/recognizer.js';
 import { createControlBar } from './controls/controlbar.js';
@@ -32,7 +30,6 @@ const SIDE_SKIP_SECONDS = {
   [ZONE.LEFT]: -SKIP_SECONDS,
   [ZONE.RIGHT]: SKIP_SECONDS,
 };
-const PLAYLIST_SETTLE_MS = 600;
 const CHAPTER_TRIES_MS = [1200, 4000, 10000];
 // A pull on the picture is judged like a sheet being put away: far enough
 // down the screen, or flung fast enough, and it leaves; short of both, it
@@ -71,7 +68,6 @@ const buildGearPath = () => {
 
 const ICON = {
   exit: 'M6 6l12 12M18 6L6 18',
-  chevron: 'M7 10l5 5 5-5',
   settings: buildGearPath(),
   play: 'M8 5 19 12 8 19z',
   fullscreen: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
@@ -148,18 +144,11 @@ export const createOverlay = ({
   // to things created after them.
   const buttons = {
     exit: null,
-    colour: null,
     menu: null,
-    playlist: null,
     play: null,
     fullscreen: null,
   };
   const menuRef = { setSubtitle: () => {} };
-  const playlistRef = {
-    refresh: () => {},
-    isOpen: () => false,
-    close: () => {},
-  };
 
   // Playback speed is deliberately not restored: it belongs to the film you
   // were watching, not to the next one.
@@ -168,7 +157,6 @@ export const createOverlay = ({
   const visuals = createVisuals(video, stage);
   const quality = createQuality(video, playerHost);
   const audio = createAudioTracks(video, playerHost);
-  const playlist = createPlaylist(video, playerHost);
   const tracks = createTrackManager(
     video,
     (text) => {
@@ -260,7 +248,7 @@ export const createOverlay = ({
 
   menuRef.setSubtitle = menu.setSubtitle;
 
-  const isPanelOpen = () => menu.isOpen() || playlistRef.isOpen();
+  const isPanelOpen = () => menu.isOpen();
 
   // The chrome must never fade out from under an open panel: the panel lives
   // inside it, and hiding it mid-adjustment looked like the player had frozen.
@@ -277,9 +265,6 @@ export const createOverlay = ({
   };
 
   const setChromeVisible = (isVisible) => {
-    // Read again on the way in: an episode that finished and rolled on to the
-    // next one has left the bar naming the one before it.
-    if (isVisible) playlistRef.refresh();
     chrome.toggleAttribute('hidden', !isVisible);
     if (chromeTimer !== null) clearTimeout(chromeTimer);
     chromeTimer = null;
@@ -288,13 +273,12 @@ export const createOverlay = ({
   };
 
   // A mouse gliding over the picture keeps the controls up — but it may not
-  // pay a tap's price for it. Showing again runs the playlist's page walk,
-  // and the pointer moves hundreds of times a second. So a wake shows only
-  // what is actually hidden; everything else it does is to rewind the idle
-  // timer, so chrome the mouse rests on never fades out from under it, and
-  // one left alone fades on the schedule as ever. Touch fingers do not wake
-  // it: tapping the picture is how a hand brings the controls back, and the
-  // drift of a palm brushing the film must not summon them.
+  // pay a tap's price for it. So a wake shows only what is actually hidden;
+  // everything else it does is to rewind the idle timer, so chrome the mouse
+  // rests on never fades out from under it, and one left alone fades on the
+  // schedule as ever. Touch fingers do not wake it: tapping the picture is
+  // how a hand brings the controls back, and the drift of a palm brushing
+  // the film must not summon them.
   const wakeChrome = (event) => {
     if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
     if (chromeTimer !== null) clearTimeout(chromeTimer);
@@ -310,33 +294,10 @@ export const createOverlay = ({
   showChrome = setChromeVisible;
 
   const closePanels = () => {
-    playlistRef.close();
     menu.close();
-    buttons.playlist?.setAttribute('aria-pressed', 'false');
     buttons.menu?.setAttribute('aria-pressed', 'false');
     setChromeVisible(true);
   };
-
-  const playlistPanel = createPlaylistPanel({
-    onSelect: (level, option, isEpisode) => {
-      // A season is half an answer: the sheet stays up until the episode in
-      // it has been picked.
-      if (isEpisode) {
-        playlistPanel.close();
-        buttons.playlist.setAttribute('aria-pressed', 'false');
-      }
-      playlist.select(level, option);
-      // The player rewrites its own path as it switches, so the sheet is read
-      // again rather than guessing what the press will have done — once now,
-      // on the way back into the controls, and once more after the step it
-      // had to fetch has landed.
-      setChromeVisible(true);
-      setTimeout(() => playlistRef.refresh(), PLAYLIST_SETTLE_MS);
-    },
-  });
-
-  playlistRef.isOpen = playlistPanel.isOpen;
-  playlistRef.close = playlistPanel.close;
 
   const togglePlay = () => {
     if (video.paused) video.play().catch(() => {});
@@ -544,8 +505,6 @@ export const createOverlay = ({
     'Settings',
     ICON.settings,
     () => {
-      playlistPanel.close();
-      buttons.playlist.setAttribute('aria-pressed', 'false');
       menu.toggle();
       buttons.menu.setAttribute('aria-pressed', String(menu.isOpen()));
       setChromeVisible(true);
@@ -567,58 +526,18 @@ export const createOverlay = ({
     [buttons.menu],
   );
 
-  // The playlist sits where a thumb reaches it while the phone is held
-  // sideways — beside the way out, not buried in the settings sheet, which is
-  // no place to be changing episode from. The button names where in the series
-  // the film is; the sheet it opens is where another episode is picked.
-  const playlistLabel = el('span', { class: 'playlist-current' });
-  buttons.playlist = el(
-    'button',
-    {
-      class: 'playlist-button anchor-playlist',
-      type: 'button',
-      title: 'Episodes',
-    },
-    [playlistLabel, buildIcon(ICON.chevron)],
-  );
-  buttons.playlist.addEventListener('click', () => {
-    menu.close();
-    buttons.menu.setAttribute('aria-pressed', 'false');
-    playlistPanel.toggle();
-    const isOpen = playlistPanel.isOpen();
-    buttons.playlist.setAttribute('aria-pressed', String(isOpen));
-    setChromeVisible(true);
-  });
-
-  // A series only admits to having a playlist once its player has drawn one, so
-  // the button appears when there is something to choose from and stays away
-  // when the page is a film.
-  playlistRef.refresh = () => {
-    playlist.refresh();
-    const levels = playlist.getLevels();
-    const path = levels.map((level) => level.current);
-    playlistLabel.textContent = path.join(' · ');
-    buttons.playlist.classList.toggle('is-empty', levels.length === 0);
-    playlistPanel.setLevels(levels);
-    if (levels.length === 0) {
-      buttons.playlist.setAttribute('aria-pressed', 'false');
-    }
-  };
-  playlistRef.refresh();
-
   buttons.exit = buildButton('Exit player', ICON.exit, () => onExit());
   buttons.fullscreen = buildButton('Fullscreen', ICON.fullscreen, () => {
     onFullscreen();
     setChromeVisible(false);
   });
 
-  const fullOnly = [buttons.exit, buttons.playlist, buttons.menu];
+  const fullOnly = [buttons.exit, buttons.menu];
   for (const node of fullOnly) node.classList.add('is-full-only');
   buttons.fullscreen.classList.add('is-windowed-only');
 
   topbar.append(
     buttons.exit,
-    buttons.playlist,
     el('div', { class: 'spacer' }),
     buttons.fullscreen,
   );
@@ -633,7 +552,7 @@ export const createOverlay = ({
     if (isCompact && isPanelOpen()) closePanels();
   };
 
-  chrome.append(scrim, topbar, menu.root, playlistPanel.root, controlBar.root);
+  chrome.append(scrim, topbar, menu.root, controlBar.root);
 
   // Reading a file the user picked themselves, straight into the cue list.
   // Nothing leaves the device and nothing is parsed as markup.

@@ -56,7 +56,7 @@ choice is remembered for the next film.
 - **Quality, audio track, speed, subtitles** (site tracks or your own
   `.srt` / `.vtt`) — subtitles drill into a page of the settings sheet, where
   the tracks, the file loader and native rendering live together.
-- **Seasons and episodes** picker, and chapter marks on the seek bar.
+- **Chapter marks** on the seek bar.
 
 ## Privacy
 

@@ -58,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   its settings toggle — is gone. Settings learned before this release are
   unaffected, and the sound records older releases kept on the device are
   removed the next time the player runs on a page.
+- **The episodes picker is gone.** The seasons-and-episodes sheet, its
+  button beside the way out, and the playlist machinery behind them all
+  leave the player. The sites the feature read keep their own pickers, and
+  the player plays the film the page gives it.
 - **The transport moved into the seek strip.** Backward, play and forward
   sit to the bar's left, the clock at its right end — one row at the bottom
   edge, where the thumb already works. The centre of the picture is the
@@ -67,9 +71,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   that used to sit on the other end is gone.
 - The player is offered to Firefox on desktop as well as Android, under one
   floor for both: Firefox 158.
-- The settings, colour and episodes panels hang under the buttons that open
-  them, read from the buttons by the browser rather than guessed from the
-  topbar's padding.
 - **Colour and subtitles are pages of settings.** The topbar loses its palette
   button; the sheet's own Picture and Subtitles rows drill into pages inside
   the same sheet — one panel DOM, one anchor, a back row to return. Subtitles

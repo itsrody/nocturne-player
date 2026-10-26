@@ -105,64 +105,6 @@
   pointer-events: auto;
 }
 
-/* The playlist sits next to the way out, where a thumb reaches it with the
-   phone held sideways: one quiet button that names where in the series the
-   film is, the way the site itself reads it — the season, then the episode. */
-.playlist-button {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  max-width: 38vw;
-  height: 32px;
-  padding: 0 8px 0 12px;
-  border: 0;
-  border-radius: 9px;
-  background: rgba(118, 118, 128, 0.32);
-  color: #fff;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background 200ms var(--ease),
-    transform 200ms var(--ease);
-}
-
-.playlist-button.is-empty {
-  display: none;
-}
-
-.playlist-button:active {
-  transform: scale(0.95);
-}
-
-.playlist-button[aria-pressed='true'] {
-  background: #636366;
-}
-
-.playlist-button svg {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  fill: none;
-  stroke: rgba(235, 235, 245, 0.6);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: transform 260ms var(--ease);
-}
-
-.playlist-button[aria-pressed='true'] svg {
-  transform: rotate(180deg);
-}
-
-.playlist-current {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .spacer {
   flex: 1;
 }
@@ -577,16 +519,6 @@
   animation: panel-in 260ms var(--ease);
 }
 
-/* Anchor names, registered by the elements that open the panels. The sheets
-   used to sit at guessed offsets — 60px down, a held-off right edge — that
-   had to be maintained against whatever the topbar's own padding did. The
-   browser can answer exactly. The settings sheet is the exception now: it
-   opens above the control bar, a strip of known geometry, and is laid out
-   in plain numbers instead. */
-.anchor-playlist {
-  anchor-name: --anchor-playlist;
-}
-
 @keyframes panel-in {
   from {
     opacity: 0;
@@ -836,16 +768,6 @@
   stroke-linejoin: round;
 }
 
-/* The sheet hangs under the button that opens it, on the side of the way
-   out, rather than under the settings gear across the screen. */
-.playlist-panel {
-  position-anchor: --anchor-playlist;
-  top: calc(anchor(--anchor-playlist bottom, 60px) + 8px);
-  left: anchor(--anchor-playlist left, max(30px, env(safe-area-inset-left)));
-  right: auto;
-  transform-origin: top left;
-}
-
 /* One sheet, two pages: the settings list and the colour page are states of
    the same panel, so the sheet keeps one frame, one anchor, one scroll. */
 .menu-page,
@@ -1088,7 +1010,6 @@
   .cue,
   .button,
   .chip,
-  .playlist-button,
   .step-button,
   .play-button,
   .skip-button,
