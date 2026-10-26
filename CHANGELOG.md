@@ -94,6 +94,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   middle and both sides included — and runs it at the hold-speed chip for as
   long as the finger is down, as the right side alone used to. The rewind
   hold is gone: rewind is the seek band's business again.
+- **The badge rides the film it names.** The pre-player pill reads its place
+  from an anchor carried by the video itself, the way the sheets already
+  read theirs from their buttons: the browser answers every scroll and
+  layout move, so the scroll listener and the redraw per frame are gone,
+  and being "mostly on screen" is an observation rather than an arithmetic.
+  The one case left to the hand-held pin is a film living inside the site's
+  shadow root, out of the anchor's reach.
 
 ## [0.9.1][] - 2026-10-20
 

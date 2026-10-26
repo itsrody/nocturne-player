@@ -4,6 +4,7 @@ import badgeCss from './badge.css';
 const SIZE_PX = 44;
 const INSET_PX = 12;
 const MIN_VISIBLE_RATIO = 0.35;
+const ANCHOR_NAME = '--nocturne-film';
 
 // Fullscreen arrows rather than a logo: what the button does is make this
 // video fill the screen, and that is what a viewer is looking for. It stays
@@ -29,21 +30,40 @@ export const createBadge = () => {
   let target = null;
   let frame = 0;
   let isMounted = false;
-
-  const isMostlyVisible = (rect) => {
-    const visibleTop = Math.max(rect.top, 0);
-    const visibleBottom = Math.min(rect.bottom, window.innerHeight);
-    const visible = Math.max(0, visibleBottom - visibleTop);
-    return visible / rect.height >= MIN_VISIBLE_RATIO;
-  };
+  let listensForScroll = false;
 
   const conceal = () => {
     pinStyle(shell.host, { opacity: '0', 'pointer-events': 'none' });
   };
 
+  const reveal = () => {
+    pinStyle(shell.host, { opacity: '1', 'pointer-events': 'auto' });
+  };
+
+  // The badge stays glued to the film the way the sheets stay glued to their
+  // buttons: the video carries the anchor's name, and the host reads its
+  // place from it. CSS answers every layout change for free — scroll, a
+  // sidebar setting, a sticky header — where the pin used to walk after each
+  // of them with a scroll listener and a redraw per frame. The name lives
+  // inline on an element the extension already takes into its own frame, and
+  // it is a claim on one element: anchor() that matched two videos would be
+  // ambiguous, and an ambiguous anchor is dropped, so a switch always strips
+  // the name from the previous holder before the next takes it.
+  let anchored = null;
+
+  const releaseAnchor = () => {
+    if (anchored === null) return;
+    // 'none' rather than a removal: the property went in inline and
+    // important, and 'none' reads as never-named everywhere the name could
+    // matter, so the video is left on the page exactly as the badge found it.
+    pinStyle(anchored, { 'anchor-name': 'none' });
+    anchored = null;
+  };
+
   // Halfway up the right edge, which is the one part of a video that no player
   // puts a control on: the bottom corner sat on top of the site's own buttons
-  // and swallowed taps meant for them.
+  // and swallowed taps meant for them. This is the fallback's own answer — a
+  // film pinned by hand, one rect read per frame it stands still.
   const placement = (rect) => {
     const left = rect.right - SIZE_PX - INSET_PX;
     const top = rect.top + rect.height / 2 - SIZE_PX / 2;
@@ -54,24 +74,44 @@ export const createBadge = () => {
     };
   };
 
-  // Teardown is the watcher's job: when the video goes away it reports a new
-  // primary and calls hide(). Here we only stop drawing.
+  // Whether the film is meaningfully on screen is the browser's question to
+  // answer, in either mode: the observer fires when the film crosses the line
+  // — by scroll, and by layout move a scroll listener never hears — so the
+  // badge no longer rereads rects against its own viewport arithmetic. The
+  // observe/notify work this way leaves the answer also true for a film that
+  // moves without scrolling.
+  const visibility = new IntersectionObserver(
+    (entries) => {
+      if (entries[entries.length - 1].intersectionRatio >= MIN_VISIBLE_RATIO) {
+        reveal();
+      } else {
+        conceal();
+      }
+    },
+    { threshold: MIN_VISIBLE_RATIO },
+  );
+
+  // The fallback's reposition, for a film a light-DOM anchor cannot name: a
+  // video inside one of the site's own shadow roots is out of the badge's
+  // anchor scope, so its geometry is carried by hand, as the badge always
+  // carried it.
   const reposition = () => {
     frame = 0;
     if (!target?.isConnected) {
       conceal();
       return;
     }
+    if (anchored === target) return;
     const rect = target.getBoundingClientRect();
-    if (rect.width === 0 || !isMostlyVisible(rect)) {
+    if (rect.width === 0) {
       conceal();
       return;
     }
-    pinStyle(shell.host, {
-      opacity: '1',
-      'pointer-events': 'auto',
-      ...placement(rect),
-    });
+    reveal();
+    // An anchored badge rides the film's own edge, near as it is — even past
+    // what a viewport clamp would allow at the screen's rim. Only the
+    // fallback clamps.
+    pinStyle(shell.host, placement(rect));
   };
 
   const scheduleReposition = () => {
@@ -79,22 +119,55 @@ export const createBadge = () => {
     frame = requestAnimationFrame(reposition);
   };
 
-  const show = (video) => {
-    target = video;
-    if (!isMounted) {
-      document.body.append(shell.host);
+  const setFallbackListener = (isNeeded) => {
+    if (isNeeded === listensForScroll) return;
+    listensForScroll = isNeeded;
+    if (isNeeded) {
       window.addEventListener('scroll', scheduleReposition, true);
       window.addEventListener('resize', scheduleReposition);
+    } else {
+      window.removeEventListener('scroll', scheduleReposition, true);
+      window.removeEventListener('resize', scheduleReposition);
+    }
+  };
+
+  const show = (video) => {
+    target = video;
+    // Unshown until its position is known: a host pinned visible by default
+    // would paint one frame at a stale or unset place otherwise.
+    conceal();
+    releaseAnchor();
+    if (video.getRootNode() === document) {
+      anchored = video;
+      pinStyle(video, { 'anchor-name': ANCHOR_NAME });
+      pinStyle(shell.host, {
+        'position-anchor': ANCHOR_NAME,
+        left: `calc(anchor(right) - ${SIZE_PX + INSET_PX}px)`,
+        top: `calc(anchor(50%) - ${SIZE_PX / 2}px)`,
+      });
+      // The anchor answers the scrolling page itself; a scroll listener would
+      // only wake the fallback's redraw for no reason.
+      setFallbackListener(false);
+    } else {
+      pinStyle(shell.host, { 'position-anchor': 'none' });
+      setFallbackListener(true);
+    }
+    if (!isMounted) {
+      document.body.append(shell.host);
       isMounted = true;
+    } else {
+      visibility.disconnect();
     }
     scheduleReposition();
+    visibility.observe(video);
   };
 
   const hide = () => {
+    setFallbackListener(false);
+    releaseAnchor();
     target = null;
     if (!isMounted) return;
-    window.removeEventListener('scroll', scheduleReposition, true);
-    window.removeEventListener('resize', scheduleReposition);
+    visibility.disconnect();
     if (frame !== 0) cancelAnimationFrame(frame);
     frame = 0;
     shell.host.remove();
