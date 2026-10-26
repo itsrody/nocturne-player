@@ -1,6 +1,8 @@
 import { el } from '../shell.js';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+// The speeds a held finger can run at — the same range the setting validates.
+const HOLD_SPEEDS = [1.5, 2, 3, 4];
 
 // A row of chips whose contents are repainted rather than rebuilt, because a
 // streaming site only learns what it can offer after the film has started and
@@ -84,6 +86,8 @@ export const createMenu = ({
   audio,
   onPickFile,
   onRate,
+  holdSpeed,
+  onHoldSpeed,
   onNotice,
   isIntroSkipOn,
   onIntroSkip,
@@ -98,6 +102,22 @@ export const createMenu = ({
     },
   );
   setSpeed(video.playbackRate);
+
+  // The pace a held finger plays at, remembered for every film after this
+  // one — unlike the row above, which belongs to the film in hand. The picked
+  // value is kept as well: refresh repaints from it, so a reopened sheet
+  // shows what the holds are running at, not what the film started with.
+  let currentHoldSpeed = holdSpeed;
+  const holdRow = buildChipRow('Hold speed');
+  const setHoldSpeed = paintChips(
+    holdRow,
+    HOLD_SPEEDS.map((rate) => ({ id: rate, label: `${rate}x` })),
+    (rate) => {
+      currentHoldSpeed = rate;
+      onHoldSpeed(rate);
+    },
+  );
+  setHoldSpeed(currentHoldSpeed);
 
   const loadCell = buildActionCell('Load .srt / .vtt file', onPickFile);
   const nativeCell = buildToggleCell(
@@ -182,6 +202,7 @@ export const createMenu = ({
     qualityRow.row,
     audioRow.row,
     speedRow.row,
+    holdRow.row,
     subtitleRow.row,
     introRow,
   ]);
@@ -193,6 +214,7 @@ export const createMenu = ({
     paintSubtitles();
     paintQuality();
     audioRow.paint();
+    setHoldSpeed(currentHoldSpeed);
   };
 
   const open = () => {

@@ -18,9 +18,9 @@ import { isFeedShaped } from './gestures/swipe.js';
 import { ZONE } from './gestures/zones.js';
 
 const CHROME_IDLE_MS = 3000;
-// Holding a side plays at the speed the sheet's 2x chip sets, forward — and
-// the same speed backward, which no browser plays, so it is stepped instead.
-const HOLD_RATE = 2;
+// Hold speed is a setting, chosen from the sheet's chips (1.5x–4x). A held
+// side forward runs at that rate; backward — which no browser can play —
+// steps through the film at the same pace instead.
 // Rewinding waits for each step to land before taking the next one. Firing a
 // seek every tenth of a second, as it used to, aborted every seek before the
 // one in flight could paint a frame: on a real film the picture froze and
@@ -220,6 +220,14 @@ export const createOverlay = ({
   let pinchBase = 1;
   let skipTarget = null;
   let releaseHold = null;
+  // Read from the snapshot the overlay opened with and written by the sheet's
+  // chip: a film in progress takes the new pace at once, and persistence
+  // keeps it for the next one.
+  let holdSpeed = settings.holdSpeed;
+  // While a hold is on, it owns the element's rate. Some site engines rewrite
+  // playbackRate back to 1x the moment they see it move, which used to leave
+  // the toast promising a speed the film never ran at.
+  let holdRate = 0;
 
   // A duration of null keeps the toast up until hideToast takes it down: the
   // 2x label stays for as long as the finger does.
@@ -258,6 +266,11 @@ export const createOverlay = ({
     audio,
     onPickFile: () => filePicker.click(),
     onRate: () => {},
+    holdSpeed,
+    onHoldSpeed: (value) => {
+      holdSpeed = value;
+      onPersist({ holdSpeed: value });
+    },
     onNotice: (text) => showToast(text, HINT_MS),
     isIntroSkipOn: settings.isIntroSkipOn,
     onIntroSkip: (isOn) => {
@@ -337,22 +350,41 @@ export const createOverlay = ({
     skipTarget = seek(from + seconds);
   };
 
-  // Exactly what the 2x chip in the sheet does, for as long as the finger is
-  // down, and the speed that was set before comes back when it lifts.
+  // Writing the default rate along with it is deliberate: the rate falls back
+  // to the default when the element loads a new resource, which is exactly
+  // what a stream the site feeds itself through MSE does mid-hold.
+  const assertHoldRate = () => {
+    if (holdRate === 0 || video.playbackRate === holdRate) return;
+    video.defaultPlaybackRate = holdRate;
+    video.playbackRate = holdRate;
+    // Reading straight after the write is the element answering. A backend
+    // that cannot run at the ask clamps silently, and writing into its own
+    // answer would trade events with itself forever — so the hold steps
+    // aside and the film runs at whatever the hardware can manage.
+    if (video.playbackRate !== holdRate) holdRate = 0;
+  };
+  video.addEventListener('ratechange', assertHoldRate);
+
+  // Exactly what the hold-speed chip in the sheet does, for as long as the
+  // finger is down, and the speed that was set before comes back when it lifts.
   const holdForward = () => {
     const previousRate = video.playbackRate;
+    const previousDefault = video.defaultPlaybackRate;
     const wasPaused = video.paused;
-    video.playbackRate = HOLD_RATE;
+    holdRate = holdSpeed;
+    assertHoldRate();
     if (wasPaused) video.play().catch(() => {});
     return () => {
+      holdRate = 0;
+      video.defaultPlaybackRate = previousDefault;
       video.playbackRate = previousRate;
       if (wasPaused) video.pause();
     };
   };
 
   // Each step is worked out from the time the finger has been down, not added
-  // to the last one, so the picture goes back at 2x however long each seek
-  // takes — a slow stream just shows fewer frames on the way.
+  // to the last one, so the picture goes back at hold pace however long each
+  // seek takes — a slow stream just shows fewer frames on the way.
   const holdBack = () => {
     const wasPlaying = !video.paused;
     const origin = video.currentTime;
@@ -366,7 +398,7 @@ export const createOverlay = ({
       timer = null;
       if (!isHeld) return;
       const elapsed = (performance.now() - startedAt) / 1000;
-      seek(origin - elapsed * HOLD_RATE);
+      seek(origin - elapsed * holdSpeed);
       // In case the seek never reports back, the next one is not held up by it.
       timer = setTimeout(step, REWIND_STALL_MS);
     };
@@ -435,7 +467,7 @@ export const createOverlay = ({
         stopHold();
         const isForward = zone === ZONE.HOLD_RIGHT;
         releaseHold = isForward ? holdForward() : holdBack();
-        showToast(isForward ? '2x ▶▶' : '◀◀ 2x', null);
+        showToast(isForward ? `${holdSpeed}x ▶▶` : `◀◀ ${holdSpeed}x`, null);
       },
       holdEnd: () => stopHold(),
       dragStart: ({ zone }) => {
@@ -681,6 +713,7 @@ export const createOverlay = ({
       for (const timer of chapterTimers) clearTimeout(timer);
       video.removeEventListener('pause', handlePlaybackChange);
       video.removeEventListener('play', handlePlaybackChange);
+      video.removeEventListener('ratechange', assertHoldRate);
     },
   };
 };
