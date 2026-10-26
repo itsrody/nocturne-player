@@ -5,7 +5,7 @@ import { createAudioTracks } from './video/audiotracks.js';
 import { createPlaylist } from './video/playlist.js';
 import { createQuality } from './video/quality.js';
 import { createRecognizer } from './gestures/recognizer.js';
-import { createSeekBar } from './controls/seekbar.js';
+import { createControlBar } from './controls/controlbar.js';
 import { createSeeker } from './video/seek.js';
 import { createSkipFeedback } from './controls/skipfeedback.js';
 import { createTrackManager } from './video/tracks.js';
@@ -29,8 +29,8 @@ const HINT_MS = 2200;
 // expect to count differently from its twin.
 const SKIP_SECONDS = 10;
 const SIDE_SKIP_SECONDS = {
-  [ZONE.HOLD_LEFT]: -SKIP_SECONDS,
-  [ZONE.HOLD_RIGHT]: SKIP_SECONDS,
+  [ZONE.LEFT]: -SKIP_SECONDS,
+  [ZONE.RIGHT]: SKIP_SECONDS,
 };
 const PLAYLIST_SETTLE_MS = 600;
 const CHAPTER_TRIES_MS = [1200, 4000, 10000];
@@ -195,7 +195,7 @@ export const createOverlay = ({
     showChrome?.();
   }
 
-  const seekBar = createSeekBar(video, seek, { onScrub: onHeadScrub });
+  const controlBar = createControlBar(video, seek, { onScrub: onHeadScrub });
   const skipFeedback = createSkipFeedback();
 
   let chromeTimer = null;
@@ -463,20 +463,15 @@ export const createOverlay = ({
   const recognizer = createRecognizer(
     surface,
     {
-      tap: ({ zone, clientX }) => {
+      tap: () => {
         if (isPanelOpen()) {
           closePanels();
           return;
         }
-        // A tap on the bar itself jumps to the moment under the finger —
-        // but only when the bar is actually out to meet it: with the chrome
-        // hidden there is no bar to aim at, so the tap is the ordinary one
-        // that summons the controls.
-        if (zone === ZONE.SEEK && !chrome.hasAttribute('hidden')) {
-          setChromeVisible(true);
-          seekBar.jumpToTap({ clientX });
-          return;
-        }
+        // Every tap on the picture toggles the controls — middle, sides and
+        // all. The seek bar answers taps itself now: its pill is a real
+        // element that takes its own finger, so nothing here reads bars off
+        // the picture any more.
         setChromeVisible(chrome.hasAttribute('hidden'));
       },
       multiTap: ({ zone, x, y }) => {
@@ -501,10 +496,10 @@ export const createOverlay = ({
       holdEnd: () => stopHold(),
       dragStart: ({ x, y }) => {
         setChromeVisible(true);
-        seekBar.start({ x, y });
+        controlBar.start({ x, y });
       },
-      dragMove: (detail) => seekBar.move(detail),
-      dragEnd: () => seekBar.end(),
+      dragMove: (detail) => controlBar.move(detail),
+      dragEnd: () => controlBar.end(),
       dismissStart: () => {
         // A drag takes the whole player, sheets and all, off the screen;
         // one already open is settled first, so nothing is twitching under
@@ -545,16 +540,6 @@ export const createOverlay = ({
     return button;
   };
 
-  // The transport sits in the seek strip now — backward, play, forward to
-  // the bar's left, in one row with it — where a thumb reaches all three
-  // without leaving the bottom edge it already works. The middle of the
-  // picture belongs to the gestures alone.
-  seekBar.setControls([
-    buildSkipButton(-SKIP_SECONDS),
-    buttons.play,
-    buildSkipButton(SKIP_SECONDS),
-  ]);
-
   buttons.menu = buildButton(
     'Settings',
     ICON.settings,
@@ -565,7 +550,21 @@ export const createOverlay = ({
       buttons.menu.setAttribute('aria-pressed', String(menu.isOpen()));
       setChromeVisible(true);
     },
-    'button anchor-menu',
+    'button',
+  );
+
+  // The control bar carries everything the thumb works — transport before
+  // the ruler, and the gear trailing the clock at its far right: opening
+  // the settings is a reach along the edge the hand is already on, not a
+  // walk to the top corner it never visits while scrubbing. The middle of
+  // the picture belongs to the gestures alone.
+  controlBar.setControls(
+    [
+      buildSkipButton(-SKIP_SECONDS),
+      buttons.play,
+      buildSkipButton(SKIP_SECONDS),
+    ],
+    [buttons.menu],
   );
 
   // The playlist sits where a thumb reaches it while the phone is held
@@ -621,7 +620,6 @@ export const createOverlay = ({
     buttons.exit,
     buttons.playlist,
     el('div', { class: 'spacer' }),
-    buttons.menu,
     buttons.fullscreen,
   );
 
@@ -635,7 +633,7 @@ export const createOverlay = ({
     if (isCompact && isPanelOpen()) closePanels();
   };
 
-  chrome.append(scrim, topbar, menu.root, playlistPanel.root, seekBar.root);
+  chrome.append(scrim, topbar, menu.root, playlistPanel.root, controlBar.root);
 
   // Reading a file the user picked themselves, straight into the cue list.
   // Nothing leaves the device and nothing is parsed as markup.
@@ -695,7 +693,7 @@ export const createOverlay = ({
   const chapterTimers = CHAPTER_TRIES_MS.map((delay) =>
     setTimeout(() => {
       const chapters = readSiteChapters(playerHost);
-      if (chapters.length > 0) seekBar.setChapters(chapters);
+      if (chapters.length > 0) controlBar.setChapters(chapters);
     }, delay),
   );
 
@@ -722,7 +720,7 @@ export const createOverlay = ({
     destroy: () => {
       for (const node of roots) node.remove();
       recognizer.destroy();
-      seekBar.destroy();
+      controlBar.destroy();
       skipFeedback.destroy();
       tracks.destroy();
       stopHold();

@@ -1,11 +1,5 @@
-import { hitTest, isHoldZone, ZONE } from './zones.js';
+import { hitTest, isSide, ZONE } from './zones.js';
 import { isVerticalMove, readSwipe } from './swipe.js';
-
-// A hold can begin anywhere on the picture — the way a long-press means "run
-// it fast" everywhere the surface is worth touching. The one exception is the
-// seek band: a press there is the start of a scrub, and the two meanings
-// cannot share a finger.
-const canHold = (zone) => zone !== ZONE.SEEK;
 
 const HOLD_DELAY_MS = 350;
 // How far a drag must travel before the scrub stands up — the same boundary
@@ -58,7 +52,7 @@ export const createRecognizer = (
   let holdTimer = null;
   let tapTimer = null;
   let tapCount = 0;
-  let tapZone = ZONE.DEAD;
+  let tapZone = ZONE.MIDDLE;
   let dismissAnchor = null;
   // The most recent sample of a drag that is being tracked, so its end can
   // report the pace of the last stretch — a flick reads as intent even where
@@ -111,8 +105,8 @@ export const createRecognizer = (
   const registerTap = (zone, point) => {
     if (
       tapCount > 0 &&
-      isHoldZone(tapZone) &&
-      (zone === tapZone || zone === ZONE.DEAD)
+      isSide(tapZone) &&
+      (zone === tapZone || zone === ZONE.MIDDLE)
     ) {
       tapCount += 1;
       emit('multiTap', {
@@ -133,9 +127,13 @@ export const createRecognizer = (
     if (tapTimer !== null) clearTimeout(tapTimer);
     tapCount = 1;
     tapZone = zone;
-    // The anchor rides along, not the lift: the finger's own wander between
-    // down and up is not intent, and wherever a tap's words are acted on, it
-    // is where the finger first landed that they name.
+    // Zones are named from the press, but the coordinates that travel are
+    // the finger's own resting place — its last tracked sample, read when
+    // the tap completed. A press that wanders within the tolerance is still
+    // the tap it was; that much drift is not a new gesture. Where the tap
+    // is aimed is where the finger settled, though: the jump onto the bar
+    // plays the moment under the lifted finger, the place the eye was
+    // watching when the tap was done.
     emit('tap', {
       zone,
       x: point.x,
@@ -184,12 +182,12 @@ export const createRecognizer = (
       lastY: point.y,
       clientX: point.clientX,
       clientY: point.clientY,
-      zone: hitTest(point.x, point.y, point.width, point.height),
+      zone: hitTest(point.x, point.width),
     };
     mode = MODE.PENDING;
     holdTimer = setTimeout(() => {
       holdTimer = null;
-      if (mode !== MODE.PENDING || !canHold(anchor.zone)) return;
+      if (mode !== MODE.PENDING) return;
       mode = MODE.HOLD;
       emit('holdStart', { zone: anchor.zone });
     }, HOLD_DELAY_MS);
@@ -221,36 +219,30 @@ export const createRecognizer = (
       const dy = point.y - anchor.y;
       if (Math.hypot(dx, dy) < MOVE_TOLERANCE_PX) return;
       clearHoldTimer();
-      // Checked before the zones: a flick is the same gesture wherever on
-      // the picture it starts, the seek band and the side boxes included.
+      // Checked before anything else: a flick is the same gesture wherever
+      // on the picture it starts, middle and sides alike.
       if (isVerticalMove(dx, dy)) {
         if (dy < 0) {
           // Finger up means the next video, where the page is a feed at
-          // all. An upward drag on any other page has no business of its
-          // own but the seek band's precision scrub, which the fall
-          // through carries.
+          // all. Anywhere else an upward drag has no business of its own,
+          // and the gesture is abandoned so the lift stays a dead lift.
           if (canSwipe()) {
             mode = MODE.SWIPE;
             return;
           }
-          if (anchor.zone !== ZONE.SEEK) {
-            mode = MODE.ABANDONED;
-            return;
-          }
-        } else if (anchor.zone !== ZONE.SEEK) {
-          // Finger down means out. The drag is a pull to dismiss, read as
-          // a pull-to-close from wherever it begins except the bottom
-          // band, whose drags are the scrub's. The pull goes on being
-          // tracked, move by move; what the pull turns out to be is the
-          // player's to read, from how far it went and how fast it lifted.
-          mode = MODE.DISMISS;
-          dismissAnchor = anchor;
-          lastDismissSample = { y: point.y, time: performance.now() };
-          emit('dismissStart', {});
+          mode = MODE.ABANDONED;
           return;
         }
-        // A vertical lead taken back by the seek band falls through, the
-        // way the horizontal ones below it do.
+        // Finger down means out. The drag is a pull to dismiss, read as a
+        // pull-to-close from wherever it starts — middle and sides alike.
+        // The pull goes on being tracked, move by move; what the pull turns
+        // out to be is the player's to read, from how far it went and how
+        // fast it lifted.
+        mode = MODE.DISMISS;
+        dismissAnchor = anchor;
+        lastDismissSample = { y: point.y, time: performance.now() };
+        emit('dismissStart', {});
+        return;
       }
       // Whatever arrives here is a scrub: horizontal from anywhere on the
       // picture, or vertical where the band resumed it. Engagement waits a
@@ -318,6 +310,10 @@ export const createRecognizer = (
 
   const handleUp = (event) => {
     if (!pointers.has(event.pointerId)) return;
+    // The finger's last tracked sample is read before the pointer is
+    // forgotten: the settled place is what a tap is judged from, and the
+    // down event's own coordinates are only its first guess at it.
+    const settled = pointers.get(event.pointerId);
     pointers.delete(event.pointerId);
 
     if (mode === MODE.PINCH) {
@@ -333,7 +329,7 @@ export const createRecognizer = (
     else if (mode === MODE.HOLD) emit('holdEnd', { zone: anchor.zone });
     else if (mode === MODE.SWIPE) finishSwipe(event);
     else if (mode === MODE.DISMISS) finishDismiss(event);
-    else if (mode === MODE.PENDING) registerTap(anchor.zone, anchor);
+    else if (mode === MODE.PENDING) registerTap(anchor.zone, settled);
     mode = MODE.IDLE;
   };
 

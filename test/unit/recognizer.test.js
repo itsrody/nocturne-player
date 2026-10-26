@@ -65,7 +65,7 @@ test('a lone tap acts where it lands, a side included', () => {
   tapAt(0.8, 0.4);
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
-    [['tap', 'holdRight']],
+    [['tap', 'right']],
   );
   mock.timers.reset();
 });
@@ -89,8 +89,8 @@ test('a double-tap that is not very quick still seeks, never toggles', () => {
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
     [
-      ['tap', 'holdRight'],
-      ['multiTap', 'holdRight'],
+      ['tap', 'right'],
+      ['multiTap', 'right'],
     ],
   );
   mock.timers.reset();
@@ -105,8 +105,8 @@ test('a second tap that strays onto the middle still seeks', () => {
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
     [
-      ['tap', 'holdRight'],
-      ['multiTap', 'holdRight'],
+      ['tap', 'right'],
+      ['multiTap', 'right'],
     ],
   );
   mock.timers.reset();
@@ -120,8 +120,8 @@ test('a tap on the other side starts its own run instead of joining', () => {
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
     [
-      ['tap', 'holdRight'],
-      ['tap', 'holdLeft'],
+      ['tap', 'right'],
+      ['tap', 'left'],
     ],
   );
   mock.timers.reset();
@@ -135,8 +135,8 @@ test('holding a side reports the start and the end of the hold', () => {
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
     [
-      ['holdStart', 'holdRight'],
-      ['holdEnd', 'holdRight'],
+      ['holdStart', 'right'],
+      ['holdEnd', 'right'],
     ],
   );
   mock.timers.reset();
@@ -150,8 +150,8 @@ test('a hold begins anywhere on the picture, the middle included', () => {
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
     [
-      ['holdStart', 'dead'],
-      ['holdEnd', 'dead'],
+      ['holdStart', 'middle'],
+      ['holdEnd', 'middle'],
     ],
   );
   mock.timers.reset();
@@ -164,19 +164,19 @@ test('a drifting tap stays a tap, wherever it started', () => {
   surface.fire('pointerup', 0.52, 0.4);
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
-    [['tap', 'dead']],
+    [['tap', 'middle']],
   );
   mock.timers.reset();
 });
 
-test('a drifting tap on the seek band stays a tap, not a timeline jump', () => {
+test('a drifting tap over the strip stays a tap too', () => {
   const { events, surface } = setUp();
   surface.fire('pointerdown', 0.5, 0.8);
   surface.fire('pointermove', 0.52, 0.8);
   surface.fire('pointerup', 0.52, 0.8);
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
-    [['tap', 'seek']],
+    [['tap', 'middle']],
   );
   mock.timers.reset();
 });
@@ -191,41 +191,40 @@ test('a horizontal drag anywhere scrubs once it has engaged', () => {
     events.map((event) => event.name),
     ['dragStart', 'dragMove', 'dragMove', 'dragEnd'],
   );
-  assert.equal(events[0].zone, 'dead');
+  assert.equal(events[0].zone, 'middle');
   mock.timers.reset();
 });
 
-test('a tap on the seek band names where it landed, at its anchor', () => {
+test('a tap past the strip names the spot the finger settled on', () => {
   const { surface, events } = setUp();
   surface.fire('pointerdown', 0.7, 0.8);
-  // A thumb's wander between down and up is not aim: the tap still speaks
-  // for the place the finger first landed.
+  // The press's own first landing can carry the tolerance's drift; where
+  // the finger rests when the tap completes is what was aimed at.
   surface.fire('pointermove', 0.72, 0.8);
   surface.fire('pointerup', 0.72, 0.8);
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
-    [['tap', 'seek']],
+    [['tap', 'right']],
   );
   const [tap] = events;
-  assert.equal(tap.x, 0.7 * 800);
-  assert.equal(tap.clientX, 0.7 * 800);
+  assert.equal(tap.x, 0.72 * 800);
+  assert.equal(tap.clientX, 0.72 * 800);
   assert.equal(tap.clientY, 0.8 * 360);
   mock.timers.reset();
 });
 
-test('the seek band is for scrubbing, never for a hold', () => {
+test('a hold begins on the strip too — everywhere is everywhere now', () => {
   const { events, surface } = setUp();
   surface.fire('pointerdown', 0.5, 0.8);
   mock.timers.tick(400);
   surface.fire('pointerup', 0.5, 0.8);
   mock.timers.tick(400);
-  assert.equal(
-    events.some((event) => event.name.startsWith('hold')),
-    false,
-  );
   assert.deepEqual(
     events.map((event) => [event.name, event.zone]),
-    [['tap', 'seek']],
+    [
+      ['holdStart', 'middle'],
+      ['holdEnd', 'middle'],
+    ],
   );
   mock.timers.reset();
 });
@@ -262,23 +261,22 @@ test('a downward drag dismisses even where the page is a feed', () => {
   mock.timers.reset();
 });
 
-test('the seek band keeps its scrub on a vertical-biased pull', () => {
+test('a downward pull at the strip still pulls the player away', () => {
   const { events, surface } = setUp();
   surface.fire('pointerdown', 0.5, 0.8);
   surface.fire('pointermove', 0.5, 0.9);
   surface.fire('pointerup', 0.5, 0.9);
   assert.equal(
-    events.some((event) => event.name.startsWith('dismiss')),
+    events.some((event) => event.name.startsWith('drag')),
     false,
   );
   assert.deepEqual(
     events.map((event) => event.name),
-    ['dragStart', 'dragMove', 'dragEnd'],
+    ['dismissStart', 'dismissEnd'],
   );
-  assert.equal(events.at(-1).zone, 'seek');
+  assert.ok(Math.abs(events.at(-1).progress - 0.1) < 0.001, 'progress');
   mock.timers.reset();
 });
-
 test('an upward flick still steps a feed to the next video', () => {
   const { events, surface } = setUp({ canSwipe: () => true });
   surface.fire('pointerdown', 0.5, 0.5);

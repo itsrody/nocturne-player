@@ -14,10 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   it: play and pause, stepping forward and back by ten seconds, any position
   by name, and stop closes the player. The film's name and artwork are what
   the page itself declares.
-- **A tap works anywhere on the picture**, middle, sides and all — no more
-  aiming for the centre strip. A double-tap on a side still seeks, and the
-  first tap of it brings the controls up with the seek instead of waiting a
-  third of a second to guess which was meant.
+- **Three zones, one everywhere.** The picture reads as just what it is:
+  left, middle and right, full height, no more guessed bands. Every
+  anywhere-gesture — hold, the pull to dismiss, the feed's flick, the
+  horizontal scrub — works wherever the finger starts; every tap toggles
+  the controls; and the seek bar is a real element that answers for its
+  own taps and drags instead of a region the player guessed at.
 - **A mouse over the picture keeps the controls up.** On a desktop, moving
   the pointer over the film holds them and rewinds their idle fade with the
   pointer; a tap still brings them, and a finger's drift does not.
@@ -34,9 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   from where it stands — no jump at the grab, the same lean-away precision,
   and the controls hold on for as long as the ball is held.
 - **Tapping the bar jumps.** With the controls out, a tap anywhere on the
-  seek bar plays the moment under the finger — read from the tap's own
-  landing, so a thumb's drift between down and lift changes nothing. With
-  the controls away the same tap is still the one that brings them.
+  seek bar plays the moment under the finger — read from where the finger
+  settled when the tap completed, so a thumb's slide during the tap still
+  aims at the resting spot, and the ask is bounded by the film's own
+  seekable range, so a streamed film lands where it was pointed instead of
+  falling short and walking the ruler back. With the controls away the same
+  tap is still the one that brings them.
 - **The scrub is its own everywhere gesture.** A horizontal drag on any part
   of the picture scrubs the film exactly as grabbing the bar always did,
   with the finger's lean away from its own start trading reach for
@@ -71,6 +76,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   moves because its row carried the most content: the track chips, the local
   file loader and the native renderer now share a page of their own instead
   of pushing the rest of the sheet down.
+- **The bottom strip is the control bar, and the settings gear lives at its
+  far right, beside the clock.** The topbar keeps only the ways out of the
+  film; the settings sheet rises above the bar's right end, laid in plain
+  numbers against the bar's known geometry — no anchor reaching into the
+  strip's DOM, no mis-placed sheet, no overlap. The bar's two slots (the
+  transport leading, the clock and whatever joins it trailing) name their
+  own touch, since the strip itself is blind to taps that belong to the
+  film: a plain button carried there used to be untouchable.
 - The sheet headings' spaced capitals sit exactly in their line box.
 - Videos found by a sweep are watched with a margin past the screen, so a
   scroll that never goes near a film no longer costs a sweep.

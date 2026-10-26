@@ -15,6 +15,11 @@ const PRECISION_STEPS = [
   { withinPx: Infinity, factor: 0.1 },
 ];
 
+// How far a press on the pill may wander before it is read as a scrub —
+// the same wander a tap may carry: under the line the lift is the tap the
+// finger meant, so the jump waits for it.
+const TAP_TOLERANCE_PX = 12;
+
 const precisionFor = (distancePx) => {
   for (const step of PRECISION_STEPS) {
     if (distancePx <= step.withinPx) return step;
@@ -25,7 +30,7 @@ const precisionFor = (distancePx) => {
 // The third argument is a listener for the head ball's own grab: the
 // controls must hold on for as long as the ball is held, since a drag on
 // them otherwise walks off mid-scrub at the idle fade.
-export const createSeekBar = (video, seek, { onScrub } = {}) => {
+export const createControlBar = (video, seek, { onScrub } = {}) => {
   // One clock at the bar's right end, read as "current / duration": the
   // place in the film and its whole length at one glance.
   const timer = el('span', { class: 'time', text: '0:00' });
@@ -38,8 +43,15 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
   const head = el('div', { class: 'seek-head' });
   const area = el('div', { class: 'seek-area' }, [track, head, headTime]);
   const chapterLabel = el('div', { class: 'chapter' });
-  const row = el('div', { class: 'seek-row' }, [area, timer]);
-  const root = el('div', { class: 'seekbar' }, [chapterLabel, row]);
+  // The bar is framed by two slots: the transport before it, and at the far
+  // right the clock with whatever buttons keep it company. Two groups
+  // rather than bare flex children, so a narrow row can squeeze the ruler
+  // — the one thing built to give — without tearing the clock from the
+  // button beside it or pushing the transport off the strip.
+  const lead = el('div', { class: 'controlbar-lead' });
+  const tail = el('div', { class: 'controlbar-tail' }, [timer]);
+  const row = el('div', { class: 'controlbar-row' }, [lead, area, tail]);
+  const root = el('div', { class: 'controlbar' }, [chapterLabel, row]);
 
   let isScrubbing = false;
   let scrubTime = 0;
@@ -143,12 +155,13 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     paint(scrubTime);
   };
 
-  // A tap on the bar itself is answered where the finger was: the moment
-  // under the tap is the one that plays, the way the fill's own ruler
-  // reads it. It is the tap's anchor that speaks, not its lift — the drift
-  // a thumb makes between down and up is not aim, and a band-wide ruler
-  // would pay for it in film. Off the track's own edges the answer is
-  // clamped to its reach; the labels beside it aim at its ends.
+  // A tap on the bar itself is answered where the finger settled: the
+  // moment under the tap plays, the way the fill's own ruler reads it. The
+  // tap's aim is the resting place the eye was watching when the tap was
+  // done — not the press's first landing, which can carry the tolerance's
+  // own twelve pixels and pay them out in minutes of film on a wide ruler.
+  // Off the track's own edges the answer is clamped to its reach; the
+  // labels beside it aim at its ends.
   const jumpToTap = ({ clientX } = {}) => {
     const total = duration();
     if (total === 0) return;
@@ -219,17 +232,84 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
   head.addEventListener('pointerup', releaseHead);
   head.addEventListener('pointercancel', abortHead);
 
+  // The pill's own finger handling — the seek bar is a real element, not a
+  // band guessed off the picture behind it. A press that settles without
+  // wandering is a tap and jumps to the place the finger rested on; a pull
+  // past the tap's own tolerance is a scrub through the very same
+  // precision ladder, with the hold owned by the area itself so the
+  // finger's take is not lost if it slips off the pill mid-drag. Both
+  // refuse what the head owns: its grab stops propagation before this can
+  // hear it, and a once-only owner is one rule for both readers.
+  let areaPointerId = null;
+  let areaLastX = 0;
+  let areaOriginY = 0;
+  let areaWidth = 0;
+
+  const downArea = (event) => {
+    if (areaPointerId !== null || isScrubbing || duration() === 0) return;
+    const rect = track.getBoundingClientRect();
+    if (rect.width === 0) return;
+    event.preventDefault();
+    areaPointerId = event.pointerId;
+    areaLastX = event.clientX;
+    areaOriginY = event.clientY;
+    areaWidth = rect.width;
+    area.setPointerCapture(areaPointerId);
+  };
+
+  const moveArea = (event) => {
+    if (event.pointerId !== areaPointerId) return;
+    const dx = event.clientX - areaLastX;
+    areaLastX = event.clientX;
+    // The tap boundary is the everywhere-scrub's own: under it the press
+    // is still a possible tap, so the answer waits for the lift.
+    if (
+      !isScrubbing &&
+      Math.hypot(dx, event.clientY - areaOriginY) < TAP_TOLERANCE_PX
+    ) {
+      return;
+    }
+    // The hold's origin is the press's own seat: the precision ladder is
+    // measured from where the finger took the bar, not from wherever the
+    // drag began to walk.
+    if (!isScrubbing) start({ y: areaOriginY });
+    move({ dx, y: event.clientY, width: areaWidth });
+  };
+
+  const upArea = (event) => {
+    if (event.pointerId !== areaPointerId) return;
+    areaPointerId = null;
+    if (isScrubbing) end();
+    else jumpToTap({ clientX: areaLastX });
+  };
+
+  const cancelArea = (event) => {
+    if (event.pointerId !== areaPointerId) return;
+    areaPointerId = null;
+    isScrubbing = false;
+    root.classList.remove('is-scrubbing');
+    paint(video.currentTime);
+  };
+
+  area.addEventListener('pointerdown', downArea);
+  area.addEventListener('pointermove', moveArea);
+  area.addEventListener('pointerup', upArea);
+  area.addEventListener('pointercancel', cancelArea);
+
   video.addEventListener('timeupdate', sync);
   video.addEventListener('durationchange', sync);
   video.addEventListener('seeked', sync);
   sync();
 
-  // The transport row lives inside the strip: the player's own buttons are
-  // handed over here once they exist and are re-set in front of the bar,
-  // with the clock trailing off its right end. The strip was built to be
-  // the whole bottom edge — the centre overlay it retired folded into it.
-  const setControls = (nodes = []) => {
-    row.replaceChildren(...nodes, area, timer);
+  // The bottom of the screen is the player's own control bar: the transport,
+  // the ruler and the clock live over it in one strip, and the gear that
+  // opens settings trails the clock at the far right. The player's buttons
+  // are handed over here once they exist — what leads, and what trails.
+  // The strip was built to be the whole bottom edge — the centre overlay it
+  // retired folded into it.
+  const setControls = (nodes = [], trailing = []) => {
+    lead.replaceChildren(...nodes);
+    tail.replaceChildren(timer, ...trailing);
   };
 
   return {
@@ -237,7 +317,6 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     start,
     move,
     end,
-    jumpToTap,
     setControls,
     setChapters: (list) => {
       chapters = list;
@@ -253,6 +332,10 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
       head.removeEventListener('pointermove', dragHead);
       head.removeEventListener('pointerup', releaseHead);
       head.removeEventListener('pointercancel', abortHead);
+      area.removeEventListener('pointerdown', downArea);
+      area.removeEventListener('pointermove', moveArea);
+      area.removeEventListener('pointerup', upArea);
+      area.removeEventListener('pointercancel', cancelArea);
     },
   };
 };

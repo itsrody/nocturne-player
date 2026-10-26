@@ -16,9 +16,24 @@ import { call, isFunction } from './pageapi.js';
 export const createSeeker = (video, host) => {
   const isSiteSeekable = isFunction(host, 'seekTo');
 
+  // The reach the element grants. A streamed film's seekable range can stop
+  // short of the duration it advertises, and an ask past it is not refused —
+  // the element quietly lands early, and the ruler is caught walking back
+  // from the moment the finger aimed at. A bounded ask is an accurate one:
+  // the ask is only narrowed when the range is real — read, and
+  // meaningfully short of the film's own end — so an unread or full-width
+  // range never narrows a jump the ruler promises.
+  const reachable = (time, limit) => {
+    const range = video.seekable;
+    if (!range || range.length === 0) return time;
+    const latest = range.end(range.length - 1);
+    if (latest <= 0 || latest >= limit - 1) return time;
+    return Math.min(time, latest);
+  };
+
   return (seconds, isFinal = true) => {
     const limit = Number.isFinite(video.duration) ? video.duration : seconds;
-    const time = Math.min(limit, Math.max(0, seconds));
+    const time = reachable(Math.min(limit, Math.max(0, seconds)), limit);
     if (isSiteSeekable) call(host, 'seekTo', time, isFinal);
     else video.currentTime = time;
     return time;
