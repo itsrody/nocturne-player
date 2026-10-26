@@ -8,9 +8,9 @@ import { isVerticalMove, readSwipe } from './swipe.js';
 const canHold = (zone) => zone !== ZONE.SEEK;
 
 const HOLD_DELAY_MS = 350;
-// How long a lone tap on a side waits for a second one before it is taken to
-// mean "show the controls". Acting on it at once turned a double-tap that was
-// not quite quick enough into the controls popping up instead of a seek.
+// How long a first tap is followed by the possibility of a second, whether a
+// run of side seeks begins there. Nothing waits on it: the tap already spoke,
+// so the window only decides whether the next tap joins it as a run.
 const MULTI_TAP_WINDOW_MS = 320;
 // Once a side is seeking, a tap on it keeps seeking for a little longer than
 // the double-tap window: tapping on to go further is a slower rhythm than the
@@ -76,44 +76,48 @@ export const createRecognizer = (
 
   const flushTaps = () => {
     tapTimer = null;
-    // A run of seeks in a side box has already been sent tap by tap.
-    const isSeekRun = isHoldZone(tapZone);
-    if (tapCount === 1) emit('tap', { zone: tapZone });
-    else if (!isSeekRun) emit('multiTap', { zone: tapZone, count: tapCount });
+    // Everything a tap had to say was said where it happened; the window
+    // was only ever about whether more taps were still on their way.
     tapCount = 0;
   };
 
-  // The neutral middle has no double-tap, so a tap there acts at once: the
-  // controls come up under the finger and a quick second tap lands on pause.
-  // Only a tap that strays there in the middle of a side run waits, and counts
-  // towards that run — a second tap rarely lands exactly where the first did.
-  // Tapping the other side mid-run starts a run of its own.
+  // Every tap speaks the moment the finger lifts: the controls come up under
+  // it sooner than any window can allow, and a run of side seeks is paid per
+  // tap rather than held to a rhythm the finger did not keep. The first tap
+  // acts; every tap that follows while a side run lives joins it — with a
+  // stray that lands on the neutral middle counted into the run it came
+  // from, because a second tap rarely lands exactly where the first did. A
+  // tap on the other side, or one that arrives once the run is done, starts
+  // a run of its own; the neutral middle never formed runs, and still does
+  // not.
   const registerTap = (zone, point) => {
-    const isSideRun = tapCount > 0 && isHoldZone(tapZone);
-    if (zone === ZONE.DEAD && !isSideRun) {
-      emit('tap', { zone });
-      return;
-    }
-    if (tapCount === 0 || (zone !== ZONE.DEAD && zone !== tapZone)) {
-      tapCount = 0;
-      tapZone = zone;
-    }
-    tapCount += 1;
-    if (tapTimer !== null) clearTimeout(tapTimer);
-
-    // In the side boxes every tap from the second on is a seek, sent the moment
-    // the finger lifts. Waiting the window out first put a quarter of a second
-    // between the tap and the jump, on top of whatever the seek itself takes.
-    if (tapCount >= 2 && isHoldZone(tapZone)) {
+    if (
+      tapCount > 0 &&
+      isHoldZone(tapZone) &&
+      (zone === tapZone || zone === ZONE.DEAD)
+    ) {
+      tapCount += 1;
       emit('multiTap', {
         zone: tapZone,
         count: tapCount,
         x: point.x,
         y: point.y,
       });
+      // Between taps of a live run the window is the run's own, a slower
+      // rhythm than the double-tap that started it: tapping on to go further
+      // is a habit, not a reflex.
       tapTimer = setTimeout(flushTaps, SEEK_RUN_MS);
       return;
     }
+    // A fresh tap, whatever the last run left behind: the run's timer is
+    // cancelled rather than waited out, so a tap that lands just past a run
+    // is judged on its own merits.
+    if (tapTimer !== null) clearTimeout(tapTimer);
+    tapCount = 1;
+    tapZone = zone;
+    emit('tap', { zone });
+    // The window after a first tap exists only to know whether a second is
+    // coming; nothing is decided when it runs out.
     tapTimer = setTimeout(flushTaps, MULTI_TAP_WINDOW_MS);
   };
 
