@@ -77,6 +77,10 @@ export const createRecognizer = (
     return {
       x: event.clientX - rect.left,
       y: event.clientY - rect.top,
+      // The raw pointer too: the overlay's own children live in client
+      // coordinates, and a tap on the bar has to land on the bar's map.
+      clientX: event.clientX,
+      clientY: event.clientY,
       width: rect.width,
       height: rect.height,
     };
@@ -129,7 +133,16 @@ export const createRecognizer = (
     if (tapTimer !== null) clearTimeout(tapTimer);
     tapCount = 1;
     tapZone = zone;
-    emit('tap', { zone });
+    // The anchor rides along, not the lift: the finger's own wander between
+    // down and up is not intent, and wherever a tap's words are acted on, it
+    // is where the finger first landed that they name.
+    emit('tap', {
+      zone,
+      x: point.x,
+      y: point.y,
+      clientX: point.clientX,
+      clientY: point.clientY,
+    });
     // The window after a first tap exists only to know whether a second is
     // coming; nothing is decided when it runs out.
     tapTimer = setTimeout(flushTaps, MULTI_TAP_WINDOW_MS);
@@ -169,6 +182,8 @@ export const createRecognizer = (
       y: point.y,
       lastX: point.x,
       lastY: point.y,
+      clientX: point.clientX,
+      clientY: point.clientY,
       zone: hitTest(point.x, point.y, point.width, point.height),
     };
     mode = MODE.PENDING;

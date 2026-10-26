@@ -510,9 +510,18 @@ export const createOverlay = ({
   const recognizer = createRecognizer(
     surface,
     {
-      tap: () => {
+      tap: ({ zone, clientX }) => {
         if (isPanelOpen()) {
           closePanels();
+          return;
+        }
+        // A tap on the bar itself jumps to the moment under the finger —
+        // but only when the bar is actually out to meet it: with the chrome
+        // hidden there is no bar to aim at, so the tap is the ordinary one
+        // that summons the controls.
+        if (zone === ZONE.SEEK && !chrome.hasAttribute('hidden')) {
+          setChromeVisible(true);
+          seekBar.jumpToTap({ clientX });
           return;
         }
         setChromeVisible(chrome.hasAttribute('hidden'));

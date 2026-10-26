@@ -152,6 +152,22 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     paint(scrubTime);
   };
 
+  // A tap on the bar itself is answered where the finger was: the moment
+  // under the tap is the one that plays, the way the fill's own ruler
+  // reads it. It is the tap's anchor that speaks, not its lift — the drift
+  // a thumb makes between down and up is not aim, and a band-wide ruler
+  // would pay for it in film. Off the track's own edges the answer is
+  // clamped to its reach; the labels beside it aim at its ends.
+  const jumpToTap = ({ clientX } = {}) => {
+    const total = duration();
+    if (total === 0) return;
+    const rect = track.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    seek(ratio * total);
+    paint(ratio * total);
+  };
+
   // Grabbing the ball itself: a second way to scrub, for a finger that aims
   // at the head rather than resting on the picture. The grab never jumps —
   // the drag starts from where the film stands, and its reach maps onto the
@@ -223,6 +239,7 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     start,
     move,
     end,
+    jumpToTap,
     setZones: (list) => {
       spans = list;
       placeZones();

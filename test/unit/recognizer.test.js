@@ -195,6 +195,24 @@ test('a horizontal drag anywhere scrubs once it has engaged', () => {
   mock.timers.reset();
 });
 
+test('a tap on the seek band names where it landed, at its anchor', () => {
+  const { surface, events } = setUp();
+  surface.fire('pointerdown', 0.7, 0.8);
+  // A thumb's wander between down and up is not aim: the tap still speaks
+  // for the place the finger first landed.
+  surface.fire('pointermove', 0.72, 0.8);
+  surface.fire('pointerup', 0.72, 0.8);
+  assert.deepEqual(
+    events.map((event) => [event.name, event.zone]),
+    [['tap', 'seek']],
+  );
+  const [tap] = events;
+  assert.equal(tap.x, 0.7 * 800);
+  assert.equal(tap.clientX, 0.7 * 800);
+  assert.equal(tap.clientY, 0.8 * 360);
+  mock.timers.reset();
+});
+
 test('the seek band is for scrubbing, never for a hold', () => {
   const { events, surface } = setUp();
   surface.fire('pointerdown', 0.5, 0.8);
