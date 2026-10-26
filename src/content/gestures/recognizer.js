@@ -25,6 +25,7 @@ const MODE = {
   HOLD: 'hold',
   PINCH: 'pinch',
   SWIPE: 'swipe',
+  DISMISS: 'dismiss',
   ABANDONED: 'abandoned',
 };
 
@@ -50,6 +51,11 @@ export const createRecognizer = (
   let tapTimer = null;
   let tapCount = 0;
   let tapZone = ZONE.DEAD;
+  let dismissAnchor = null;
+  // The most recent sample of a drag that is being tracked, so its end can
+  // report the pace of the last stretch — a flick reads as intent even where
+  // it has not travelled far.
+  let lastDismissSample = null;
   let pinchStartDistance = 0;
   let isEnabled = true;
 
@@ -125,6 +131,13 @@ export const createRecognizer = (
     clearHoldTimer();
     if (mode === MODE.DRAG) emit('dragEnd', { zone: anchor.zone });
     if (mode === MODE.HOLD) emit('holdEnd', { zone: anchor.zone });
+    // A second finger arrives while a pull to dismiss is under way: the
+    // pull is given up rather than judged, and the pinch takes the stage.
+    if (mode === MODE.DISMISS) {
+      emit('dismissEnd', { progress: 0, velocity: 0 });
+      dismissAnchor = null;
+      lastDismissSample = null;
+    }
     const points = Array.from(pointers.values());
     pinchStartDistance = distanceBetween(points[0], points[1]);
     mode = MODE.PINCH;
@@ -185,11 +198,30 @@ export const createRecognizer = (
       const dy = point.y - anchor.y;
       if (Math.hypot(dx, dy) < MOVE_TOLERANCE_PX) return;
       clearHoldTimer();
-      // Checked before the zones: a flick up is the same gesture wherever on
+      // Checked before the zones: a flick is the same gesture wherever on
       // the picture it starts, the seek band and the side boxes included.
-      if (isVerticalMove(dx, dy) && canSwipe()) {
-        mode = MODE.SWIPE;
-        return;
+      if (isVerticalMove(dx, dy)) {
+        if (dy < 0) {
+          // Finger up means the next video, where the page is a feed at
+          // all. An upward drag on any other page has no business of its
+          // own, and falls through to the zones as before — a slow scrub
+          // past the seek band included.
+          if (canSwipe()) {
+            mode = MODE.SWIPE;
+            return;
+          }
+        } else if (anchor.zone !== ZONE.SEEK) {
+          // Finger down means out. The drag is a pull to dismiss, read as
+          // a pull-to-close from wherever it begins except the bottom
+          // band, whose drags are the scrub's. The pull goes on being
+          // tracked, move by move; what the pull turns out to be is the
+          // player's to read, from how far it went and how fast it lifted.
+          mode = MODE.DISMISS;
+          dismissAnchor = anchor;
+          lastDismissSample = { y: point.y, time: performance.now() };
+          emit('dismissStart', {});
+          return;
+        }
       }
       if (!isDragZone(anchor.zone)) {
         mode = MODE.ABANDONED;
@@ -197,6 +229,16 @@ export const createRecognizer = (
       }
       mode = MODE.DRAG;
       emit('dragStart', { zone: anchor.zone, x: anchor.x, y: anchor.y });
+    }
+
+    if (mode === MODE.DISMISS) {
+      // Every move is reported as a share of the stage's height, up to and
+      // past the edge: the finger decides how far the pull reaches.
+      emit('dismissMove', {
+        progress: (point.y - dismissAnchor.y) / point.height,
+      });
+      lastDismissSample = { y: point.y, time: performance.now() };
+      return;
     }
 
     if (mode !== MODE.DRAG) return;
@@ -219,6 +261,27 @@ export const createRecognizer = (
     if (direction !== null) emit('swipe', { direction });
   };
 
+  // The pull is reported on two counts: how far it went, and how fast it
+  // lifted. The pace comes from the last measured stretch of the drag —
+  // the same report whether the finger ran a long way slowly or a short
+  // way quickly — and what the counts amount to is the player's verdict.
+  const finishDismiss = (event) => {
+    const point = localPoint(event);
+    const progress = (point.y - dismissAnchor.y) / point.height;
+    let velocity = 0;
+    if (lastDismissSample !== null) {
+      const slice =
+        (point.y - lastDismissSample.y) /
+        Math.max(1, performance.now() - lastDismissSample.time);
+      // A slice stood still, or ran back up, says nothing fast in favour of
+      // going; the travel alone has to carry such a pull.
+      velocity = slice > 0 ? (slice * 1000) / point.height : 0;
+    }
+    emit('dismissEnd', { progress, velocity });
+    dismissAnchor = null;
+    lastDismissSample = null;
+  };
+
   const handleUp = (event) => {
     if (!pointers.has(event.pointerId)) return;
     pointers.delete(event.pointerId);
@@ -235,6 +298,7 @@ export const createRecognizer = (
     if (mode === MODE.DRAG) emit('dragEnd', { zone: anchor.zone });
     else if (mode === MODE.HOLD) emit('holdEnd', { zone: anchor.zone });
     else if (mode === MODE.SWIPE) finishSwipe(event);
+    else if (mode === MODE.DISMISS) finishDismiss(event);
     else if (mode === MODE.PENDING) registerTap(anchor.zone, anchor);
     mode = MODE.IDLE;
   };
@@ -245,6 +309,14 @@ export const createRecognizer = (
     clearHoldTimer();
     if (mode === MODE.DRAG) emit('dragEnd', { zone: anchor.zone });
     if (mode === MODE.HOLD) emit('holdEnd', { zone: anchor.zone });
+    // A pull that the system took the finger away from is returned, not
+    // judged: whatever interrupted could not have been the finger's intent,
+    // so the player comes back where it was.
+    if (mode === MODE.DISMISS) {
+      emit('dismissEnd', { progress: 0, velocity: 0 });
+      dismissAnchor = null;
+      lastDismissSample = null;
+    }
     if (mode === MODE.PINCH && pointers.size < 2) emit('pinchEnd', {});
     if (pointers.size === 0) mode = MODE.IDLE;
   };

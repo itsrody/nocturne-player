@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, mock, test } from 'node:test';
 
 import { createRecognizer } from '../../src/content/gestures/recognizer.js';
+import { SWIPE } from '../../src/content/gestures/swipe.js';
 
 const WIDTH = 800;
 const HEIGHT = 360;
@@ -27,16 +28,27 @@ const createSurface = () => {
   };
 };
 
-const setUp = () => {
+const setUp = (options = {}) => {
   const surface = createSurface();
   const events = [];
   const record = (name) => (detail) => events.push({ name, ...detail });
-  createRecognizer(surface, {
-    tap: record('tap'),
-    multiTap: record('multiTap'),
-    holdStart: record('holdStart'),
-    holdEnd: record('holdEnd'),
-  });
+  createRecognizer(
+    surface,
+    {
+      tap: record('tap'),
+      multiTap: record('multiTap'),
+      holdStart: record('holdStart'),
+      holdEnd: record('holdEnd'),
+      dragStart: record('dragStart'),
+      dragMove: record('dragMove'),
+      dragEnd: record('dragEnd'),
+      dismissStart: record('dismissStart'),
+      dismissMove: record('dismissMove'),
+      dismissEnd: record('dismissEnd'),
+      swipe: record('swipe'),
+    },
+    { canSwipe: options.canSwipe },
+  );
   const tapAt = (xRatio, yRatio) => {
     surface.fire('pointerdown', xRatio, yRatio);
     surface.fire('pointerup', xRatio, yRatio);
@@ -159,5 +171,67 @@ test('the seek band is for scrubbing, never for a hold', () => {
     events.map((event) => [event.name, event.zone]),
     [['tap', 'seek']],
   );
+  mock.timers.reset();
+});
+
+test('a downward drag hands the player over to be pulled away', () => {
+  const { events, surface } = setUp();
+  surface.fire('pointerdown', 0.5, 0.3);
+  surface.fire('pointermove', 0.5, 0.5);
+  surface.fire('pointermove', 0.5, 0.7);
+  surface.fire('pointerup', 0.5, 0.7);
+  const dismissal = events.filter((event) => event.name.startsWith('dismiss'));
+  assert.equal(dismissal[0].name, 'dismissStart');
+  assert.ok(Math.abs(dismissal[1].progress - 0.4) < 0.001, 'drag progress');
+  const end = dismissal[dismissal.length - 1];
+  assert.equal(end.name, 'dismissEnd');
+  assert.ok(Math.abs(end.progress - 0.4) < 0.001, 'end progress');
+  assert.equal(events.includes('swipe'), false);
+  mock.timers.reset();
+});
+
+test('a downward drag dismisses even where the page is a feed', () => {
+  const { events, surface } = setUp({ canSwipe: () => true });
+  surface.fire('pointerdown', 0.5, 0.3);
+  surface.fire('pointermove', 0.5, 0.6);
+  surface.fire('pointerup', 0.5, 0.6);
+  assert.equal(
+    events.some((event) => event.name === 'swipe'),
+    false,
+  );
+  assert.equal(
+    events.some((event) => event.name === 'dismissStart'),
+    true,
+  );
+  mock.timers.reset();
+});
+
+test('the seek band keeps its scrub on a vertical-biased pull', () => {
+  const { events, surface } = setUp();
+  surface.fire('pointerdown', 0.5, 0.8);
+  surface.fire('pointermove', 0.5, 0.9);
+  surface.fire('pointerup', 0.5, 0.9);
+  assert.equal(
+    events.some((event) => event.name.startsWith('dismiss')),
+    false,
+  );
+  assert.deepEqual(
+    events.map((event) => event.name),
+    ['dragStart', 'dragMove', 'dragEnd'],
+  );
+  assert.equal(events.at(-1).zone, 'seek');
+  mock.timers.reset();
+});
+
+test('an upward flick still steps a feed to the next video', () => {
+  const { events, surface } = setUp({ canSwipe: () => true });
+  surface.fire('pointerdown', 0.5, 0.5);
+  surface.fire('pointermove', 0.5, 0.3);
+  surface.fire('pointerup', 0.5, 0.25);
+  assert.deepEqual(
+    events.map((event) => event.name),
+    ['swipe'],
+  );
+  assert.equal(events[0].direction, SWIPE.NEXT);
   mock.timers.reset();
 });
