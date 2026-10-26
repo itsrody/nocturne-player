@@ -44,12 +44,6 @@
   transition: opacity 300ms ease;
 }
 
-.dim {
-  background: #000;
-  opacity: 0;
-  transition: opacity 200ms ease;
-}
-
 .chrome {
   opacity: 1;
   transition: opacity var(--chrome-fade) var(--ease);

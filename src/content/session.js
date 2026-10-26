@@ -279,7 +279,6 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
 
   const layers = {
     warm: el('div', { class: 'layer warm' }),
-    dim: el('div', { class: 'layer dim' }),
   };
   const loader = el('div', { class: 'feed-loader', hidden: '' });
 
@@ -545,7 +544,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     pinStyle(frame, FRAME_STYLE);
     stage.append(frame);
     frame.append(ui.host);
-    ui.shadow.append(layers.warm, layers.dim, loader);
+    ui.shadow.append(layers.warm, loader);
     document.body.append(stage);
   };
 
