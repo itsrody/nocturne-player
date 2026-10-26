@@ -16,6 +16,13 @@ import { createSession } from './session.js';
 
 const PERSIST_DELAY_MS = 400;
 
+// The player no longer learns openings, but releases before this one kept
+// what they heard in the extension's own storage. The sweep removes the dead
+// key once per boot: a device that ever carried the learned openings ends up
+// without them, quietly, by the time the viewer notices anything.
+const LEGACY_INTRO_KEY = 'nocturneIntros';
+browser.storage.local.remove(LEGACY_INTRO_KEY).catch(() => {});
+
 // A player embedded in an iframe should honour the decision the user made about
 // the page they can actually see, so the embedding host counts too.
 const resolveHosts = () => {
@@ -134,9 +141,8 @@ const start = async () => {
       watcher.stop();
       badge.hide();
       // A site that has been switched off while the player was on its film
-      // loses the player as well: the off switch in the popup cannot leave a
-      // film running on — and listening, while intro skip is its business —
-      // under it.
+      // loses the player as well: the off switch in the popup cannot leave
+      // a film running on under it.
       if (session) session.exit();
     }
     refs.announce();

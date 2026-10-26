@@ -31,8 +31,7 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
   const timer = el('span', { class: 'time', text: '0:00' });
   const fill = el('div', { class: 'seek-fill' });
   const marks = el('div', { class: 'seek-marks' });
-  const zones = el('div', { class: 'seek-zones' });
-  const track = el('div', { class: 'seek-track' }, [fill, zones, marks]);
+  const track = el('div', { class: 'seek-track' }, [fill, marks]);
   const headTime = el('span', { class: 'seek-time', text: '0:00' });
   // The playback head: a ball riding the tip of the fill, inside the area
   // and not the track, so the track cannot clip its bulge at either edge.
@@ -50,7 +49,6 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
   let lastPreviewAt = 0;
   let chapters = [];
   let arePlaced = false;
-  let spans = [];
 
   const duration = () => (Number.isFinite(video.duration) ? video.duration : 0);
 
@@ -68,20 +66,6 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
       });
     marks.replaceChildren(...dividers);
     arePlaced = true;
-  };
-
-  // Stretches of the film painted onto the track — the opening, once it has
-  // been recognised — redrawn whenever the length of the film is learned.
-  const placeZones = () => {
-    const total = duration();
-    if (total === 0) return;
-    const drawn = spans.map((span) => {
-      const zone = el('span', { class: 'seek-zone' });
-      zone.style.left = `${(span.start / total) * 100}%`;
-      zone.style.width = `${((span.end - span.start) / total) * 100}%`;
-      return zone;
-    });
-    zones.replaceChildren(...drawn);
   };
 
   const showChapter = (time) => {
@@ -237,7 +221,6 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
 
   video.addEventListener('timeupdate', sync);
   video.addEventListener('durationchange', sync);
-  video.addEventListener('durationchange', placeZones);
   video.addEventListener('seeked', sync);
   sync();
 
@@ -256,10 +239,6 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     end,
     jumpToTap,
     setControls,
-    setZones: (list) => {
-      spans = list;
-      placeZones();
-    },
     setChapters: (list) => {
       chapters = list;
       arePlaced = false;
@@ -269,7 +248,6 @@ export const createSeekBar = (video, seek, { onScrub } = {}) => {
     destroy: () => {
       video.removeEventListener('timeupdate', sync);
       video.removeEventListener('durationchange', sync);
-      video.removeEventListener('durationchange', placeZones);
       video.removeEventListener('seeked', sync);
       head.removeEventListener('pointerdown', grabHead);
       head.removeEventListener('pointermove', dragHead);

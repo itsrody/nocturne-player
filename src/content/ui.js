@@ -9,8 +9,6 @@ import { createRecognizer } from './gestures/recognizer.js';
 import { createSeekBar } from './controls/seekbar.js';
 import { createSeeker } from './video/seek.js';
 import { createSkipFeedback } from './controls/skipfeedback.js';
-import { createIntroSkip } from './controls/introskip.js';
-import { createIntroWatch } from './video/introwatch.js';
 import { createTrackManager } from './video/tracks.js';
 import { createVisuals } from './video/visuals.js';
 import { el } from './shell.js';
@@ -227,13 +225,6 @@ export const createOverlay = ({
 
   const seekBar = createSeekBar(video, seek, { onScrub: onHeadScrub });
   const skipFeedback = createSkipFeedback();
-  const introSkip = createIntroSkip(video, seek);
-  const introWatch = createIntroWatch(video, {
-    onFound: (span) => {
-      introSkip.show(span);
-      seekBar.setZones(span === null ? [] : [span]);
-    },
-  });
 
   let chromeTimer = null;
   let toastTimer = null;
@@ -292,14 +283,6 @@ export const createOverlay = ({
       onPersist({ holdSpeed: value });
     },
     onNotice: (text) => showToast(text, HINT_MS),
-    isIntroSkipOn: settings.isIntroSkipOn,
-    onIntroSkip: (isOn) => {
-      onPersist({ isIntroSkipOn: isOn });
-      introWatch.setEnabled(isOn);
-      if (isOn) return;
-      introSkip.show(null);
-      seekBar.setZones([]);
-    },
   });
 
   menuRef.setSubtitle = menu.setSubtitle;
@@ -786,12 +769,10 @@ export const createOverlay = ({
     ...skipFeedback.roots,
     cueBox,
     chrome,
-    introSkip.root,
     toast,
     filePicker,
   ];
   shadow.append(...roots);
-  introWatch.setEnabled(settings.isIntroSkipOn);
   setChromeVisible(isChromeShown);
 
   return {
@@ -805,8 +786,6 @@ export const createOverlay = ({
       recognizer.destroy();
       seekBar.destroy();
       skipFeedback.destroy();
-      introWatch.destroy();
-      introSkip.destroy();
       tracks.destroy();
       stopHold();
       if (dismissSettleTimer !== null) clearTimeout(dismissSettleTimer);

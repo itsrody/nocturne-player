@@ -89,8 +89,6 @@ export const createMenu = ({
   holdSpeed,
   onHoldSpeed,
   onNotice,
-  isIntroSkipOn,
-  onIntroSkip,
 }) => {
   const speedRow = buildChipRow('Speed');
   const setSpeed = paintChips(
@@ -137,15 +135,6 @@ export const createMenu = ({
     setSubtitle = paintChips(subtitleRow, options, (id) => tracks.select(id));
     setSubtitle(tracks.getSelected());
   };
-
-  // Off means the player does not listen at all, not that it listens and
-  // keeps quiet about what it heard.
-  const introRow = el('div', { class: 'menu-row' }, [
-    el('span', { class: 'menu-label', text: 'Intros' }),
-    el('div', { class: 'menu-cells' }, [
-      buildToggleCell('Offer to skip', isIntroSkipOn, onIntroSkip),
-    ]),
-  ]);
 
   const qualityRow = buildChipRow('Quality');
 
@@ -204,7 +193,6 @@ export const createMenu = ({
     speedRow.row,
     holdRow.row,
     subtitleRow.row,
-    introRow,
   ]);
 
   // Both lists can grow while the film plays — a caption track switched on in

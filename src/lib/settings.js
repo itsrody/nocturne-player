@@ -12,7 +12,6 @@ export const DEFAULTS = Object.freeze({
   areEffectsReduced: false,
   subtitleScale: 1,
   areSubtitlesNative: false,
-  isIntroSkipOn: true,
   disabledHosts: [],
 });
 
