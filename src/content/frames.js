@@ -20,7 +20,7 @@
 // The counting goes on through the same runtime port: a frame reports what
 // it found and what it wants, and the hub — where the book of frames lives —
 // answers the seat and the counts.
-import { SLOT_TAG } from '../lib/words.js';
+import { SLOT_TAG } from '../lib/protocol.js';
 import { createTimerSlot } from '../lib/time.js';
 import { postWord, targetOf } from './slot.js';
 
@@ -39,46 +39,6 @@ export const mintTicket = () =>
   `${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}`;
 
 export const isTopFrame = () => window.top === window;
-
-// The decision about a framed film is the embedding pages', plural: every
-// named origin between the film and the eye names itself, because a page's
-// settings speak for the page the viewer is actually looking at. The chain
-// is read from this document's own location — ancestorOrigins answers for
-// the same-origin and the cross-origin case alike, carries the whole
-// nesting depth, and shipped in Firefox 148, under the floor of 158: it is
-// always there. No window beyond this one is ever touched, so the old
-// throw-and-guess path (top.location.host, then document.referrer, whose
-// truth depended on the framer's referrer policy) departs.
-//
-// A guest's own seat often carries no name — about:srcdoc and sandboxed
-// frames have an empty or opaque host — so an empty one offers nothing and
-// the decision the nearest named ancestor above it made is what counts.
-export const chainHosts = (loc) => {
-  const seen = new Set();
-  const hosts = [];
-  const offer = (host) => {
-    if (typeof host !== 'string' || host === '' || seen.has(host)) return;
-    seen.add(host);
-    hosts.push(host);
-  };
-
-  offer(loc.host);
-  const chain = loc.ancestorOrigins;
-  if (chain !== undefined) {
-    for (let index = 0; index < chain.length; index++) {
-      let host;
-      try {
-        host = new URL(chain[index]).host;
-      } catch {
-        // An opaque origin's word is "null" — not a URL, and telling the
-        // truth it carries: this guest names itself nobody.
-        host = '';
-      }
-      offer(host);
-    }
-  }
-  return hosts;
-};
 
 // A frame's half of the slot story: the ask for room, aimed one hop up —
 // every document above it widens the box of the child that spoke to it and

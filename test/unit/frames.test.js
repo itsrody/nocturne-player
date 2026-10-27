@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { chainHosts, createSlotRider } from '../../src/content/frames.js';
+import { createSlotRider } from '../../src/content/frames.js';
+import { chainHosts } from '../../src/lib/chain.js';
 import { createSlotKeeper } from '../../src/content/slot.js';
-import { SLOT_TAG } from '../../src/lib/words.js';
+import { SLOT_TAG } from '../../src/lib/protocol.js';
 // A window trimmed to what these two sides of the slot protocol do with
 // it: listen for messages and deliver them. Deliveries are made by hand
 // instead of by the event loop of a real browser, and the target a post

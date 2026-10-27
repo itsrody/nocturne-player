@@ -68,6 +68,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The background alone swears the pages in.** The manifest's content
+  script — code standing in every frame of every site, waiting for
+  nothing — is gone. Nothing runs in a page unless the wire said so: a
+  media-shaped request crossing the tab's bus names the frame it is
+  bound for (with the browser's attestation, plus the dossier's raw
+  material — the request's url, what spoke for it, the document that
+  owns the frame, and every origin nesting above it), and the
+  background's recruiter boots the field agent into exactly that frame
+  with `tabs.executeScript` aimed by `frameId`, `matchAboutBlank`
+  opening the embeds the manifest's script could never reach. The
+  field agent is the frame's whole new authority: it tells the hub what
+  the sweep confirms and what it wants (the badge), and the hub keeps
+  every other answer — verdicts, counts, the dossier — coming down the
+  frame's own port. An ordinary page carries zero of our code; a
+  media-cache edge is named honestly: a film whose bytes never cross
+  the bus after the extension loads earns no badge until a fresh
+  request, because the wire is now the only address the recruiter has.
+- **The wire's dossier rides the port.** The hub records the ear with
+  the frame — where the film's bytes come from, what spoke for them,
+  which document the frame is, every origin above it — and tells the
+  frame once per generation of its seat, whichever road arrived first:
+  a connect before the wire, or a wire heard on a frame whose port
+  already stands. The frame keeps it and speaks it in the diagnostics.
+- **The relations are swept at the film's boot.** A framed film needs a
+  slot keeper in every document between it and the eye, and no frame
+  list for the chain exists without the `webNavigation` permission, so
+  a fresh film boot mints one `allFrames` round: every document the
+  bundle has not fielded yet takes the field agent, and the bundle's
+  boot flag (one shared isolated world per frame: `__nocturneField`)
+  keeps a repeat sweep costing a fielded frame one parse and nothing
+  else. Steady state pays nothing: a stream's own cadence re-crossing
+  the bus finds the seat taken and arms nothing. A document that gains
+  a new ancestor after the last fresh boot waits for the next film to
+  arrive — the honest cost of the frame list we do not carry.
+- **The viewer's law is held at the gate.** The recruiter keeps a
+  settings mirror (one read, then the storage events the popup's
+  writes already emit) and consults the same chain of names a frame
+  itself would — the request document's host, then the origins above
+  it, nearest first, with the tab's own url answering for a room the
+  envelope leaves unnamed. A disabled host boots nothing: no field
+  agent, no relay sweep, and the hub hears no strain — no ghost seat is
+  ever founded on a page the viewer switched off. A page the viewer
+  disables mid-session is still swept clean by the frame's own hearing
+  of the change, which stays.
+- **One protocol for the whole machine.** Every word between the
+  background, the frames and the popup is now spelled, built and
+  checked in `src/lib/protocol.js` — the runtime's vocabulary (report,
+  verdict, strain, dossier, the popup's question) and the page wire's
+  slot tag alike. Producers build through the `say*` builders;
+  listeners hear through the `as*` guards and refuse a malformed word
+  whole, never half-acting on one. `words.js` keeps only the storage
+  names; the chain-of-hosts law moved to `src/lib/chain.js` so the
+  background and a frame read the same rule from the same door.
+
 - **The page hears the wire as well as the DOM.** Detection's sweep has
   run on events alone for a long time now — an observer over the tree,
   the film's own play and metadata moments, an approach margin in place

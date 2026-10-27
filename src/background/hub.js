@@ -28,7 +28,13 @@
 // — how many films the tab holds. A third voice it hears says neither of
 // those: the network's own word, a media-shaped request crossing the tab's
 // bus bound for one of its frames.
-import { STATE_QUERY, STRAIN, VERDICT } from '../lib/words.js';
+import {
+  asReport,
+  asStateQuery,
+  sayDossier,
+  sayStrain,
+  sayVerdict,
+} from '../lib/protocol.js';
 
 // The one verb the state answers with is a count, read fresh from the book
 // whenever the question arrives — the book is the hot record, and nothing
@@ -66,7 +72,7 @@ export const createFrameHub = (browser) => {
       if (entry.granted === seated) continue;
       entry.granted = seated;
       try {
-        entry.port.postMessage({ type: VERDICT, granted: seated });
+        entry.port.postMessage(sayVerdict(seated));
       } catch {
         // A mouth that would not carry the news belongs to a frame whose
         // death is already spoken as an event; the book is the truth, and
@@ -75,12 +81,33 @@ export const createFrameHub = (browser) => {
     }
   };
 
+  // The dossier rides in once per generation of an entry, whenever both
+  // parties to it are finally in the room: the background's evidence from
+  // the bus about this frame's film, told down the frame's own port. The
+  // two roads that can lead here — a connect before the wire was heard, a
+  // wire heard on a frame whose port already stands — are covered by the
+  // same flag, so the word is said exactly once and never rehearsed.
+  const tellDossier = (entry) => {
+    if (entry.wire === null || entry.told || entry.port === null) return;
+    entry.told = true;
+    try {
+      entry.port.postMessage(entry.wire);
+    } catch {
+      // A mouth that would not carry the dossier belongs to a frame
+      // whose death is already spoken as an event; nothing here is lost
+      // that the next generation will not hear again.
+    }
+  };
+
   // The network's word, heard from the eye at the bus: a media-shaped
-  // request crossed the tab's network bound for this frame. The warm
-  // word is written wherever the frame's seat stands, and where none
-  // does a ghost seat is founded — a frame with no script behind its
+  // request crossed the tab's network bound for this frame, and the ear
+  // it comes with — where the bytes came from, what spoke for them, and
+  // every origin standing above the frame — is the frame's dossier.
+  // The warm word is written wherever the frame's seat stands, and where
+  // none does a ghost seat is founded — a frame with no script behind its
   // document has no port, no want, no count, and only the one truth the
-  // wire carries: a stream runs here.
+  // wire carries: a stream runs here. A wordless crossing (ear absent)
+  // still warms the seat; the dossier waits for a crossing that spoke.
   //
   // The wake rides the first strain of an entry's life, and never
   // again: a stream in play re-crosses the bus every few seconds by its
@@ -91,7 +118,7 @@ export const createFrameHub = (browser) => {
   // being warm again for a document born again is exactly the knock the
   // beginner deserves: a reconnect replaces the entry, and the next
   // strain knocks anew.
-  const strain = (tabId, frameId) => {
+  const strain = (tabId, frameId, ear) => {
     let table = books.get(tabId);
     if (table === undefined) {
       table = { book: new Map(), seatNext: 0 };
@@ -106,20 +133,41 @@ export const createFrameHub = (browser) => {
         granted: false,
         seat: null,
         stream: true,
+        wire: ear === undefined ? null : sayDossier(ear),
+        told: false,
       });
       return;
+    }
+    // The dossier arriving on a seat already founded: a ghost warmed by
+    // a wordless crossing, or an entry whose port stands but whose
+    // evidence arrives late — both hear it now, once.
+    if (ear !== undefined && entry.wire === null) {
+      entry.wire = sayDossier(ear);
+      tellDossier(entry);
     }
     if (entry.stream) return;
     entry.stream = true;
     if (entry.port !== null) {
       try {
-        entry.port.postMessage({ type: STRAIN });
+        entry.port.postMessage(sayStrain());
       } catch {
         // A mouth that would not carry the knock is one whose death is
         // on its way as an event; the warmth stays written, the book
         // keeps what the wire said.
       }
     }
+  };
+
+  // The recruiter's skip-sign: is a field agent's port standing in this
+  // frame already? Answered straight from the book — a ghost seat (no
+  // port) never counts as standing, so a frame warm from the wire is
+  // still owed its boot — and a stranger frame, never heard of, stands
+  // nothing.
+  const standing = (tabId, frameId) => {
+    const table = books.get(tabId);
+    if (table === undefined) return false;
+    const entry = table.book.get(frameId);
+    return entry !== undefined && entry.port !== null;
   };
 
   browser.runtime.onConnect.addListener((port) => {
@@ -145,9 +193,10 @@ export const createFrameHub = (browser) => {
     // lived on — takes a fresh entry: whatever turn it held belonged to a
     // document that has gone, and it re-enters the queue at the back, the
     // way the old rail's re-claim did. What it adopts with it is the
-    // frame's warmth: if the wire strained here before — a ghost seat the
-    // stream fed, or a predecessor's — the context is the frame's, not
-    // any document's, and it stays with the seat.
+    // frame's context: the warmth the wire wrote (a ghost seat the stream
+    // fed, or a predecessor's) and the dossier it earned — the context is
+    // the frame's, not any document's, and the dossier starts its life
+    // untold, told again to whoever now holds the seat.
     const entry = {
       port,
       want: false,
@@ -155,14 +204,18 @@ export const createFrameHub = (browser) => {
       granted: false,
       seat: null,
       stream: table.book.get(frameId)?.stream === true,
+      wire: table.book.get(frameId)?.wire ?? null,
+      told: false,
     };
     table.book.set(frameId, entry);
+    tellDossier(entry);
 
     port.onMessage.addListener((word) => {
-      if (word === null || typeof word !== 'object') return;
-      entry.want = Boolean(word.want);
-      if (typeof word.count === 'number' && Number.isFinite(word.count)) {
-        entry.count = Math.max(0, Math.floor(word.count));
+      const said = asReport(word);
+      if (said === null) return;
+      entry.want = said.want;
+      if (said.count !== null) {
+        entry.count = said.count;
       }
       // The turn is drawn the first time this frame asks to be shown —
       // and since the entry is born again on every reconnect, the draw is
@@ -196,14 +249,15 @@ export const createFrameHub = (browser) => {
   });
 
   browser.runtime.onMessage.addListener((word, sender) => {
-    if (word?.type !== STATE_QUERY) return false;
+    const ask = asStateQuery(word);
+    if (ask === null) return false;
     // A runtime word reaches every ear of the extension — the frames'
     // content scripts included — so the speaker is checked before the
     // answer: only an extension page (the popup, the options) has no tab
     // on its envelope. A frame asking here is answered nothing; the hub
     // alone speaks for the book.
     if (sender?.tab !== undefined) return false;
-    const book = books.get(word.tabId)?.book;
+    const book = books.get(ask.tabId)?.book;
     let total = 0;
     let streams = 0;
     if (book !== undefined) {
@@ -221,8 +275,10 @@ export const createFrameHub = (browser) => {
   });
 
   // The book is returned for the tests, which stand in for the browser
-  // and read the registry by hand — and `strain` with it, for the eye at
-  // the bus to feed. The running extension composes the two in
-  // background/index.js: the tap hears the wire, the hub keeps the book.
-  return { books, strain };
+  // and read the registry by hand — and `strain` and `standing` with
+  // them: the eye at the bus feeds the first, and the recruiter asks the
+  // second before any boot. The running extension composes the three in
+  // background/index.js: the tap hears the wire, the conscript arms the
+  // frames, the hub keeps the book.
+  return { books, strain, standing };
 };

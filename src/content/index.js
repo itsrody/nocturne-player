@@ -4,27 +4,23 @@ import {
   readSettings,
   writeSettings,
 } from '../lib/settings.js';
+import { createDebug } from '../lib/debug.js';
+import { chainHosts } from '../lib/chain.js';
 import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
-import { LEGACY_OPENINGS_KEY, REPORT, STRAIN, VERDICT } from '../lib/words.js';
+import { asDossier, asStrain, asVerdict, sayReport } from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
-import {
-  chainHosts,
-  createSlotRider,
-  isTopFrame,
-  mintTicket,
-} from './frames.js';
+import { createSlotRider, isTopFrame, mintTicket } from './frames.js';
 import { createSlotKeeper } from './slot.js';
 import { createSession } from './session.js';
 
 const PERSIST_DELAY_MS = 400;
 
-// The player no longer learns openings, but releases before this one kept
-// what they heard in the extension's own storage. The sweep removes the dead
-// key once per boot: a device that ever carried the learned openings ends up
-// without them, quietly, by the time the viewer notices anything.
-browser.storage.local.remove(LEGACY_OPENINGS_KEY).catch(() => {});
+// The diagnostics voice of the wire room: the dossier's arrival is the
+// one thing this file can say that nothing else knows how to say — it is
+// the background's evidence about this frame's film, earned at the bus.
+const debug = createDebug('wire');
 
 const isDocumentSupported = () =>
   document.contentType === 'text/html' &&
@@ -33,6 +29,15 @@ const isDocumentSupported = () =>
 
 const start = async () => {
   if (!isDocumentSupported()) return;
+  // The standing sign of this frame's field agent: set on the first boot
+  // and consulted before any of the arrangement below runs again. The
+  // conscription may reach this bundle twice — a targeted boot for the
+  // film's own frame, and the relay sweep that names no frameIds — and
+  // the check and the set are synchronous on purpose: two evals racing
+  // meet at exactly one statement, and the loser leaves without opening
+  // a port.
+  if (globalThis.__nocturneField) return;
+  globalThis.__nocturneField = true;
 
   // A player embedded in an iframe honours the decision the user made about
   // the page they can actually see, and every named origin between the film
@@ -116,20 +121,37 @@ const start = async () => {
   // needs to walk beneath the words — silence here is a fact with an
   // event attached, not a guess the seat must ride out.
   const report = () => {
-    up.postMessage({ type: REPORT, want: wantsBadge(), count: liveCount() });
+    up.postMessage(sayReport(wantsBadge(), liveCount()));
   };
 
-  // Two words ride back, and each is answered where it is known: the
-  // seat's news by the badge's own arrangement, the wire's strain by the
-  // scheduling signal — the sweep's own debounce keeps a burst of
-  // segment-fetch knocks from becoming a burst of walks.
+  // The dossier this frame hears back, kept only until the next: the
+  // background's evidence from the bus — where the film's bytes came
+  // from, what spoke for them, every origin standing above this frame.
+  // The DOM cannot see any of it, and this frame cannot re-earn it by
+  // shouting; it is spoken into the diagnostics when they are on.
+  let heard = null;
+
+  // Three words ride back, and each is heard through the protocol's own
+  // guard, so a half-formed word is refused whole and never half-acted
+  // on: the seat's news by the badge's own arrangement, the wire's
+  // strain by the scheduling signal — the sweep's own debounce keeps a
+  // burst of segment-fetch knocks from becoming a burst of walks — and
+  // the dossier by the record above.
   up.onMessage.addListener((word) => {
-    if (word?.type === STRAIN) {
+    const strainWord = asStrain(word);
+    if (strainWord !== null) {
       strain.emit();
       return;
     }
-    if (word?.type !== VERDICT) return;
-    granted = Boolean(word.granted);
+    const dossierWord = asDossier(word);
+    if (dossierWord !== null) {
+      heard = dossierWord;
+      debug('the wire’s dossier arrived', heard.url);
+      return;
+    }
+    const verdictWord = asVerdict(word);
+    if (verdictWord === null) return;
+    granted = verdictWord.granted;
     grant.emit();
   });
 
@@ -231,6 +253,13 @@ const start = async () => {
   });
 };
 
-start().catch((error) => {
-  console.error('Nocturne: failed to start', error);
-});
+// One field agent per frame, whatever route the background took to reach
+// it — the boot flag's check is read here, before the arrangement's first
+// await, by any repeat eval of this same bundle. The supported check and
+// the flag's set are the only run of statements the bundle makes twice;
+// a frame the platform refuses loses nothing but the parse.
+if (!globalThis.__nocturneField) {
+  start().catch((error) => {
+    console.error('Nocturne: failed to start', error);
+  });
+}

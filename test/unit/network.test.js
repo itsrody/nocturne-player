@@ -113,15 +113,49 @@ test('the tap stands exactly one listener, aimed and unblocking', () => {
 test('the tap names the frame a media request crossed', () => {
   const browser = makeBrowser();
   const strained = [];
-  createWireTap(browser, (tabId, frameId) => strained.push({ tabId, frameId }));
+  createWireTap(browser, (tabId, frameId, earPiece) =>
+    strained.push({ tabId, frameId, ...earPiece }),
+  );
 
   browser.taps[0].listener({
     tabId: 7,
     frameId: 2,
     type: 'xmlhttprequest',
     url: 'https://cdn.example/master.m3u8',
+    documentUrl: 'https://site.example/watch',
+    frameAncestors: ['https://site.example/'],
   });
-  assert.deepEqual(strained, [{ tabId: 7, frameId: 2 }]);
+  // The ear rides with the name: where the bytes came from, what spoke
+  // for them, the document that owns the frame, and every origin above
+  // it — the dossier's raw material, straight from the platform.
+  assert.deepEqual(strained, [
+    {
+      tabId: 7,
+      frameId: 2,
+      url: 'https://cdn.example/master.m3u8',
+      resource: 'xmlhttprequest',
+      doc: 'https://site.example/watch',
+      chain: ['https://site.example/'],
+    },
+  ]);
+
+  // A frameless room on the envelope is named as best the wire allows:
+  // no documentUrl, no chain — the fields stay undefined and empty, and
+  // the context is honestly none.
+  browser.taps[0].listener({
+    tabId: 9,
+    frameId: 0,
+    type: 'media',
+    url: 'https://cdn.example/hero.mp4',
+  });
+  assert.deepEqual(strained[1], {
+    tabId: 9,
+    frameId: 0,
+    url: 'https://cdn.example/hero.mp4',
+    resource: 'media',
+    doc: undefined,
+    chain: [],
+  });
 
   // Nobody's request — the browser's own housekeeping — names no frame.
   browser.taps[0].listener({
@@ -130,7 +164,7 @@ test('the tap names the frame a media request crossed', () => {
     type: 'media',
     url: 'https://elsewhere.example/a.mp4',
   });
-  assert.equal(strained.length, 1);
+  assert.equal(strained.length, 2);
 });
 
 test('a stand-in room with no webRequest stands nothing', () => {

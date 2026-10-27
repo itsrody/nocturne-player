@@ -4,7 +4,7 @@ import {
   resetSettings,
   setHostEnabled,
 } from '../lib/settings.js';
-import { STATE_QUERY } from '../lib/words.js';
+import { askState } from '../lib/protocol.js';
 
 const hostLabel = document.getElementById('site-host');
 const enabledToggle = document.getElementById('site-enabled');
@@ -36,10 +36,7 @@ const describeVideo = async (tab) => {
     // frame's films for the tab: one message, no round trip through the
     // pages, and the answer is the whole tab's count whatever frame of it
     // the film lives in.
-    const state = await browser.runtime.sendMessage({
-      type: STATE_QUERY,
-      tabId: tab.id,
-    });
+    const state = await browser.runtime.sendMessage(askState(tab.id));
     if (state?.videoCount > 0) {
       const plural = state.videoCount === 1 ? 'video' : 'videos';
       return `${state.videoCount} ${plural} detected on this page.`;

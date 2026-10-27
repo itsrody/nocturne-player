@@ -71,7 +71,18 @@ export const createWireTap = (browser, onStrain) => {
       // page's film.
       if (details.tabId < 0) return;
       if (!isMediaShaped(details.type, details.url)) return;
-      onStrain(details.tabId, details.frameId);
+      // The ear's evidence rides with the name: where the bytes come from,
+      // what spoke for them, the document that owns this frame, and every
+      // origin nested above it — all attested by the same envelope that
+      // named the frame. It is the dossier's raw material and the
+      // recruiter's law, and it costs nothing: the platform listed it
+      // before the listener ever ran.
+      onStrain(details.tabId, details.frameId, {
+        url: details.url,
+        resource: details.type,
+        doc: details.documentUrl,
+        chain: details.frameAncestors ?? [],
+      });
     },
     // The types are the whole story: media elements and the script-ridden
     // fetch family. `speculative` above all is left out — Firefox says its

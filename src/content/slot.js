@@ -1,4 +1,4 @@
-import { SLOT_TAG } from '../lib/words.js';
+import { SLOT_TAG } from '../lib/protocol.js';
 import { createTimerSlot } from '../lib/time.js';
 import { createGuardBudget } from './ground.js';
 

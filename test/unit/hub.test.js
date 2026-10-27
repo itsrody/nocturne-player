@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { createFrameHub } from '../../src/background/hub.js';
-import { STATE_QUERY, STRAIN, VERDICT } from '../../src/lib/words.js';
+import {
+  DOSSIER,
+  STATE_QUERY,
+  STRAIN,
+  VERDICT,
+} from '../../src/lib/protocol.js';
 // The browser, stood up to exactly the shape the hub asks of it: three
 // event bags (connect, message, tabs going away), and a port with the
 // envelope the runtime hands over. Deliveries are synchronous — no
@@ -314,4 +319,86 @@ test('the popup hears the context line beyond the count', async () => {
     {},
   );
   assert.deepEqual(answer, { videoCount: 2, streams: 2 });
+});
+
+const wireEar = {
+  url: 'https://cdn.example/master.m3u8',
+  resource: 'xmlhttprequest',
+  doc: 'https://site.example/watch',
+  chain: ['https://site.example/'],
+};
+
+test('the dossier rides the port once, despite the roads', async () => {
+  const browser = makeBrowser();
+  const hub = createFrameHub(browser);
+
+  // The wire first: the strain lands before any port exists, so the
+  // entry is founded already carrying its dossier — and the freshly
+  // conscripted frame that connects hears it on arrival, unprompted.
+  hub.strain(1, 1, wireEar);
+  const one = makePort(1, 1);
+  browser.fire.connect(one);
+  assert.deepEqual(one.spoken, [
+    {
+      type: DOSSIER,
+      url: 'https://cdn.example/master.m3u8',
+      resource: 'xmlhttprequest',
+      doc: 'https://site.example/watch',
+      chain: ['https://site.example/'],
+    },
+  ]);
+
+  // The cadence catches up with the word: a later strain finds the
+  // dossier told and adds nothing.
+  hub.strain(1, 1, wireEar);
+  assert.equal(one.spoken.length, 1);
+});
+
+test('a dossier earned as a ghost is told to whoever comes home', () => {
+  const browser = makeBrowser();
+  const hub = createFrameHub(browser);
+
+  // The wordless first crossing warms the seat; the next crossing that
+  // spoke carries the dossier, held by the ghost.
+  hub.strain(1, 3);
+  hub.strain(1, 3, wireEar);
+
+  const ghost = makePort(1, 3);
+  browser.fire.connect(ghost);
+  assert.equal(ghost.spoken.length, 1, 'the context arrives with the seat');
+  assert.deepEqual(ghost.spoken[0].type, DOSSIER);
+
+  // A document born again comes home through the wire's own cadence: the
+  // stream picked up in the remade document crosses the bus first, the
+  // seat is warmed and told anew, and the re-conscripted port hears the
+  // dossier on arrival — one word per generation, not per frame
+  // lifetime.
+  ghost.leave();
+  assert.equal(hub.standing(1, 3), false);
+  hub.strain(1, 3, wireEar);
+  const again = makePort(1, 3);
+  browser.fire.connect(again);
+  assert.equal(again.spoken.length, 1);
+  assert.deepEqual(again.spoken[0].type, DOSSIER);
+});
+
+test('standing answers only where a port is alive', async () => {
+  const browser = makeBrowser();
+  const hub = createFrameHub(browser);
+
+  // The wire warmed a ghost: no port, so nothing for the recruiter to
+  // skip. The boot must land despite the warmth.
+  hub.strain(1, 1, wireEar);
+  assert.equal(hub.standing(1, 1), false);
+  assert.equal(hub.standing(1, 4), false);
+  assert.equal(hub.standing(9, 1), false);
+
+  const one = makePort(1, 1);
+  browser.fire.connect(one);
+  assert.equal(hub.standing(1, 1), true);
+
+  // And the death is the standing's end — the recruiter asks nothing of
+  // a frame the hub has already said goodbye to.
+  one.leave();
+  assert.equal(hub.standing(1, 1), false);
 });
