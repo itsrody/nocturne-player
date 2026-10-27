@@ -153,6 +153,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   clamp's to mute: a system asked for less motion gets the slide anyway,
   for its rise and fall is how the picture answers the hand, not
   ornament.
+- **A tap on the middle toggles the film.** Where a running picture
+  stands, a tap on the narrow centre strip pauses it; where a resting one
+  waits, it plays. The bar lifts with the icon's change, so the toggle
+  answers at once. A tap on the sides is only the hand's presence — it
+  lifts the bar, and its second tap is free to become a run of seeks. The
+  centre strip stays narrow so nobody pauses by accident.
 
 ### Removed
 

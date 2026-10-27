@@ -421,15 +421,21 @@ export const createOverlay = ({
   };
 
   const recognizer = createRecognizer(surface, {
-    tap: () => {
+    tap: ({ zone }) => {
       if (isPanelOpen()) {
         closePanels();
         return;
       }
-      // A tap is interaction: it shows the pill (or holds it where it
-      // stands), never hides it — hiding is the idle's alone. The seek
-      // bar answers its own taps, as it builds them from a real element.
-      setChromeVisible(true);
+      // A tap on the middle toggles the film itself — pause where a running
+      // picture stands, play where one rests — and lights the bar along
+      // with the icon's change, so the toggle's feedback screens at once.
+      // A tap on the sides is only the hand's presence: it lifts the bar,
+      // and the taps to come are free to become a seek run. The middle
+      // strip stays narrow exactly so that nobody pauses by accident.
+      // The seek bar answers its own taps, as it builds them from a real
+      // element.
+      if (zone === ZONE.MIDDLE) togglePlay();
+      else setChromeVisible(true);
     },
     multiTap: ({ zone }) => {
       if (isPanelOpen()) {

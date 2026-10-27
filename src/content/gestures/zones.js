@@ -10,8 +10,8 @@ export const ZONE = {
 // are only ever the picture's, and they span its full height. The sides
 // stay wide the way a phone video app draws them, two fifths of the picture
 // each: a sloppy second tap of a double-tap must still land on one, while
-// the middle — where taps only ever toggle the controls — stays a narrow
-// strip nobody accidentally means.
+// the middle — where a tap now toggles the film itself, pause and play —
+// stays a narrow strip nobody accidentally means.
 const LEFT_EDGE = 0.4;
 const RIGHT_EDGE = 0.6;
 
