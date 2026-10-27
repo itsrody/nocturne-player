@@ -140,7 +140,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the container itself stays blind: a tap on its own dead space answers
   the picture, only the ruler and the buttons name their touch. The
   sheets and the subtitle cues hang a breath above the taller body, and
-  the clock needs no shadow on ink of its own kind.
+  the clock needs no shadow on ink of its own kind. The toast joins the
+  shape: rounded from its 12px corners into the same 999px stadium with
+  the same rim in its ink, so the container and the notices read as one
+  material speaking in two places.
 - **The bar shows for interaction, and idles away.** Any contact with the
   film — a pointer travelling it, a touch laid down, a drag working —
   slides the pill up from its seat, wherever on the picture it happens,

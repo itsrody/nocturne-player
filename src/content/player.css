@@ -274,11 +274,15 @@
   left: 50%;
   transform: translate(-50%, -8px);
   /* Sized for a 12pt voice: the words keep their point size, and the bubble
-     carries them with less air round about. */
+     carries them with less air round about. Shaped as the bar's own ink
+     pill — the same 999px stadium, the same rim inside the ink — so the
+     two containers read as one material speaking in two places. */
   padding: 7px 14px;
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--ink);
-  box-shadow: var(--shadow-soft);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+    var(--shadow-soft);
   font-size: 12pt;
   font-variant-numeric: tabular-nums;
   opacity: 0;
