@@ -9,11 +9,12 @@ import { createVisuals } from './video/visuals.js';
 import { el } from './shell.js';
 import { ZONE } from './gestures/zones.js';
 
-// Controls that show themselves are timed from the moment they show: two
-// seconds of nothing happening on them, and they step aside again. The
-// countdown is rewound — not restarted from scratch — by a pointer moving
-// over an already-shown chrome, so hover holds it and silence still hides it.
-const CHROME_IDLE_MS = 2000;
+// Controls that show themselves are timed from the moment they show: one
+// and a half seconds of nothing happening on them, and they step aside
+// again. The countdown is rewound — not restarted from scratch — by a
+// pointer moving over an already-shown chrome, so hover holds it and
+// silence still hides it.
+const CHROME_IDLE_MS = 1500;
 // Hold speed is a setting, chosen from the sheet's chips (1.5x–4x). A held
 // picture runs at that rate for as long as the finger stays down, wherever
 // the hold began; the pace before the hold comes back when it lifts.

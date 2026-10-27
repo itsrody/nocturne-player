@@ -147,8 +147,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **The bar shows for interaction, and idles away.** Any contact with the
   film — a pointer travelling it, a touch laid down, a drag working —
   slides the pill up from its seat, wherever on the picture it happens,
-  and the last of them starts a two-second count. Silence passes it,
-  and the pill slides back down the road it came. There is no band to
+  and the last of them starts a second-and-a-half count. Silence passes
+  it, and the pill slides back down the road it came. There is no band to
   point at and no toggle to throw: showing is the interaction's job,
   hiding is the silence's. The pill travels one plane — the chrome's own
   fade softens the far end of each trip, so neither direction reads as an
