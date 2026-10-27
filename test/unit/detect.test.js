@@ -20,13 +20,16 @@ const clearRealm = () => {
 };
 
 // A landscape film at the page's origin: `left`/`top` seat it relative to
-// the seeded viewport, which clamps its visible area at `detect.js`.
+// the seeded viewport, which clamps its visible area at `detect.js`. The
+// gate's visibility reading is the element's own `checkVisibility`, so the
+// stub answers what a plainly rendered film would.
 const film = (left, top, width, height) => ({
   isConnected: true,
   videoWidth: width,
   videoHeight: height,
   readyState: 4,
   currentSrc: 'https://film.example/master.m3u8',
+  checkVisibility: () => true,
   getBoundingClientRect: () => ({
     left,
     top,
@@ -88,6 +91,15 @@ test('a portrait film is refused at the gate', () => {
   clip.videoWidth = 720;
   clip.videoHeight = 1280;
   assert.equal(isPlayable(clip), false);
+});
+
+test('a film the page has blinded is refused at the gate', () => {
+  // The refusal is not the element's own styles alone: one checkVisibility
+  // reading walks the ancestors, and a container opacity-zeroed or a layout
+  // collapsed around the film refuses it without the element knowing.
+  const blinded = film(0, 0, VIEW.width, VIEW.height);
+  blinded.checkVisibility = () => false;
+  assert.equal(isPlayable(blinded), false);
 });
 
 test('a portrait refusal needs dimensions for its verdict', () => {

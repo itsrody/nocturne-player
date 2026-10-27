@@ -151,6 +151,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   masthead, sidebar and the room below never stop it from being the reason
   the page stands, and a big window could once shrink the film's share
   under the half and refuse it.
+- **The sweep covers the whole page, in pieces.** The find-sweep walks the
+  light DOM and every shadow root in one budgeted pass — the walk no longer
+  waits for an empty light DOM to run, because a page that keeps a teaser
+  in the light and its real film inside a custom element never met the
+  film at all — and its TreeWalker hands out one element at a time where
+  the old walk materialised whole trees before a budget could object. A
+  walk the budget ends leaves its walkers standing; the next sweep resumes
+  where this one stopped, so every shadowed film arrives sooner or later,
+  and the playable set is reconciled, not rebuilt, or the elected film
+  would flicker out of existence between two sweeps. The sweep sits out
+  while the document hides — nothing it reads is worth forcing layout on
+  an unpainting page — and the tab being seen again re-arms it.
+- **A film the page has blinded is refused at the gate.** Three
+  computed-style readings — display, visibility, opacity, all of them the
+  element's own — become one `checkVisibility` call, which also sees
+  through the ancestors: a container opacity-zeroed, a visibility hidden
+  above, a layout collapsed around a video no longer elects a badge over
+  a thing nobody can see.
 - **The bar speaks from its own ink pill.** The full-width strip the
   controls rode on becomes a stadium container of the same ink the toast
   and the sheets speak from, rim and shadow lifting it off the film — and

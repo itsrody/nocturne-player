@@ -26,52 +26,17 @@ const HAVE_METADATA = 1;
 // sweep. A scroll that goes nowhere near a film costs nothing.
 const APPROACH_MARGIN = '25%';
 
-const makeApproachObserver = (onApproach) => {
-  if (typeof IntersectionObserver !== 'function') return null;
-  const observer = new IntersectionObserver(onApproach, {
-    scrollMargin: APPROACH_MARGIN,
-  });
-  // An option the browser did not know is dropped, so the presence of the
-  // reading is what says the margin was understood; without it the observer
-  // would watch the true viewport and fire late.
-  if (!('scrollMargin' in observer)) return null;
-  return observer;
-};
+// The margin shipped in Firefox 141 and the extension's floor is 158: the
+// option is always understood, and the coarse scroll listener an older page
+// once paid for instead has nothing left to stand in for.
+const makeApproachObserver = (onApproach) =>
+  new IntersectionObserver(onApproach, { scrollMargin: APPROACH_MARGIN });
 
-// The shadow walk is the expensive branch, so it only runs when the light DOM
-// turned up nothing — which is the only case where it can help. And it is
-// bounded: a page whose web components nest deeply can hand the walk a tree
-// without end, and every scroll would send the walk down it again. The
-// budget keeps one rescan from sitting on the main thread for longer than a
-// moment; a video the budget went past is found by the next rescan instead,
-// the way a page still being built is found in pieces.
+// The budget the find-sweep walks under, counted per element visited. Where
+// querySelectorAll('*') materialised a whole tree before a budget could
+// object, a TreeWalker hands out one element at a time — the walker's own
+// enumeration is what stops the cost the moment the budget says so.
 const MAX_WALK_ELEMENTS = 5000;
-
-const collectFromShadowRoots = (root, found) => {
-  let budget = MAX_WALK_ELEMENTS;
-
-  const walk = (node) => {
-    if (budget <= 0) return;
-    for (const element of node.querySelectorAll('*')) {
-      budget -= 1;
-      if (budget <= 0) return;
-      const { shadowRoot } = element;
-      if (!shadowRoot) continue;
-      for (const video of shadowRoot.querySelectorAll('video')) {
-        found.add(video);
-      }
-      walk(shadowRoot);
-    }
-  };
-
-  walk(root);
-};
-
-const collectVideos = () => {
-  const found = new Set(document.querySelectorAll('video'));
-  if (found.size === 0) collectFromShadowRoots(document, found);
-  return found;
-};
 
 export const isPlayable = (video) => {
   if (!video.isConnected) return false;
@@ -85,9 +50,18 @@ export const isPlayable = (video) => {
   }
   const rect = video.getBoundingClientRect();
   if (rect.width < MIN_WIDTH || rect.height < MIN_HEIGHT) return false;
-  const style = getComputedStyle(video);
-  if (style.visibility === 'hidden' || style.display === 'none') return false;
-  if (Number(style.opacity) === 0) return false;
+  // One reading answers every kind of invisible, the element's own and its
+  // ancestors': display gone, visibility off, opacity zeroed. The computed
+  // styles this replaces could only speak for the element itself — opacity
+  // is not inherited, and a style read is not a walk up the tree — so a
+  // container opacity-zeroed or a layout collapsed around a film used to
+  // elect a badge over a thing nobody can see. The check shipped in
+  // Firefox 106; the floor is 158.
+  if (
+    !video.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
+  ) {
+    return false;
+  }
   return video.readyState >= HAVE_METADATA || video.currentSrc !== '';
 };
 
@@ -135,11 +109,67 @@ export const createVideoWatcher = (onPrimaryChange) => {
   const watched = new Set();
   let isRunning = false;
 
+  // The sweep's walkers, left standing between rescans: where one pass
+  // stopped, the next resumes — a tree the budget ran out under is covered
+  // in pieces, not approached from the top again every time.
+  const walkStack = [];
+
+  const collectVideos = () => {
+    const found = new Set();
+    // One budgeted pass for the whole document, light and shadowed alike:
+    // the old walk waited for an empty light DOM before it ran, so a page
+    // that kept a teaser in the light and its real film inside a custom
+    // element never met the film at all. A walker cannot cross the shadow
+    // boundary itself; each root it meets joins the same pass by one cheap
+    // name query for its own videos and one walker on it for the roots
+    // nested inside.
+    if (walkStack.length === 0) {
+      walkStack.push(
+        document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT),
+      );
+    }
+    let budget = MAX_WALK_ELEMENTS;
+    while (walkStack.length > 0) {
+      const walker = walkStack[walkStack.length - 1];
+      const node = walker.nextNode();
+      if (node === null) {
+        walkStack.pop();
+        continue;
+      }
+      budget -= 1;
+      if (node.localName === 'video') found.add(node);
+      if (node.shadowRoot !== null) {
+        for (const video of node.shadowRoot.querySelectorAll('video')) {
+          found.add(video);
+        }
+        walkStack.push(
+          document.createTreeWalker(node.shadowRoot, NodeFilter.SHOW_ELEMENT),
+        );
+      }
+      if (budget <= 0) break;
+    }
+    // `spent` says the budget, not the tree, drew the line under this pass;
+    // the walk standing in `walkStack` resumes on the sweep re-armed below.
+    return { found, spent: budget <= 0 };
+  };
+
   const rescan = () => {
     rescanTimer = null;
-    playable.clear();
-    for (const video of collectVideos()) {
+    // A hidden document paints nothing a sweep could serve, and rect and
+    // style reads are forced layout on it; the sweep sits out, and the tab
+    // being seen again is what re-arms it.
+    if (document.hidden) return;
+    const { found, spent } = collectVideos();
+    if (spent) rescanTimer = setTimeout(rescan, RESCAN_DELAY_MS);
+    // The playable set is not cleared and rebuilt here, as it was when one
+    // sweep covered the whole document: a pass covers a piece of it, and a
+    // clear would drop films a later pass has not reached yet — the elected
+    // film flickering out of existence between two sweeps. Everything found
+    // is judged fresh; what no found film can still be is what has left the
+    // page, and the page is honest about that by itself.
+    for (const video of found) {
       if (isPlayable(video)) playable.add(video);
+      else playable.delete(video);
       // Position changes of known films come through the approach observer
       // rather than through scrolls, so every video the sweep meets is kept
       // on watch. An element the page has let go of is one it has forgotten:
@@ -157,6 +187,11 @@ export const createVideoWatcher = (onPrimaryChange) => {
         watched.delete(video);
       }
     }
+    for (const video of playable) {
+      // A film the page let go of stops being a film by the same honesty
+      // the walk reaches it: not found again, and not on the page to find.
+      if (!video.isConnected) playable.delete(video);
+    }
     const next = pickPrimary(playable);
     if (next === primary) return;
     primary = next;
@@ -166,6 +201,12 @@ export const createVideoWatcher = (onPrimaryChange) => {
   const scheduleRescan = () => {
     if (rescanTimer !== null) return;
     rescanTimer = setTimeout(rescan, RESCAN_DELAY_MS);
+  };
+
+  // The tab coming back into view is a sweep's invitation as much as any
+  // event is: sweeps sat out while it was hidden.
+  const onVisibility = () => {
+    if (!document.hidden) scheduleRescan();
   };
 
   const start = () => {
@@ -179,13 +220,9 @@ export const createVideoWatcher = (onPrimaryChange) => {
     document.addEventListener('play', scheduleRescan, true);
     document.addEventListener('pause', scheduleRescan, true);
     document.addEventListener('loadedmetadata', scheduleRescan, true);
+    document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('resize', scheduleRescan);
     approacher = makeApproachObserver(scheduleRescan);
-    // Without an approach observer — an old browser, or a promise the page
-    // keeps none of — the scroll itself stands in, coarse as ever.
-    if (approacher === null) {
-      window.addEventListener('scroll', scheduleRescan, true);
-    }
     rescan();
   };
 
@@ -197,13 +234,14 @@ export const createVideoWatcher = (onPrimaryChange) => {
     if (approacher !== null) approacher.disconnect();
     approacher = null;
     watched.clear();
+    walkStack.length = 0;
     if (rescanTimer !== null) clearTimeout(rescanTimer);
     rescanTimer = null;
     document.removeEventListener('play', scheduleRescan, true);
     document.removeEventListener('pause', scheduleRescan, true);
     document.removeEventListener('loadedmetadata', scheduleRescan, true);
+    document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('resize', scheduleRescan);
-    window.removeEventListener('scroll', scheduleRescan, true);
     playable.clear();
     primary = null;
   };
