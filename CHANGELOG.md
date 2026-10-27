@@ -68,6 +68,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The rungs and the moments get homes of their own.** The quality row
+  and the audio row had written the same ceremony twice — find the site's
+  player once per sheet opening, list what it offers, carry the viewer's
+  choice over it, refuse a rung the player will not take — and the rung
+  sheet is struck once now, each row keeping only its own hunt and its
+  two extra words. A one-shot timer is one verb where it used to be a
+  hand-bound knot of a variable cleared if armed, nulled when it fired,
+  cleared again at teardown: ten of them — the toast, the chrome's idle
+  fade, the dismiss spring home, the skip ledger's linger, the persist
+  batch, the frames rail's beat, the slot's expiry, the caption probe,
+  the detect sweep — hold their moment in one place, and the slot
+  empties itself the instant its work runs. The colour panel's four
+  steppers carried the settings schema's ends copied by hand, and they
+  read them from the module now (the feel of the hand — each step, each
+  dial's decimals — stays local), so the settings page writes its
+  sliders' endpoints from the same source and the schema can no longer
+  drift from its dials. And the badge's answer for a film — shown, or
+  not, and why not — is said once in the frame instead of four times.
+
 - **The methods that were hidden in three hand-copies get one home.** The
   discipline of holding a line a rewriting site wants to move — repair,
   count, exceed the budget, sound off once, step aside — is now a guard

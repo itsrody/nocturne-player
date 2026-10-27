@@ -1,4 +1,5 @@
 import { SLOT_TAG } from '../lib/words.js';
+import { createTimerSlot } from '../lib/time.js';
 import { createGuardBudget } from './ground.js';
 
 const HOLD_GRACE_MS = 12000;
@@ -115,16 +116,14 @@ export const createSlotKeeper = (home, doc) => {
     // mid-open cannot say its goodbyes, so the width pays itself back
     // rather than squatting on the page for good. The beat is the slot
     // word itself, renewed on the claimant's own heartbeat.
-    const pause = () => close(ticket);
-    let expiry = setTimeout(pause, HOLD_GRACE_MS);
+    const expiry = createTimerSlot(() => close(ticket));
 
     return {
       fresh: () => {
-        clearTimeout(expiry);
-        expiry = setTimeout(pause, HOLD_GRACE_MS);
+        expiry.set(HOLD_GRACE_MS);
       },
       restore: () => {
-        clearTimeout(expiry);
+        expiry.clear();
         if (guard) guard.disconnect();
         if (original === null) element.removeAttribute('style');
         else element.setAttribute('style', original);

@@ -7,6 +7,7 @@ import { createSeeker } from './video/seek.js';
 import { createTrackManager } from './video/tracks.js';
 import { createVisuals } from './video/visuals.js';
 import { el } from './shell.js';
+import { createTimerSlot } from '../lib/time.js';
 import { ZONE } from './gestures/zones.js';
 
 // Controls that show themselves are timed from the moment they show: one
@@ -201,8 +202,6 @@ export const createOverlay = ({
 
   const controlBar = createControlBar(video, seek, { onScrub: onHeadScrub });
 
-  let chromeTimer = null;
-  let toastTimer = null;
   let pinchBase = 1;
   let skipTarget = null;
   // The pill's ledger for a sitting of side seeks — the half-moon's old
@@ -212,14 +211,27 @@ export const createOverlay = ({
   // skipTarget, the piece that keeps the film's side of the same bargain
   // cumulative while its last seek is still in flight.
   const skipAccount = {
-    back: { total: 0, timer: null },
-    forward: { total: 0, timer: null },
+    back: { total: 0 },
+    forward: { total: 0 },
   };
+
+  // A side's account is dropped — its timer cleared and its sum forgotten —
+  // when the other side speaks or the linger runs out.
   const clearAccount = (side) => {
-    if (side.timer !== null) clearTimeout(side.timer);
-    side.timer = null;
+    side.timer.clear();
     side.total = 0;
   };
+
+  // The linger itself: one breath after the last seeking tap, and the
+  // side's account comes off the screen. The timers name each other's
+  // sides, so the slots are armed after both sides exist.
+  const lingerFor = (side) =>
+    createTimerSlot(() => {
+      side.total = 0;
+    });
+
+  skipAccount.back.timer = lingerFor(skipAccount.back);
+  skipAccount.forward.timer = lingerFor(skipAccount.forward);
   let releaseHold = null;
   // Read from the snapshot the overlay opened with and written by the sheet's
   // chip: a film in progress takes the new pace at once, and persistence
@@ -233,7 +245,12 @@ export const createOverlay = ({
   // A duration of null keeps the toast up until hideToast takes it down: the
   // 2x label stays for as long as the finger does. A lead icon — the drawn
   // arrow pair — rides before the words when a voice is carried with it;
-  // plain notices keep textContent, since they need no mark at all.
+  // plain notices keep textContent, since they need no mark at all. The fade
+  // out is a timer slot — every notice's rearm replaces the last one.
+  const toastTimer = createTimerSlot(() => {
+    toast.classList.remove('is-visible');
+  });
+
   const showToast = (text, duration = TOAST_MS, lead = null) => {
     if (lead === null) {
       toast.textContent = text;
@@ -241,18 +258,15 @@ export const createOverlay = ({
       toast.replaceChildren(lead, el('span', { text }));
     }
     toast.classList.add('is-visible');
-    if (toastTimer !== null) clearTimeout(toastTimer);
-    toastTimer = null;
-    if (duration === null) return;
-    toastTimer = setTimeout(() => {
-      toastTimer = null;
-      toast.classList.remove('is-visible');
-    }, duration);
+    if (duration === null) {
+      toastTimer.clear();
+      return;
+    }
+    toastTimer.set(duration);
   };
 
   const hideToast = () => {
-    if (toastTimer !== null) clearTimeout(toastTimer);
-    toastTimer = null;
+    toastTimer.clear();
     toast.classList.remove('is-visible');
   };
 
@@ -291,19 +305,20 @@ export const createOverlay = ({
   // The idle timer that puts an undisturbed picture away, in its own name:
   // showing must never and rewinding must be able to reach it alone. The
   // flag read here alongside it is the head ball's: see onHeadScrub above,
-  // which indeed runs before this atom does.
+  // which indeed runs before this atom does. The moment is a slot — a rearm
+  // by whoever disturbs the chrome replaces what was pending.
+  const chromeTimer = createTimerSlot(() => {
+    if (isPanelOpen() || isHeadScrubbing) return;
+    chrome.toggleAttribute('hidden', true);
+  });
+
   const scheduleFade = () => {
-    chromeTimer = setTimeout(() => {
-      chromeTimer = null;
-      if (isPanelOpen() || isHeadScrubbing) return;
-      chrome.toggleAttribute('hidden', true);
-    }, CHROME_IDLE_MS);
+    chromeTimer.set(CHROME_IDLE_MS);
   };
 
   const setChromeVisible = (isVisible) => {
     chrome.toggleAttribute('hidden', !isVisible);
-    if (chromeTimer !== null) clearTimeout(chromeTimer);
-    chromeTimer = null;
+    chromeTimer.clear();
     if (!isVisible || isPanelOpen()) return;
     scheduleFade();
   };
@@ -406,22 +421,22 @@ export const createOverlay = ({
   // rides because its house is moved, not because anything touched the
   // picture's style. The frame dies with the session, so an unmade bed
   // cannot meet the next one.
-  let dismissSettleTimer = null;
-
   const clearDismissStage = () => {
     frame.style.transition = '';
     frame.style.transform = '';
   };
+
+  // The spring home: a moment that is cleared out from under itself when
+  // the hand commits on the road down, so the settle cannot fire after
+  // the session is already gone.
+  const settleBack = createTimerSlot(clearDismissStage);
 
   const dismissMove = ({ progress }) => {
     // No ceremony at the line: crossing it is the whole gesture. The player
     // is already where the finger has dragged it, so it goes out there and
     // then, with no fall of its own to watch afterwards.
     if (progress >= DISMISS_COMMIT_TRAVEL) {
-      if (dismissSettleTimer !== null) {
-        clearTimeout(dismissSettleTimer);
-        dismissSettleTimer = null;
-      }
+      settleBack.clear();
       onExit();
       return;
     }
@@ -438,11 +453,7 @@ export const createOverlay = ({
     }
     frame.style.transition = `transform ${DISMISS_MS}ms ease-out`;
     frame.style.transform = 'translateY(0%)';
-    if (dismissSettleTimer !== null) clearTimeout(dismissSettleTimer);
-    dismissSettleTimer = setTimeout(() => {
-      dismissSettleTimer = null;
-      clearDismissStage();
-    }, DISMISS_MS);
+    settleBack.set(DISMISS_MS);
   };
 
   const recognizer = createRecognizer(surface, {
@@ -487,8 +498,7 @@ export const createOverlay = ({
       // The other direction's ledger closes when this one speaks: a flip
       // is a fresh walk, not a step of the old one.
       clearAccount(seconds > 0 ? skipAccount.back : skipAccount.forward);
-      if (side.timer !== null) clearTimeout(side.timer);
-      side.timer = setTimeout(() => clearAccount(side), SKIP_LINGER_MS);
+      side.timer.set(SKIP_LINGER_MS);
     },
     holdStart: () => {
       if (isPanelOpen()) return;
@@ -676,9 +686,9 @@ export const createOverlay = ({
       controlBar.destroy();
       tracks.destroy();
       stopHold();
-      if (dismissSettleTimer !== null) clearTimeout(dismissSettleTimer);
-      if (chromeTimer !== null) clearTimeout(chromeTimer);
-      if (toastTimer !== null) clearTimeout(toastTimer);
+      settleBack.clear();
+      chromeTimer.clear();
+      toastTimer.clear();
       clearAccount(skipAccount.back);
       clearAccount(skipAccount.forward);
       surface.removeEventListener('pointermove', wakeChrome);

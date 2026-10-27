@@ -1,5 +1,6 @@
 import { call, read, toArray, write } from './pageapi.js';
 import { findEngines } from './engines.js';
+import { createRungs } from './rungs.js';
 
 // A film with two dubs carries them as two audio renditions of the same stream,
 // and every engine names them differently. What they agree on is that there is
@@ -159,12 +160,6 @@ const BUILDERS = [
 ];
 
 export const createAudioTracks = (video, host = null) => {
-  let adapter = null;
-  let options = [];
-  // The same bargain the quality row strikes: what the viewer asked for
-  // outlives the adapter, which is rebuilt every time the sheet opens.
-  let chosen = null;
-
   const detect = () => {
     const engines = findEngines(video, host);
     for (const { kind, build } of BUILDERS) {
@@ -186,29 +181,15 @@ export const createAudioTracks = (video, host = null) => {
     return null;
   };
 
-  const refresh = () => {
-    adapter = detect();
-    options = adapter === null ? [] : adapter.list();
-    if (!options.some((option) => option.id === chosen)) chosen = null;
-    return options;
-  };
-
+  // The sheet itself is the shared ceremony — the same bargain the quality
+  // row strikes, held by the rungs module; only the hunt for the adapter
+  // is this row's own.
+  const rungs = createRungs(detect);
   return {
-    refresh,
-    getOptions: () => options,
-    // One track is not a choice, it is a fact, and a row offering it is a row
-    // in the way.
-    isSwitchable: () => options.length > 1,
-    getCurrent: () => {
-      if (chosen !== null) return chosen;
-      return adapter === null ? null : adapter.current();
-    },
-    select: (id) => {
-      if (adapter === null) return false;
-      const wanted = String(id);
-      if (adapter.select(wanted) !== true) return false;
-      chosen = wanted;
-      return true;
-    },
+    refresh: rungs.refresh,
+    getOptions: rungs.getOptions,
+    isSwitchable: rungs.isSwitchable,
+    getCurrent: rungs.getCurrent,
+    select: rungs.select,
   };
 };

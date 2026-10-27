@@ -1,4 +1,5 @@
 import { call, isFunction, read, toArray, toPage } from './pageapi.js';
+import { createTimerSlot } from '../../lib/time.js';
 
 const PROBE_INTERVAL_MS = 1000;
 
@@ -107,7 +108,6 @@ export const createSiteCaptions = (onText, host = null) => {
 
   let container = null;
   let observer = null;
-  let probeTimer = null;
   let isMirroring = false;
   let lastText = '';
 
@@ -141,8 +141,9 @@ export const createSiteCaptions = (onText, host = null) => {
 
   // The container is created the moment captions are first switched on, which
   // may be long after the player opened, so it is looked for on a slow tick.
-  const probe = () => {
-    probeTimer = null;
+  // The tick is a timer slot: each probe re-arms itself, whatever it found.
+  const probeTimer = createTimerSlot(probe);
+  function probe() {
     if (container !== null && !container.isConnected) unwatch();
     if (container === null) {
       const found = findContainer();
@@ -150,8 +151,8 @@ export const createSiteCaptions = (onText, host = null) => {
     } else {
       readNow();
     }
-    probeTimer = setTimeout(probe, PROBE_INTERVAL_MS);
-  };
+    probeTimer.set(PROBE_INTERVAL_MS);
+  }
 
   probe();
 
@@ -176,8 +177,7 @@ export const createSiteCaptions = (onText, host = null) => {
       onText('');
     },
     destroy: () => {
-      if (probeTimer !== null) clearTimeout(probeTimer);
-      probeTimer = null;
+      probeTimer.clear();
       unwatch();
     },
   };

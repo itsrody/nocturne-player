@@ -24,3 +24,39 @@ export const formatOffset = (seconds) => {
   const sign = seconds < 0 ? '-' : '+';
   return `${sign}${formatClock(Math.abs(seconds))}`;
 };
+
+// A moment the code comes back to, held as one verb. The hand-bound bookkeeping
+// this replaces — a bookkeeping variable, cleared if already armed, nulled when
+// the work runs, cleared again on teardown — is one discipline said many
+// times over; here it is said once. Rearming replaces what was pending, and
+// the slot empties itself the moment the work runs, so `isOn` always means
+// "still to come" — never "recently fired".
+//
+// The arm and drop arrive as knobs so the slot can be watched in a test
+// realm where setTimeout is a ledger rather than a clock.
+export const createTimerSlot = (
+  fire,
+  { arm = setTimeout, drop = clearTimeout } = {},
+) => {
+  let held = null;
+
+  const when = () => {
+    held = null;
+    fire();
+  };
+
+  return {
+    // Arms the moment: whatever was pending is taken away first, so a
+    // rearm is one call, not a question about what was there before.
+    set: (ms) => {
+      if (held !== null) drop(held);
+      held = arm(when, ms);
+    },
+    clear: () => {
+      if (held === null) return;
+      drop(held);
+      held = null;
+    },
+    isOn: () => held !== null,
+  };
+};

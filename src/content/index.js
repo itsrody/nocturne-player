@@ -4,6 +4,7 @@ import {
   readSettings,
   writeSettings,
 } from '../lib/settings.js';
+import { createTimerSlot } from '../lib/time.js';
 import { LEGACY_OPENINGS_KEY, STATE_QUERY } from '../lib/words.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
@@ -45,7 +46,6 @@ const start = async () => {
   // in place for the next film the page hands over — rebinding, as a fresh
   // object did, left the session carrying the value it opened with.
   const current = await readSettings();
-  let persistTimer = null;
   let pendingPatch = null;
 
   const badge = createBadge();
@@ -54,17 +54,19 @@ const start = async () => {
   // times should not mean five writes. The values waiting to be written
   // accumulate, because a timer that only carried the newest patch would have
   // dropped every field touched before it — a warmth turned down and then a
-  // brightness turned up, and the warmth never reached storage at all.
+  // brightness turned up, and the warmth never reached storage at all. The
+  // debouncer is a timer slot: rearms replace, and nothing about the ledger
+  // is the slot's business.
+  const persistTimer = createTimerSlot(() => {
+    const patchToWrite = pendingPatch;
+    pendingPatch = null;
+    writeSettings(patchToWrite);
+  });
+
   const persist = (patch) => {
     Object.assign(current, patch);
     pendingPatch = { ...pendingPatch, ...patch };
-    if (persistTimer !== null) clearTimeout(persistTimer);
-    persistTimer = setTimeout(() => {
-      persistTimer = null;
-      const patchToWrite = pendingPatch;
-      pendingPatch = null;
-      writeSettings(patchToWrite);
-    }, PERSIST_DELAY_MS);
+    persistTimer.set(PERSIST_DELAY_MS);
   };
 
   const isWatched = () => hosts.every((host) => isHostEnabled(current, host));
@@ -102,20 +104,24 @@ const start = async () => {
     ? createJudge(window, { ownWant: () => refs.wantsBadge() })
     : null;
 
-  const watcher = createVideoWatcher((primary) => {
-    if (session) return;
+  // The badge's answer for a film, said once and asked of wherever the
+  // news comes from: a watcher's sweep, a grant arriving from the judge,
+  // or the player handing its film back. The film is always given — each
+  // caller knows it, and the answer needs no second opinion.
+  const retune = (primary) => {
     if (primary && granted && isWatched()) badge.show(primary);
     else badge.hide();
+  };
+
+  const watcher = createVideoWatcher((primary) => {
+    if (session) return;
+    retune(primary);
     refs.announce();
   });
 
   refs.liveCount = () => watcher.getCount();
 
-  refs.onGrant = () => {
-    const primary = watcher.getPrimary();
-    if (primary && granted && isWatched()) badge.show(primary);
-    else badge.hide();
-  };
+  refs.onGrant = () => retune(watcher.getPrimary());
 
   refs.wantsBadge = () =>
     !session && watcher.getPrimary() !== null && isWatched();
@@ -167,8 +173,7 @@ const start = async () => {
       onExit: (lastVideo) => {
         session = null;
         claimant?.slot(false);
-        if (granted && isWatched()) badge.show(lastVideo);
-        else badge.hide();
+        retune(lastVideo);
         refs.announce();
       },
     });

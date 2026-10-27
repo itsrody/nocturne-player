@@ -16,6 +16,7 @@
 // on its own content all the same. The ticket filters out everything the
 // protocol did not itself put on the wire.
 import { CLAIM_TAG, SLOT_TAG } from '../lib/words.js';
+import { createTimerSlot } from '../lib/time.js';
 import { postWord, targetOf } from './slot.js';
 const RENEW_MS = 2000;
 const STALE_MS = 6000;
@@ -24,7 +25,6 @@ export const mintTicket = () =>
   `${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}`;
 
 export const isTopFrame = () => window.top === window;
-
 // The decision about a framed film is the embedding pages', plural: every
 // named origin between the film and the eye names itself, because a page's
 // settings speak for the page the viewer is actually looking at. The chain
@@ -74,7 +74,6 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   const getCount = opts.getCount ?? (() => 0);
   let want = false;
   let slotOpen = false;
-  let renewTimer = null;
 
   // The words the rail carries: what this frame asks for, how many films
   // live in it, and — while the session below is open — the slot word
@@ -101,14 +100,14 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   const worthSaying = () => want || slotOpen || getCount() > 0;
 
   // The next beat, when the frame still has something to keep alive on the
-  // rail.
-  const renew = () => {
-    renewTimer = null;
+  // rail. The beat and the words are knotted — each names the other — so
+  // the word is a hoisted one and the slot is armed with it before its
+  // body reads.
+  const beat = createTimerSlot(renew);
+  function renew() {
     say();
-    if (worthSaying()) {
-      renewTimer = setTimeout(renew, RENEW_MS);
-    }
-  };
+    if (worthSaying()) beat.set(RENEW_MS);
+  }
 
   // The words now, and the heart's verdict after them: a frame with
   // something to say keeps beating — a claim in force, films to count, a
@@ -117,12 +116,9 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   const tell = () => {
     say();
     if (worthSaying()) {
-      if (renewTimer === null) {
-        renewTimer = setTimeout(renew, RENEW_MS);
-      }
-    } else if (renewTimer !== null) {
-      clearTimeout(renewTimer);
-      renewTimer = null;
+      if (!beat.isOn()) beat.set(RENEW_MS);
+    } else {
+      beat.clear();
     }
   };
 
@@ -130,10 +126,7 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   // the page it is nobody, in the tests it is the way a test leaves the
   // rail behind without leaving its beat on the event loop.
   const end = () => {
-    if (renewTimer !== null) {
-      clearTimeout(renewTimer);
-      renewTimer = null;
-    }
+    beat.clear();
   };
 
   // A session in this frame wants the page to give its seat room: the
@@ -162,10 +155,9 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   const setWant = (next) => {
     if (next === want) return;
     want = next;
-    if (renewTimer !== null) {
-      clearTimeout(renewTimer);
-      renewTimer = null;
-    }
+    // The beat restarts with the want: a change of mind is worth a full
+    // window, not whatever was left of the old one.
+    beat.clear();
     tell();
   };
 

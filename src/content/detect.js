@@ -1,4 +1,5 @@
 import { createDebug } from '../lib/debug.js';
+import { createTimerSlot } from '../lib/time.js';
 
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
@@ -111,10 +112,9 @@ export const createVideoWatcher = (onPrimaryChange) => {
   const playable = new Set();
   let primary = null;
   let observer = null;
-  let rescanTimer = null;
+  let isRunning = false;
   let approacher = null;
   const watched = new Set();
-  let isRunning = false;
 
   // The sweep's walkers, left standing between rescans: where one pass
   // stopped, the next resumes — a tree the budget ran out under is covered
@@ -160,14 +160,16 @@ export const createVideoWatcher = (onPrimaryChange) => {
     return { found, spent: budget <= 0 };
   };
 
-  const rescan = () => {
-    rescanTimer = null;
+  // The sweep, a hoisted name so the slot below can name it: rescan and
+  // the moment it runs at need each other for their bodies.
+  const rescanTimer = createTimerSlot(rescan);
+  function rescan() {
     // A hidden document paints nothing a sweep could serve, and rect and
     // style reads are forced layout on it; the sweep sits out, and the tab
     // being seen again is what re-arms it.
     if (document.hidden) return;
     const { found, spent } = collectVideos();
-    if (spent) rescanTimer = setTimeout(rescan, RESCAN_DELAY_MS);
+    if (spent) rescanTimer.set(RESCAN_DELAY_MS);
     // The playable set is not cleared and rebuilt here, as it was when one
     // sweep covered the whole document: a pass covers a piece of it, and a
     // clear would drop films a later pass has not reached yet — the elected
@@ -209,11 +211,11 @@ export const createVideoWatcher = (onPrimaryChange) => {
       `${playable.size} playable in all`,
     );
     onPrimaryChange(primary, playable.size);
-  };
+  }
 
   const scheduleRescan = () => {
-    if (rescanTimer !== null) return;
-    rescanTimer = setTimeout(rescan, RESCAN_DELAY_MS);
+    if (rescanTimer.isOn()) return;
+    rescanTimer.set(RESCAN_DELAY_MS);
   };
 
   // The tab coming back into view is a sweep's invitation as much as any
@@ -248,8 +250,7 @@ export const createVideoWatcher = (onPrimaryChange) => {
     approacher = null;
     watched.clear();
     walkStack.length = 0;
-    if (rescanTimer !== null) clearTimeout(rescanTimer);
-    rescanTimer = null;
+    rescanTimer.clear();
     document.removeEventListener('play', scheduleRescan, true);
     document.removeEventListener('pause', scheduleRescan, true);
     document.removeEventListener('loadedmetadata', scheduleRescan, true);

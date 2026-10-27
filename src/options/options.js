@@ -1,4 +1,5 @@
 import {
+  DIALS,
   onSettingsChanged,
   readSettings,
   resetSettings,
@@ -50,7 +51,11 @@ const writeSoon = (key, value) => {
 
 // A slider answers as it moves: the number beside its label first (free), the
 // storage write debounced after it. The decimals it shows come from its own
-// step, so a seconds dial reads whole and a colour dial reads fine.
+// step, so a seconds dial reads whole and a colour dial reads fine. Its ends
+// are written from the settings module's own dials rather than trusted to
+// the HTML staying in step with the schema — the static ends stay as the
+// no-JS answer, and a schema change cannot leave a slider promising storage
+// something it will refuse.
 const decimalsOf = (step) => {
   if (step >= 1) return 0;
   if (step >= 0.1) return 1;
@@ -60,6 +65,9 @@ const decimalsOf = (step) => {
 const readSlider = (slider) => {
   const input = byId(slider.key);
   const label = byId(slider.output);
+  const dial = DIALS[slider.key];
+  input.min = String(dial.min);
+  input.max = String(dial.max);
 
   const paint = () => {
     const value = Number(input.value);

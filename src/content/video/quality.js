@@ -1,4 +1,5 @@
 import { ADAPTERS, AUTO_ID } from './qualityadapters.js';
+import { createRungs } from './rungs.js';
 import { createDebug } from '../../lib/debug.js';
 
 export { AUTO_ID };
@@ -12,14 +13,6 @@ const debug = createDebug('quality');
 // so the ladder is looked up again every time the sheet is opened rather than
 // once when the session starts.
 export const createQuality = (video, host = null, adapters = ADAPTERS) => {
-  let adapter = null;
-  let options = [];
-  // What the viewer asked for has to outlive the adapter. The ladder is looked
-  // up again every time the sheet opens, which builds a new adapter each time,
-  // and a player that has been given a rung goes back to reporting whatever its
-  // own auto has drifted to. The chip should say what was asked for.
-  let chosen = null;
-
   const detect = () => {
     for (const create of adapters) {
       try {
@@ -32,19 +25,15 @@ export const createQuality = (video, host = null, adapters = ADAPTERS) => {
     return null;
   };
 
+  const rungs = createRungs(detect, { autoId: AUTO_ID });
+
   const refresh = () => {
-    adapter = detect();
+    const options = rungs.refresh();
+    const adapter = rungs.getAdapter();
     if (adapter === null) {
-      options = [];
-      chosen = null;
       debug('no adapter would take the film');
       return options;
     }
-    const listed = adapter.list();
-    const auto = adapter.hasAuto ? [{ id: AUTO_ID, label: 'Auto' }] : [];
-    options = listed.length > 0 ? auto.concat(listed) : [];
-    // A choice lives only as long as the rung it names is still on offer.
-    if (!options.some((option) => option.id === chosen)) chosen = null;
     debug(
       `the ladder came from the ${adapter.name} adapter`,
       `${options.length} rungs offered`,
@@ -60,6 +49,7 @@ export const createQuality = (video, host = null, adapters = ADAPTERS) => {
       video.videoWidth === 0
         ? ''
         : `${video.videoWidth}×${video.videoHeight} · `;
+    const adapter = rungs.getAdapter();
     if (adapter !== null) {
       const detail = adapter.diagnose ? adapter.diagnose() : 'no levels yet';
       return `${size}${adapter.name}: ${detail}`;
@@ -70,19 +60,13 @@ export const createQuality = (video, host = null, adapters = ADAPTERS) => {
   return {
     refresh,
     describe,
-    getOptions: () => options,
-    getEngine: () => (adapter === null ? null : adapter.name),
-    isSwitchable: () => options.length > 1,
-    getCurrent: () => {
-      if (chosen !== null) return chosen;
-      return adapter === null ? null : adapter.current();
+    getOptions: rungs.getOptions,
+    getEngine: () => {
+      const adapter = rungs.getAdapter();
+      return adapter === null ? null : adapter.name;
     },
-    select: (id) => {
-      if (adapter === null) return false;
-      const wanted = String(id);
-      if (adapter.select(wanted) !== true) return false;
-      chosen = wanted;
-      return true;
-    },
+    isSwitchable: rungs.isSwitchable,
+    getCurrent: rungs.getCurrent,
+    select: rungs.select,
   };
 };

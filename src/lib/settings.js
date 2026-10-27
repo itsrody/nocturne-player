@@ -31,6 +31,26 @@ export const DEFAULTS = Object.freeze({
   ),
 });
 
+// The dials' ends, told once for whoever draws one. The colour panel's
+// steppers and the settings page's sliders both clamp between these ends
+// and both reset to the neutral at the middle, so the numbers they were
+// carrying by hand live here now. A dial's step is deliberately not here:
+// it is the surface's own feel, not the schema's.
+export const DIALS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(SPEC)
+      .filter(([, spec]) => spec.min !== undefined)
+      .map(([key, spec]) => [
+        key,
+        Object.freeze({
+          min: spec.min,
+          max: spec.max,
+          fallback: spec.fallback,
+        }),
+      ]),
+  ),
+);
+
 // A dial's answer is only trusted within its ends: a colour or range value
 // that is not a finite number in range is not the viewer's answer — it
 // falls back to the neutral one rather than tinting somebody's first film

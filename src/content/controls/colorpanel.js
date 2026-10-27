@@ -1,4 +1,5 @@
 import { el } from '../shell.js';
+import { DIALS } from '../../lib/settings.js';
 
 const asPercent = (value) => `${Math.round(value * 100)}%`;
 
@@ -6,7 +7,9 @@ const asWarmth = (value) =>
   value === 0 ? 'off' : `${Math.round((value / 0.45) * 100)}%`;
 
 // Steppers rather than sliders: a thumb can hit a 44px button while holding the
-// phone, which is not true of a slider handle.
+// phone, which is not true of a slider handle. The row names its key and the
+// hand's feel — the ends and the neutral come from the settings module's own
+// dials, so a schema change cannot leave the panel clamping at stale numbers.
 const ROWS = [
   // A wider reach and a bigger step than the rest: brightness is the one people
   // come here for, on a dark film in a dark room, and at 5% a press with a
@@ -15,37 +18,25 @@ const ROWS = [
   {
     key: 'brightness',
     label: 'Brightness',
-    min: 0.4,
-    max: 2,
     step: 0.1,
-    value: 1,
     format: asPercent,
   },
   {
     key: 'contrast',
     label: 'Contrast',
-    min: 0.5,
-    max: 1.5,
     step: 0.05,
-    value: 1,
     format: asPercent,
   },
   {
     key: 'saturate',
     label: 'Saturation',
-    min: 0,
-    max: 2,
     step: 0.1,
-    value: 1,
     format: asPercent,
   },
   {
     key: 'warmth',
     label: 'Night light',
-    min: 0,
-    max: 0.45,
     step: 0.09,
-    value: 0,
     format: asWarmth,
   },
 ];
@@ -53,9 +44,10 @@ const ROWS = [
 const round = (value, step) => Math.round(value / step) * step;
 
 const buildStepper = (spec, onChange) => {
+  const dial = DIALS[spec.key];
   const readout = el('span', {
     class: 'step-value',
-    text: spec.format(spec.value),
+    text: spec.format(dial.fallback),
   });
   const minus = el('button', {
     class: 'step-button',
@@ -70,13 +62,13 @@ const buildStepper = (spec, onChange) => {
     'aria-label': `More ${spec.label.toLowerCase()}`,
   });
 
-  let value = spec.value;
+  let value = dial.fallback;
 
   const set = (next) => {
-    value = round(Math.min(spec.max, Math.max(spec.min, next)), spec.step);
+    value = round(Math.min(dial.max, Math.max(dial.min, next)), spec.step);
     readout.textContent = spec.format(value);
-    minus.disabled = value <= spec.min;
-    plus.disabled = value >= spec.max;
+    minus.disabled = value <= dial.min;
+    plus.disabled = value >= dial.max;
     return value;
   };
 
@@ -86,11 +78,11 @@ const buildStepper = (spec, onChange) => {
   plus.addEventListener('click', () =>
     onChange(spec.key, set(value + spec.step)),
   );
-  set(spec.value);
+  set(dial.fallback);
 
   return {
     key: spec.key,
-    reset: () => set(spec.value),
+    reset: () => set(dial.fallback),
     set,
     root: el('div', { class: 'step-row' }, [
       el('span', { class: 'step-label', text: spec.label }),
