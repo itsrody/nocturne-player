@@ -12,6 +12,7 @@ import { asDossier, asStrain, asVerdict } from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import { createDomManager } from './dom.js';
+import { warmEngines } from './video/engines.js';
 import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
 
@@ -248,6 +249,14 @@ const start = async () => {
   });
 
   apply();
+
+  // The engines' sweep is the page's own document-wide ask, and it is
+  // asked now at the page's ease instead of at the sheet's opening: a
+  // quiet page answers its first sheet out of the quiet, and a page
+  // that has since moved on answers as it always did — the walk stamped
+  // by the manager, never believed stale.
+  warmEngines(dom);
+
   onSettingsChanged((next) => {
     // The popup writes too, and the write also comes back here when it is
     // our own: merged into the one shared object, never replaced, so the

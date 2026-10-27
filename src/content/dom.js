@@ -17,7 +17,15 @@
 //   a move too, and a scroll that goes nowhere near costs nothing;
 // - a move on an **unseen page** is no move at all: rect and style reads
 //   are forced layout a hidden document paints nothing for, so the beat
-//   sits out, and the tab seen again re-arms it.
+//   sits out, and the tab seen again re-arms it;
+// - the **ease** is the page's own quiet, native `requestIdleCallback`:
+//   work handed in runs when the page rests (a page that never rests
+//   still meets it, at the timeout), once per asking — so a survey that
+//   is wanted later is made while the viewer is not waiting; and
+// - the **turn** is the page's own count of the moves it has said. An
+//   answer made of the page is stamped with the count it was made at,
+//   and whoever keeps one consults the stamp before believing it — a
+//   page that has moved on since is never answered from a memory.
 import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
 
@@ -27,10 +35,16 @@ import { createTimerSlot } from '../lib/time.js';
 const BEAT_MS = 250;
 
 // The margin the approach eye watches past the viewport. The option
-// shipped in Firefox 141 and the extension’s floor is 158, so the option
+// shipped in Firefox 141 and the extension's floor is 158, so the option
 // is always understood — and the coarse scroll listener an older page
 // once paid for instead has nothing left to stand in for.
 const APPROACH_MARGIN = '25%';
+
+// The meeting the quiet is asked to keep: `requestIdleCallback` answers
+// when the page rests, but a page that never rests must still meet the
+// call, or the pre-made answer is never made. Shipped in Firefox 55,
+// well under the floor of 158.
+const EASE_TIMEOUT_MS = 4000;
 
 // `home` is the window the resize is heard from; `doc` is the document
 // the eye watches and the hidden verdict is read from. The clock’s knobs
@@ -49,11 +63,17 @@ export const createDomManager = (
   // own work, so nobody’s bookkeeping ever has to say goodbye.
   const kept = new Set();
 
-  // How many ears stand, and the two eyes — none of which exist before
-  // the first ear does.
+  // How many ears stand, the count of moves said, and the two eyes —
+  // none of which exist before the first ear does.
   let ears = 0;
+  let turn = 0;
   let eye = null;
   let approacher = null;
+
+  // The quiet: the works handed in here are the page's own resting
+  // duties, keyed by the work itself so a second hand asking for the
+  // same work is one rest, not two.
+  const rests = new Map();
 
   // The beat: the slot empties itself the moment the work runs, so the
   // work asking for a next beat is a fresh arm, never a rearm of the one
@@ -66,6 +86,9 @@ export const createDomManager = (
     // on a document that paints nothing. The beat sits out, and the tab
     // being seen again is what re-arms it.
     if (doc.hidden) return;
+    // The beat is the page saying a move: one count for every beat,
+    // stamped by every answer the page's quiet made.
+    turn += 1;
     for (const element of kept) {
       if (element.isConnected) continue;
       // An element the page has let go of is one it has forgotten: the
@@ -99,6 +122,12 @@ export const createDomManager = (
   // arrangement, and no ear of the page changes it.
   function standUp() {
     if (eye !== null) return;
+    // The story's resumption is its own move. Changes the sitting eye
+    // could not see are committed the moment it stands, so the count
+    // jumps once here: every answer made before knows it was made for
+    // an eye that was sleeping, and a stamp that reads `turn` after this
+    // bumps is the new page's truth, not the sleeper's.
+    turn += 1;
     eye = new MutationObserver(ask);
     eye.observe(doc.documentElement, {
       childList: true,
@@ -153,10 +182,40 @@ export const createDomManager = (
       approacher.observe(element);
     },
 
-    // The one ask, for the moments outside the eye’s own hearing: a
-    // media event the listener knows first, the network’s knock from the
+    // The one ask, for the moments outside the eye's own hearing: a
+    // media event the listener knows first, the network's knock from the
     // background. It answers like any other move — one beat, for a burst
     // of asks one beat still.
     ask,
+
+    // The page's quiet. The work handed in runs when the browser's own
+    // idle moment reaches it — once per asking, and a work already
+    // resting is one rest however many hands ask for it again. The word
+    // back cancels the rest if it has not yet run, and is silent after
+    // it has.
+    atEase: (work) => {
+      const resting = rests.get(work);
+      const held =
+        resting !== undefined
+          ? resting
+          : requestIdleCallback(
+              () => {
+                rests.delete(work);
+                work();
+              },
+              { timeout: EASE_TIMEOUT_MS },
+            );
+      rests.set(work, held);
+      return () => {
+        if (rests.get(work) !== held) return;
+        cancelIdleCallback(held);
+        rests.delete(work);
+      };
+    },
+
+    // The page's count of the moves it has said. An answer made of the
+    // page is stamped with this, and the stamp is the difference between
+    // an answer that is the page's and one that is its memory's.
+    turn: () => turn,
   };
 };

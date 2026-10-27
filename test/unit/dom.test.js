@@ -3,6 +3,10 @@ import { afterEach, test } from 'node:test';
 
 import { createDomManager } from '../../src/content/dom.js';
 
+// The quiet realm’s hands: `makeObserved` below fixes them on the test
+// global so the eyes' hours can be run and counted by name.
+/* global runRest, restCount */
+
 // A realm trimmed to the two eyes and the two hearings the manager
 // stands: a MutationObserver and an IntersectionObserver remembered by
 // their constructions, and a document and window that keep what they
@@ -43,12 +47,34 @@ const makeObserved = () => {
       this.observed.length = 0;
     }
   };
+  // The quiet is a ledger too: every work rests with an id, and its
+  // hour is run (or cancelled) by hand.
+  let rests = 0;
+  const held = new Map();
+  globalThis.requestIdleCallback = (work, options) => {
+    rests += 1;
+    held.set(rests, { work, options });
+    return rests;
+  };
+  globalThis.cancelIdleCallback = (id) => {
+    held.delete(id);
+  };
+  globalThis.runRest = (id) => {
+    const rest = held.get(id);
+    if (rest === undefined) return false;
+    held.delete(id);
+    rest.work();
+    return true;
+  };
+  globalThis.restCount = () => held.size;
   return records;
 };
 
 const clearObserved = () => {
   delete globalThis.MutationObserver;
   delete globalThis.IntersectionObserver;
+  delete globalThis.requestIdleCallback;
+  delete globalThis.cancelIdleCallback;
 };
 
 const makeStreet = () => {
@@ -247,4 +273,65 @@ test('the last ear leaving stands the approach eye down too', () => {
   manager.keepNear(film());
   off();
   assert.equal(record[1].disconnects, 1, 'the approach eye went with it');
+});
+
+test('the page’s quiet does the work once, however many hands ask', () => {
+  makeObserved();
+  const doc = makeDoc();
+  const home = makeHome();
+  const manager = createDomManager(home, doc);
+  const done = [];
+  const work = () => done.push('the quiet ran');
+
+  const firstOff = manager.atEase(work);
+  manager.atEase(work);
+  assert.equal(restCount(), 1, 'the second hand asked one rest, not two');
+  assert.equal(runRest(1), true, 'the work rests with an hour');
+  assert.deepEqual(done, ['the quiet ran']);
+
+  // After the hour, the asking is a new rest: once per asking.
+  manager.atEase(work);
+  assert.equal(restCount(), 1);
+  runRest(2);
+  assert.deepEqual(done, ['the quiet ran', 'the quiet ran']);
+
+  // The hour never reached: the live hand’s word takes the work off,
+  // and a word made stale by a newer asking is silent — it must not
+  // take someone else’s rest down.
+  manager.atEase(work);
+  firstOff();
+  assert.equal(restCount(), 1, 'a stale word takes nobody’s rest down');
+  manager.atEase(work)(); // the live word, said and spent at once
+  assert.equal(restCount(), 0, 'the rest was cancelled, not left');
+  assert.equal(done.length, 2);
+});
+
+test('the count of moves stamps the page’s answers', () => {
+  makeObserved();
+  const clock = makeClock();
+  const doc = makeDoc();
+  const home = makeHome();
+  const manager = createDomManager(home, doc, clock);
+
+  manager.onMove(() => {});
+  assert.equal(
+    manager.turn(),
+    1,
+    'the story’s resumption is its own move counted',
+  );
+
+  manager.ask();
+  clock.fire();
+  assert.equal(manager.turn(), 2, 'one move said, one count');
+
+  // A dark page says no beats: the moves it makes are counted when it
+  // is seen again, as one.
+  doc.hidden = true;
+  manager.ask();
+  clock.fire();
+  assert.equal(manager.turn(), 2, 'the darkness added nothing');
+  doc.hidden = false;
+  doc.say('visibilitychange');
+  clock.fire();
+  assert.equal(manager.turn(), 3, 'the seeing is one move again');
 });

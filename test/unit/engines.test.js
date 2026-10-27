@@ -6,6 +6,7 @@ import {
   hasPlayerjs,
   isHlsEngine,
   isVideojsPlayer,
+  warmEngines,
 } from '../../src/content/video/engines.js';
 import {
   call,
@@ -26,7 +27,7 @@ afterEach(() => {
 
 // The sweep answers to a window the test hands it: `pageapi` reads
 // `window.wrappedJSObject ?? window`, and the stub has no waiver to offer,
-// so the plain object stands in for the page's globals. An engine is what
+// so the plain object stands in for the page’s globals. An engine is what
 // the shapes ask for: a ladder and a number beside it.
 const installWindow = (values) => {
   globalThis.window = values;
@@ -184,7 +185,7 @@ test('a throwing identification is no console noise', () => {
   });
 
   // A method that raises on the question is an answer too; unlike a real
-  // order to a site's player, the sweep says so without a warning.
+  // order to a site’s player, the sweep says so without a warning.
   assert.equal(
     probe(
       {
@@ -199,7 +200,7 @@ test('a throwing identification is no console noise', () => {
   );
   assert.equal(warned, 0);
 
-  // A command to a site's player keeps its witness — the warn is how a
+  // A command to a site’s player keeps its witness — the warn is how a
   // sheet that came back empty explains itself.
   assert.equal(
     call(
@@ -213,4 +214,92 @@ test('a throwing identification is no console noise', () => {
     null,
   );
   assert.equal(warned, 1);
+});
+
+// The manager’s arm at the page’s quiet, in a stub realm: the ease is
+// called and fired by hand, the count of moves is moved by hand, and
+// the word for Playerjs is whatever window says. The stop word is
+// carried to the test’s own teardown, so a failed assertion leaves no
+// warm answer behind for the next page.
+const makeQuiet = () => {
+  let turn = 0;
+  let resting = null;
+  return {
+    turn: () => turn,
+    atEase: (work) => {
+      resting = work;
+      return () => {
+        resting = null;
+      };
+    },
+    // The quiet hour comes.
+    rest: () => {
+      const work = resting;
+      resting = null;
+      work();
+    },
+    move: () => {
+      turn += 1;
+    },
+  };
+};
+
+const askQuietly = () => {
+  const quiet = makeQuiet();
+  const stop = warmEngines(quiet);
+  afterEachStubs.push(stop);
+  return quiet;
+};
+
+test('the sheet opens on an answer the page’s quiet already made', () => {
+  const engine = hlsEngine();
+  installWindow({ attachedEngine: engine });
+  const quiet = askQuietly();
+  quiet.rest();
+
+  // The read of the page’s answer is the warm answer — proof given by a
+  // page that now has nothing on it: the consult does not sweep, it
+  // keeps the answer the quiet made.
+  installWindow({});
+  const found = findEngines({});
+  assert.equal(found.hls, engine);
+});
+
+test('a page that moved on since is answered fresh, never from memory', () => {
+  const engine = hlsEngine();
+  installWindow({ attachedEngine: engine });
+  const quiet = askQuietly();
+  quiet.rest();
+
+  quiet.move();
+  installWindow({});
+  assert.equal(findEngines({}).hls, undefined, 'the move made the page new');
+
+  // The fresh sweep re-stamps: the next open on the quiet page reads it.
+  installWindow({ attachedEngine: engine });
+  const again = findEngines({});
+  assert.equal(again.hls, engine);
+  quiet.move();
+  const something = {};
+  installWindow({ attachedEngine: something });
+  assert.equal(findEngines({}).hls, undefined, 'the count is the stamp');
+});
+
+test('the page’s word for Playerjs is part of the stamp', () => {
+  // The page has engines but has said nothing of Playerjs, so the warm
+  // answer is an answer of the no-Playerjs matcher set.
+  const engine = hlsEngine();
+  installWindow({ attachedEngine: engine });
+  const quiet = askQuietly();
+  quiet.rest();
+
+  // The page gains its word without a move: the gate decides the
+  // matcher set, so the consult must not answer from the old word’s
+  // answer — the fresh ask carries the Playerjs matcher and finds the
+  // page’s own api-bearing object.
+  const playerjsEngine = { api: () => 'the-film' };
+  installWindow({ Playerjs: () => {}, thePlayer: playerjsEngine });
+  const found = findEngines({});
+  assert.equal(found.playerjs, playerjsEngine, 'the new word made it new');
+  assert.equal(found.hls, undefined, 'the old word’s answer is not kept');
 });

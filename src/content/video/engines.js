@@ -7,7 +7,7 @@ import {
   findGlobalMatches,
 } from './pageapi.js';
 
-// The hunt's misses are the other unanswerable question: why is there no
+// The hunt’s misses are the other unanswerable question: why is there no
 // sound-track sheet, no ladder? Once per sweep that comes up with nothing.
 const debug = createDebug('engines');
 
@@ -51,7 +51,7 @@ const ATTACHED_KEYS = [
 ];
 
 // The seats a handle can hang from, most likely first: the element itself,
-// then the film's own furniture — pages habitually hang the engine on the
+// then the film’s own furniture — pages habitually hang the engine on the
 // wrapper the player was built inside of — and the host answering for its
 // own last.
 const seatsOf = (video, host) => {
@@ -112,27 +112,89 @@ const MATCHERS = [
   { name: 'playerjs', matches: isPlayerjsInstance },
 ];
 
-// One sweep of the page's globals for all of them. Sweeping once per engine
-// meant walking the page's globals four times over, through cross-compartment
-// wrappers, in the moment the viewer was waiting for the sheet to open.
+// The gate said no to Playerjs: those are the matchers the sweep carries.
+const WITHOUT_PLAYERJS = MATCHERS.filter((one) => one.name !== 'playerjs');
+
+// One bounded pass of the page’s globals for every matcher at once.
+// Sweeping once per engine meant walking the page’s globals several
+// times over, through cross-compartment wrappers, in the moment the
+// viewer was waiting.
+const globalSweep = (matchers) =>
+  findGlobalMatches(matchers, (total) => {
+    debug('the sweep gave up at its budget', `${total} globals on the page`);
+  });
 
 // Playerjs is only worth looking for once the page has said it has one: the
 // check is a call into an api() that belongs to somebody, and asking that of
 // every global with a method by that name is not a question worth asking.
 export const hasPlayerjs = () => isFunction(pageWindow(), 'Playerjs');
 
+// The sweep’s answer, warm in hand. This is the manager’s arm at the
+// page’s own quiet: the walk over the page’s globals is a document-wide
+// ask, and it is made while the viewer is not waiting for it. The
+// answer is stamped with the page’s count of moves and with the page’s
+// word for Playerjs, so a consult can tell whether it is still the
+// page’s answer or a memory of an earlier page.
+let warm = null;
+
+// Ask the sweep at the page’s ease. The word back clears the arm — the
+// answer’s bookkeeping goes with it, so a consult afterwards asks the
+// page anew; the tests carry the word, a page-lifetime arm does not.
+export const warmEngines = (dom) => {
+  warm = { dom, turn: null, playerjs: null, found: null };
+  const off = dom.atEase(() => {
+    if (warm.dom !== dom) return;
+    warm.playerjs = hasPlayerjs();
+    warm.turn = dom.turn();
+    warm.found = globalSweep(warm.playerjs ? MATCHERS : WITHOUT_PLAYERJS);
+  });
+  return () => {
+    if (warm !== null && warm.dom === dom) warm = null;
+    off();
+  };
+};
+
+// The warm answer, if it is still the page’s. The stamp is read twice —
+// the count of moves, and the page’s word for Playerjs — because both
+// can change without the other.
+const warmSweep = (playerjs) => {
+  if (warm === null) return null;
+  if (warm.turn !== warm.dom.turn() || warm.playerjs !== playerjs) {
+    return null;
+  }
+  return warm.found;
+};
+
+// The site’s own engine hunt: the sweep of the page’s globals for every
+// matcher at once, then the film’s own furniture and the host’s, then
+// the constructor’s registry. `video` and `host` are the film and the
+// player room it was judged in.
 export const findEngines = (video, host = null) => {
   // Playerjs is asked for only once the page has said the word: asking the
-  // page's every api-bearing object for the id is a call into other people's
+  // page’s every api-bearing object for the id is a call into other people’s
   // code at identification time, and a page that has not admitted Playerjs
   // owes it to nobody. The gate lives here, so the quality sheet and the
   // audio sheet both inherit it instead of minding it separately.
-  const matchers = hasPlayerjs()
-    ? MATCHERS
-    : MATCHERS.filter((one) => one.name !== 'playerjs');
-  const found = findGlobalMatches(matchers, (total) => {
-    debug('the sweep gave up at its budget', `${total} globals on the page`);
-  });
+  const playerjs = hasPlayerjs();
+  const matchers = playerjs ? MATCHERS : WITHOUT_PLAYERJS;
+
+  let raw = warmSweep(playerjs);
+  if (raw === null) {
+    raw = globalSweep(matchers);
+    // A fresh sweep is its own stamp: one sheet opening pays, and the
+    // next one on a page that has been quiet opens on the answer. An
+    // empty answer is not stamped — a page that builds its engine later
+    // must not be answered from a memory of the nothing before it.
+    if (warm !== null && Object.keys(raw).length > 0) {
+      warm.turn = warm.dom.turn();
+      warm.playerjs = playerjs;
+      warm.found = raw;
+    }
+  }
+  // The sweep’s answer is the page’s, not this ask’s: the film’s own
+  // furniture and the host’s override it on a copy, so the warm answer
+  // never accumulates one film’s attached engines for the next.
+  const found = { ...raw };
   if (host !== null) {
     for (const matcher of matchers) {
       try {

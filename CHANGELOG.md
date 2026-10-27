@@ -68,6 +68,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The engine sweep is asked at the page's quiet.** The walk over the
+  page's globals used to be paid at every sheet opening, in the moment
+  the viewer was waiting; now the dom manager makes it at its own ease
+  (the page's idle time, natively), and the sheet opens on an answer
+  already in hand. The warm answer is stamped with the page's count of
+  moves and with its word for Playerjs, so a page that has moved on —
+  or gained the word — since the quiet hour is answered fresh, never
+  from memory; an empty answer is never stamped, and a page that
+  builds its engine later is not answered from the nothing before it.
+  The climb up the video's ancestors to find the site's own player API
+  keeps its finding per element the same way: re-checked against the
+  one native `contains` reading, keyed by the names it was asked with,
+  and a climb that found nothing is never remembered — a page that
+  builds its player later has the walk waiting for it.
 - **The frame carries the manager's arm, and the arm ends in the
   handshake.** The film watcher is three body parts in one file: the
   budgeted walk (the only whole-document walk a frame keeps — mutations
