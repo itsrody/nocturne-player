@@ -2,6 +2,24 @@
 export const SLOT_TAG = 'nocturneSlot';
 
 const HOLD_GRACE_MS = 12000;
+
+// The origin each word is worth naming. A document's own location lists its
+// enclosing origins nearest-first — the parent the chain's first entry, the
+// top of the tree the chain's last — and both rails read their target from
+// there, so the words on the wire are aimed at the one window that owns
+// them instead of broadcast to every listener. The read never leaves this
+// document; the fallback '*' is for a realm that has no list to read (and
+// for the opaque 'null', which names no window). The receiving ends keep
+// their own checks one way or the other.
+export const targetOf = (loc, fromTheTop = false) => {
+  const chain = loc?.ancestorOrigins;
+  if (chain === undefined || chain === null) return '*';
+  const index = fromTheTop ? chain.length - 1 : 0;
+  const origin = chain[index];
+  const named =
+    typeof origin === 'string' && origin !== '' && origin !== 'null';
+  return named ? origin : '*';
+};
 const MAX_REPINS = 240;
 const TOP_Z = '2147483647';
 
@@ -119,10 +137,12 @@ export const createSlotKeeper = (home, doc) => {
     if (element === null) return;
 
     // One hop up, each document for the one below it — every document
-    // except this tree's top has a parent to pass the word to.
+    // except this tree's top has a parent to pass the word to, and the
+    // word carries the parent's own name, read from this document's
+    // location like every other aimed word on the rails.
     if (home.top !== home) {
       try {
-        home.parent.postMessage(data, '*');
+        home.parent.postMessage(data, targetOf(home.location));
       } catch {
         // A wall that went away with the page; the hold below is ours and
         // stays honest either way.

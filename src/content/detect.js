@@ -1,5 +1,12 @@
+import { createDebug } from '../lib/debug.js';
+
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
+
+// The election's verdicts are the question nobody can ask after the fact:
+// why is the badge not here? The sweep's answer, once per change of mind,
+// says how many films the page had and what it made of them.
+const debug = createDebug('detect');
 // The player is a player for one film — the one a page is built around.
 // Where a page keeps several films, two cheap readings say which one it
 // belongs to: the film must own at least half of the screen's area on its
@@ -195,6 +202,12 @@ export const createVideoWatcher = (onPrimaryChange) => {
     const next = pickPrimary(playable);
     if (next === primary) return;
     primary = next;
+    debug(
+      primary === null
+        ? 'the page holds no film of its own'
+        : 'the film is settled',
+      `${playable.size} playable in all`,
+    );
     onPrimaryChange(primary, playable.size);
   };
 

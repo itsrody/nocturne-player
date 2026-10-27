@@ -8,10 +8,11 @@ import {
   mintTicket,
 } from '../../src/content/frames.js';
 import { SLOT_TAG, createSlotKeeper } from '../../src/content/slot.js';
-
 // A window trimmed to what the two ends of the protocol do with it: listen
 // for messages and deliver them. Deliveries are made by hand instead of by
-// the event loop of a real browser.
+// the event loop of a real browser, and the target a post was aimed at is
+// kept in the record — the rails aim their words now, and the tests say
+// where.
 const makeWindow = () => {
   const handlers = [];
   const arrived = [];
@@ -21,29 +22,38 @@ const makeWindow = () => {
     // A window with no children, until a test gives it a family: the judge
     // credits a claim only to a window it finds in its own tree.
     frames: [],
+    // A realm without a chain to read: words out of such a window fall
+    // back to the '*' the rails answer for.
+    location: { ancestorOrigins: [] },
     addEventListener: (type, handler) => {
       if (type === 'message') handlers.push(handler);
     },
-    deliver: (source, data) => {
-      arrived.push({ source, data });
-      for (const handler of [...handlers]) handler({ source, data });
+    deliver: (source, data, target) => {
+      arrived.push({ source, data, target });
+      for (const handler of [...handlers]) {
+        handler({ source, data, origin: target });
+      }
     },
   };
   // Posts landing on a window carry the window they were posted through as
-  // their source.
-  home.postMessage = (data) => home.deliver(home.receivesAs ?? home, data);
+  // their source, and the target they were aimed at rides along.
+  home.postMessage = (data, target) =>
+    home.deliver(home.receivesAs ?? home, data, target);
   return home;
 };
 
 // A frame's view of the top window: a door whose posts arrive carrying the
 // frame's own name, since that is what a browser's window proxy does.
-const joinsThe = (top) => {
+const joinsThe = (top, chain = ['https://top.example']) => {
   const home = makeWindow();
   const proxy = {
-    postMessage: (data) => top.deliver(home, data),
+    postMessage: (data, target) => top.deliver(home, data, target),
   };
   home.top = proxy;
   home.receivesAs = proxy;
+  // The enclosing page names itself — the one entry of a one-deep tree —
+  // and that name is the address the frame's words are aimed at.
+  home.location = { ancestorOrigins: chain };
   // The tree answers for itself: the judge locates a claimant in the
   // frames of its own document, so the claimant's window is registered
   // with the top it is claimed against.
@@ -315,4 +325,115 @@ test('the child of the house is what gets the width', () => {
   // And the page gets its own slot back, in the words it gave it.
   host.deliver(child, { [SLOT_TAG]: 'ticket', open: false });
   assert.equal(iframe.width, 'width:300px');
+});
+
+test('every word on the rails names the window it belongs to', () => {
+  const top = makeWindow();
+  createJudge(top, { ownWant: () => false });
+
+  // Two hops up: the chain reads nearest first, so the parent's name is
+  // its first entry and the top's its last.
+  const framed = joinsThe(top, [
+    'https://parent.example',
+    'https://top.example',
+  ]);
+
+  // A claim beats at the top, by the top's name — not a broadcast.
+  const broadcast = seatOf(framed, 'ticket-one');
+  broadcast.claimant.setWant(true);
+  const claim = top.arrived[0];
+  assert.equal(claim.data.nocturneClaim, 'ticket-one');
+  assert.equal(claim.target, 'https://top.example');
+  broadcast.claimant.setWant(false);
+  broadcast.claimant.end();
+
+  // And the verdict goes back the same way: named to the origin the claim
+  // arrived from — the address carried on the claimant's own words.
+  const answered = seatOf(framed, 'ticket-two');
+  top.deliver(
+    framed,
+    { nocturneClaim: 'ticket-two', want: true },
+    'https://parent.example',
+  );
+  assert.deepEqual(answered.seated, [true]);
+  const verdict = framed.arrived.at(-1);
+  assert.equal(verdict.data.granted, true);
+  assert.equal(verdict.target, 'https://parent.example');
+
+  answered.claimant.end();
+});
+
+test('the slot word climbs by the name of the window it climbs to', () => {
+  const parent = makeWindow();
+  const framed = makeWindow();
+  framed.location = { ancestorOrigins: ['https://parent.example'] };
+  const posted = [];
+  framed.parent = {
+    postMessage: (data, target) => {
+      posted.push({ data, target });
+      parent.deliver(framed, data, target);
+    },
+  };
+
+  const claimant = createClaimant(framed, 'ticket', () => undefined);
+  claimant.slot(true);
+  assert.equal(posted[0].target, 'https://parent.example');
+  assert.equal(posted[0].data[SLOT_TAG], 'ticket');
+
+  // A realm without a chain to read falls back to the unaimed word, and
+  // the rail still moves.
+  const wanderer = makeWindow();
+  wanderer.parent = {
+    postMessage: (data, target) => {
+      posted.push({ data, target });
+    },
+  };
+  const stray = createClaimant(wanderer, 'stray', () => undefined);
+  stray.slot(true);
+  assert.equal(posted.at(-1).target, '*');
+
+  claimant.end();
+  stray.end();
+});
+
+test('the relay aims the word it passes up at the parent', () => {
+  globalThis.MutationObserver = class {
+    constructor() {
+      this.observed = null;
+    }
+    observe() {
+      this.observed = true;
+    }
+    disconnect() {
+      this.observed = false;
+    }
+  };
+
+  const child = {};
+  const iframe = {
+    contentWindow: child,
+    style: {
+      setProperty: () => {},
+      getPropertyValue: () => 'fixed',
+    },
+    getAttribute: () => 'width:300px',
+    setAttribute() {},
+    removeAttribute() {},
+  };
+  const doc = { querySelectorAll: () => [iframe] };
+
+  const host = makeWindow();
+  host.location = { ancestorOrigins: ['https://above.example'] };
+  const passed = [];
+  host.parent = {
+    postMessage: (data, target) => {
+      passed.push({ data, target });
+    },
+  };
+
+  createSlotKeeper(host, doc);
+  host.deliver(child, { [SLOT_TAG]: 'ticket', open: true, another: 'a' });
+  assert.equal(passed.length, 1);
+  assert.equal(passed[0].data.another, 'a', 'the relayed word is whole');
+  assert.equal(passed[0].target, 'https://above.example');
 });

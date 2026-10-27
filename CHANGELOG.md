@@ -54,6 +54,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The lock cannot be written over.** The fullscreen lock still answers the
+  page's take-the-screen calls as if they had worked, but its fake now stands
+  behind a property the page cannot rewrite with plain assignment — a page
+  that reaches past the lock by hand (the one thing a simple assignment could
+  not do) finds a void where its write landed, and the lock's way back at
+  release is by what it provably holds at that moment: its own snapshot
+  never comes back on top of the page's doing.
+- **The rails aim their words.** Every word between frames now names the
+  window it belongs to: claims and film counts beat at the top frame by the
+  top frame's own name, verdicts go back to the origin a claim arrived
+  from, slot words climb the chain by each hop's parent's name — every
+  address read from the document's own ancestor chain, so nothing is
+  broadcast to listeners the words do not belong to. The unaimed '*' remains
+  only where a realm has no chain to read, and the receiving ends keep
+  their own checks either way.
+- **A switch for the after-the-fact questions.** A `debugMode` setting
+  (default false) turns on one-line console diagnostics at the places the
+  answers live: the film election's verdicts, the engine sweep's finds and
+  misses, the quality ladder's award. uBlock's logger at our scale — set
+  the storage key while the page runs and the next word arrives; off, and
+  the pages run exactly as they ran.
 - **A page with its film behind glass answers for it whole.** The chain
   of named origins between a film and the eye comes from the frame's own
   location now — `ancestorOrigins`, shipped in Firefox 148 and therefore

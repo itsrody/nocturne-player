@@ -1,3 +1,4 @@
+import { createDebug } from '../../lib/debug.js';
 import {
   isFunction,
   pageWindow,
@@ -5,6 +6,10 @@ import {
   read,
   findGlobalMatches,
 } from './pageapi.js';
+
+// The hunt's misses are the other unanswerable question: why is there no
+// sound-track sheet, no ladder? Once per sweep that comes up with nothing.
+const debug = createDebug('engines');
 
 // The quality ladder and the audio tracks are asked of the same object, so the
 // hunt for that object lives here rather than twice over. Nothing in this file
@@ -87,5 +92,9 @@ export const findEngines = (video, host = null) => {
     const attached = findAttachedHls(video, host);
     if (attached !== null) found.hls = attached;
   }
+  const names = Object.keys(found);
+  debug(
+    names.length > 0 ? `identified ${names.join(', ')}` : 'no engine in sight',
+  );
   return found;
 };

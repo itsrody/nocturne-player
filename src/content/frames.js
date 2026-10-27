@@ -15,7 +15,7 @@
 // badge drawn or withheld — which a page could bring about with a style rule
 // on its own content all the same. The ticket filters out everything the
 // protocol did not itself put on the wire.
-import { SLOT_TAG } from './slot.js';
+import { SLOT_TAG, targetOf } from './slot.js';
 
 const TAG = 'nocturneClaim';
 const RENEW_MS = 2000;
@@ -84,14 +84,20 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   // can say its goodbyes.
   const say = () => {
     try {
-      home.top.postMessage({ [TAG]: ticket, want, count: getCount() }, '*');
+      home.top.postMessage(
+        { [TAG]: ticket, want, count: getCount() },
+        targetOf(home.location, true),
+      );
     } catch {
       // A window that went away with the page. A claim that cannot be sent
       // has no consequence the next claim cannot repair.
     }
     if (slotOpen) {
       try {
-        home.parent.postMessage({ [SLOT_TAG]: ticket, open: true }, '*');
+        home.parent.postMessage(
+          { [SLOT_TAG]: ticket, open: true },
+          targetOf(home.location),
+        );
       } catch {
         // The word cannot get out; the holds below expire on their own.
       }
@@ -144,7 +150,10 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
     slotOpen = open;
     tell();
     try {
-      home.parent.postMessage({ [SLOT_TAG]: ticket, open }, '*');
+      home.parent.postMessage(
+        { [SLOT_TAG]: ticket, open },
+        targetOf(home.location),
+      );
     } catch {
       // A wall that went away with the page. Nothing to hold open then.
     }
@@ -218,7 +227,10 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
       // is gone, and its claim can go with it.
       if (claim.granted) {
         try {
-          claim.source.postMessage({ [TAG]: ticket, granted: false }, '*');
+          claim.source.postMessage(
+            { [TAG]: ticket, granted: false },
+            claim.origin,
+          );
         } catch {
           // The claimant is closing behind our back; it will not need news.
         }
@@ -237,7 +249,10 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
       if (claim.granted === seated) continue;
       claim.granted = seated;
       try {
-        claim.source.postMessage({ [TAG]: ticket, granted: seated }, '*');
+        claim.source.postMessage(
+          { [TAG]: ticket, granted: seated },
+          claim.origin,
+        );
       } catch {
         // The claimant is closing behind our back; it will not need news.
         claims.delete(ticket);
@@ -260,6 +275,15 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
     const previous = claims.get(ticket);
     claims.set(ticket, {
       source: event.source,
+      // The origin the claim arrived from is the only address the answers
+      // are worth naming: a window that can spell our words but is nobody's
+      // child was already refused above, so this is the belt on a held
+      // claim — the verdicts go back to the exact window they answer, and
+      // nowhere else on the wire.
+      origin:
+        typeof event.origin === 'string' && event.origin !== ''
+          ? event.origin
+          : '*',
       want: Boolean(data.want),
       count: readCount(data, previous),
       renewedAt: now(),

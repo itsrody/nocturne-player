@@ -1,6 +1,12 @@
 import { ADAPTERS, AUTO_ID } from './qualityadapters.js';
+import { createDebug } from '../../lib/debug.js';
 
 export { AUTO_ID };
+
+// The ladder's award is read once per sheet opening: naming which adapter
+// took the film, and what it offered, is the answer to "why is the sheet
+// empty" nobody can reconstruct afterwards.
+const debug = createDebug('quality');
 
 // A streaming player builds its quality ladder after the first segments land,
 // so the ladder is looked up again every time the sheet is opened rather than
@@ -31,6 +37,7 @@ export const createQuality = (video, host = null, adapters = ADAPTERS) => {
     if (adapter === null) {
       options = [];
       chosen = null;
+      debug('no adapter would take the film');
       return options;
     }
     const listed = adapter.list();
@@ -38,6 +45,10 @@ export const createQuality = (video, host = null, adapters = ADAPTERS) => {
     options = listed.length > 0 ? auto.concat(listed) : [];
     // A choice lives only as long as the rung it names is still on offer.
     if (!options.some((option) => option.id === chosen)) chosen = null;
+    debug(
+      `the ladder came from the ${adapter.name} adapter`,
+      `${options.length} rungs offered`,
+    );
     return options;
   };
 

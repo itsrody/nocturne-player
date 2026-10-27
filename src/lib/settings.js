@@ -12,6 +12,7 @@ export const DEFAULTS = Object.freeze({
   areEffectsReduced: false,
   subtitleScale: 1,
   areSubtitlesNative: false,
+  debugMode: false,
   disabledHosts: [],
 });
 
@@ -41,6 +42,11 @@ const inRange = (key, value) => {
 
 const COLOUR_KEYS = ['warmth', 'brightness', 'contrast', 'saturate'];
 
+// A switch is only switched by a real boolean: a stored string or a number is
+// nobody's answer, and the same suspicion the ranges hold for numbers holds
+// here for everything that is not the word asked for.
+const FLAGS = new Set(['debugMode']);
+
 // Schema 1 kept whatever colour the panel was last left on, including values
 // somebody had only been trying out. They came back on the next film — on what
 // looked like a clean profile — as a picture that was already tinted, or in one
@@ -62,6 +68,9 @@ export const normalize = (raw) => {
   for (const key of KEYS) {
     const value = stored?.[key];
     settings[key] = value === undefined ? DEFAULTS[key] : inRange(key, value);
+  }
+  for (const key of FLAGS) {
+    settings[key] = settings[key] === true;
   }
   settings.schemaVersion = SCHEMA_VERSION;
   settings.disabledHosts = Array.isArray(settings.disabledHosts)

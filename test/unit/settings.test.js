@@ -39,6 +39,16 @@ test('unknown keys never reach the running state', () => {
   assert.deepEqual(Object.keys(settings).sort(), Object.keys(DEFAULTS).sort());
 });
 
+test('the debug switch answers only to a real boolean', () => {
+  assert.equal(normalize(null).debugMode, false);
+  assert.equal(normalize({ debugMode: true }).debugMode, true);
+
+  // A string, a number, a guess — all of them are the default's quiet no.
+  assert.equal(normalize({ debugMode: 'true' }).debugMode, false);
+  assert.equal(normalize({ debugMode: 1 }).debugMode, false);
+  assert.equal(normalize({ debugMode: null }).debugMode, false);
+});
+
 test('an upgrade from schema 1 drops the colour it was left on', () => {
   const settings = normalize({
     schemaVersion: 1,

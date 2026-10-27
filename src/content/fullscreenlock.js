@@ -15,6 +15,9 @@ const LOCKED = [
   { owner: 'Document', names: ['exitFullscreen', 'mozCancelFullScreen'] },
 ];
 
+// uBlock's set-constant defuser, in its own words: the page is free to try,
+// and what it wrote is what it believes it wrote. The lock leaves as it came:
+// through a property definition whose writing side is a sunk void.
 export const lockPageFullscreen = () => {
   const page = pageWindow();
   if (page === null || typeof exportFunction !== 'function') return () => {};
@@ -32,11 +35,42 @@ export const lockPageFullscreen = () => {
       try {
         const original = proto[name];
         if (typeof original !== 'function') continue;
-        exportFunction(() => page.Promise.resolve(), proto, {
-          defineAs: name,
+
+        // Both sides of the property stand in the page's own compartment, so
+        // the page calling through it sees room for no doubt — the same
+        // "pretend it worked" answer as before, carried now by a property
+        // whose writing side lands in a void. Reading back the old
+        // writable-own-property way left the lock defeatable in one line:
+        // `Element.prototype.requestFullscreen = pageFake` over it and won.
+        // The getter stands one hop above the faked method — a property
+        // read hands back a function, and the call happens on the page's
+        // side of that function.
+        const method = exportFunction(() => page.Promise.resolve(), proto);
+        const holder = exportFunction(() => method, proto);
+        const sink = exportFunction(() => {}, proto);
+        page.Object.defineProperty(proto, name, {
+          get: holder,
+          set: sink,
+          configurable: true,
+          enumerable: true,
         });
+
         restores.push(() => {
-          proto[name] = original;
+          // Restore only what we provably hold. If the page reached past the
+          // lock and defined the name away from us meanwhile — a definition
+          // call can, where plain assignment could not — the current
+          // description is the page's own doing, and ours never touches it:
+          // no stale snapshot of ours comes back on top of the page's choice.
+          // And the putting-back must define through, not assign through: the
+          // assignment would land in the very sink the lock stands on.
+          const now = page.Object.getOwnPropertyDescriptor(proto, name);
+          if (now === undefined || now.get !== holder) return;
+          page.Object.defineProperty(proto, name, {
+            configurable: true,
+            enumerable: true,
+            value: original,
+            writable: true,
+          });
         });
       } catch (error) {
         console.warn(`Nocturne: could not hold ${name} for the player`, error);
