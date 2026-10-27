@@ -6,10 +6,6 @@ const INSET_PX = 12;
 const GAP_PX = 8;
 const MIN_VISIBLE_RATIO = 0.35;
 const ANCHOR_NAME = '--nocturne-film';
-// The walk looking for what actually bounds the visible room below the film
-// reads at most six ancestors, and reads style before geometry.
-const WALK_DEPTH = 6;
-const OVERFLOW_CLIPS = new Set(['hidden', 'clip', 'auto', 'scroll']);
 
 // Fullscreen arrows rather than a logo: what the button does is make this
 // video fill the screen, and that is what a viewer is looking for. It stays
@@ -67,54 +63,71 @@ export const createBadge = () => {
 
   // Below the film's bottom-right corner, not over it: the pill hangs
   // outside the picture — a line's gap under the corner — so no film pixel
-  // is covered while the player is closed. Which rim bounds the room is
-  // read, not assumed: every ancestor that clips its children ends where
-  // its children end, and the pill's seat yields to the tightest of those
-  // rims — the viewport being one more of them, its own being the
-  // outermost box rather than a special case. A drifted seat that reads no
-  // nearer rim than the viewport is the anchor's to keep; a seat inside a
-  // tighter clip is the hand's.
-  const clipRim = (video) => {
-    let rim = null;
-    let node = video.parentElement;
-    for (let depth = 0; node && depth < WALK_DEPTH; depth += 1) {
-      const style = window.getComputedStyle(node);
-      if (OVERFLOW_CLIPS.has(style.overflowY)) {
-        rim = Math.min(rim ?? Infinity, node.getBoundingClientRect().bottom);
-      }
-      node = node.parentElement;
-    }
-    return rim;
-  };
+  // is covered while the player is closed. Only when the film runs to the
+  // viewport's bottom rim is there no outside to be had, and the pill
+  // falls back to its old seat inside the corner. Vertically the answer is
+  // min(): the outside seat unless the viewport is out of screen below.
+  // Horizontally it stays at the corner's own inset either way.
+  const topSeat = (bottom) =>
+    Math.min(bottom + GAP_PX, window.innerHeight - SIZE_PX - INSET_PX);
 
-  // The seat's arithmetic, one shape for every rim: the lower edge of the
-  // room the rim admits, a breath over it — pill bottom at rim's edge with
-  // the corner inset's worth of dignity kept in.
-  const topSeat = (bottom, rim) =>
-    Math.min(bottom + GAP_PX, rim - SIZE_PX - INSET_PX);
-
-  // In the corner, down and to the right — its tap is its own — a
-  // shadow-hosted button that stops propagation — so the site's own
-  // controls that most skins paint into this corner stay reachable around
-  // it. A film pinned by hand, one rect read per frame it stands still.
-  const placement = (rect, rim) => {
+  // In the corner, down and to the right — its fallback, when a scroll
+  // event or a viewport rim decides the pill has no outside to stand on.
+  // Its tap is its own — a shadow-hosted button that stops propagation — so
+  // the site's own controls that most skins paint into this corner stay
+  // reachable around it. A film pinned by hand, one rect read per frame it
+  // stands still.
+  const placement = (rect) => {
     const left = rect.right - SIZE_PX - INSET_PX;
     return {
       left: `${Math.max(INSET_PX, left)}px`,
-      top: `${topSeat(rect.bottom, rim ?? window.innerHeight)}px`,
+      top: `${topSeat(rect.bottom)}px`,
     };
   };
 
-  // The runner. Its judge does not exist yet — the walk that decides the
-  // seat needs every helper above it — so the slot is filled once the
-  // judge is born, a little lower in the file: the cycle of listener
-  // asking runner asking judge asking listener is cut with a slot rather
-  // than with hoisting.
-  let judge = null;
+  // Whether the film is meaningfully on screen is the browser's question to
+  // answer, in either mode: the observer fires when the film crosses the line
+  // — by scroll, and by layout move a scroll listener never hears — so the
+  // badge no longer rereads rects against its own viewport arithmetic. The
+  // observe/notify work this way leaves the answer also true for a film that
+  // moves without scrolling.
+  const visibility = new IntersectionObserver(
+    (entries) => {
+      if (entries[entries.length - 1].intersectionRatio >= MIN_VISIBLE_RATIO) {
+        reveal();
+      } else {
+        conceal();
+      }
+    },
+    { threshold: MIN_VISIBLE_RATIO },
+  );
+
+  // The fallback's reposition, for a film a light-DOM anchor cannot name: a
+  // video inside one of the site's own shadow roots is out of the badge's
+  // anchor scope, so its geometry is carried by hand, as the badge always
+  // carried it.
+  const reposition = () => {
+    frame = 0;
+    if (!target?.isConnected) {
+      conceal();
+      return;
+    }
+    if (anchored === target) return;
+    const rect = target.getBoundingClientRect();
+    if (rect.width === 0) {
+      conceal();
+      return;
+    }
+    reveal();
+    // The anchored badge's seat is the pill-below-the-corner rule too —
+    // min() folds the viewport's bottom rim into it, so the pill falls
+    // back inside the corner on the same arithmetic the fallback reads.
+    pinStyle(shell.host, placement(rect));
+  };
 
   const scheduleReposition = () => {
     if (frame !== 0) return;
-    frame = requestAnimationFrame(judge);
+    frame = requestAnimationFrame(reposition);
   };
 
   const setFallbackListener = (isNeeded) => {
@@ -129,98 +142,29 @@ export const createBadge = () => {
     }
   };
 
-  // The anchor's own outfit: the film carries the name, the host reads its
-  // place with min() holding the viewport's rim, and the hand's listeners
-  // are stood down — CSS answers every scroll and layout move itself.
-  const seatByAnchor = (video) => {
-    releaseAnchor();
-    pinStyle(video, { 'anchor-name': ANCHOR_NAME });
-    anchored = video;
-    pinStyle(shell.host, {
-      'position-anchor': ANCHOR_NAME,
-      left: `calc(anchor(right) - ${SIZE_PX + INSET_PX}px)`,
-      top: `min(calc(anchor(bottom) + ${GAP_PX}px), calc(100vh - ${
-        SIZE_PX + INSET_PX
-      }px))`,
-    });
-    setFallbackListener(false);
-  };
-
-  // Fold the anchor back before another seat takes it: the name goes to
-  // 'none' rather than away, so the video is left on the page exactly as
-  // the badge found it.
-  const packAnchor = () => {
-    releaseAnchor();
-    pinStyle(shell.host, { 'position-anchor': 'none' });
-  };
-
-  // The seat's one judge. The walk names the visible rim below the film;
-  // when it is tighter than the viewport's own, the pill is seated by hand
-  // — anchored inside a tighter clip, it would read a transitioning seat
-  // the CSS never hears about. When the walk names nothing nearer than the
-  // viewport, the anchor keeps the seat — its CSS answering every scroll
-  // and layout move on its own, no walk per frame. A film inside a shadow
-  // root is the hand's regardless: the name would be out of the anchor's
-  // reach, so no anchor to hold.
-  const reposition = () => {
-    frame = 0;
-    if (!target?.isConnected) {
-      conceal();
-      return;
-    }
-    const rim = clipRim(target);
-    const clipTightens = rim !== null && rim < window.innerHeight;
-    if (clipTightens || target.getRootNode() !== document) {
-      packAnchor();
-      setFallbackListener(true);
-      const rect = target.getBoundingClientRect();
-      if (rect.width === 0) {
-        conceal();
-        return;
-      }
-      reveal();
-      pinStyle(shell.host, placement(rect, rim));
-      return;
-    }
-    // The walk named nothing nearer than the viewport, and the film is one
-    // the anchor can reach: the anchor owns the seat. Already its own,
-    // nothing to write — pins are idempotent, but a walk per scroll tick
-    // need not restate them.
-    if (anchored === target) return;
-    seatByAnchor(target);
-  };
-
-  judge = reposition;
-
-  // Whether the film is meaningfully on screen is the browser's question to
-  // answer, in either mode: the observer fires when the film crosses the
-  // line — by scroll, and by layout move a scroll listener never hears — so
-  // the badge no longer rereads rects against its own viewport arithmetic.
-  // The observe/notify work this way leaves the answer also true for a film
-  // that moves without scrolling. A crossing is also the one occasion the
-  // anchor-driven seat gets to re-ask which rim bounds the room: the walk
-  // runs, and the seat drifts between anchor and hand only if the rims say
-  // so.
-  const visibility = new IntersectionObserver(
-    (entries) => {
-      const visibleNow =
-        entries[entries.length - 1].intersectionRatio >= MIN_VISIBLE_RATIO;
-      if (visibleNow) reveal();
-      else conceal();
-      if (anchored !== null) scheduleReposition();
-    },
-    { threshold: MIN_VISIBLE_RATIO },
-  );
-
   const show = (video) => {
     target = video;
     // Unshown until its position is known: a host pinned visible by default
-    // would paint one frame at a stale or unset place otherwise. The anchor
-    // is folded flat as the seat's starting state; the judge below — the
-    // scheduled reposition — deals anchor and hand from the walk's verdict.
+    // would paint one frame at a stale or unset place otherwise.
     conceal();
-    packAnchor();
-    setFallbackListener(false);
+    releaseAnchor();
+    if (video.getRootNode() === document) {
+      anchored = video;
+      pinStyle(video, { 'anchor-name': ANCHOR_NAME });
+      pinStyle(shell.host, {
+        'position-anchor': ANCHOR_NAME,
+        left: `calc(anchor(right) - ${SIZE_PX + INSET_PX}px)`,
+        top: `min(calc(anchor(bottom) + ${GAP_PX}px), calc(100vh - ${
+          SIZE_PX + INSET_PX
+        }px))`,
+      });
+      // The anchor answers the scrolling page itself; a scroll listener would
+      // only wake the fallback's redraw for no reason.
+      setFallbackListener(false);
+    } else {
+      pinStyle(shell.host, { 'position-anchor': 'none' });
+      setFallbackListener(true);
+    }
     if (!isMounted) {
       document.body.append(shell.host);
       isMounted = true;

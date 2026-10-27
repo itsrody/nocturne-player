@@ -59,9 +59,22 @@ test('an over-dominance runner-up costs the page its film', () => {
   assert.equal(pickPrimary([first, second]), null);
 });
 
-test('a film under half the screen is no main film at all', () => {
+test('a lone film under half the screen is still the page’s film', () => {
+  // One playable film is the page's film at any share: a watch page's
+  // masthead, sidebar and the room below it leave the film the reason the
+  // page stands, and the rival arithmetic — the share law's home — has no
+  // rival to speak among.
   const small = film(0, 0, 400, 300);
-  assert.equal(pickPrimary([small]), null);
+  assert.equal(pickPrimary([small]), small);
+});
+
+test('with rivals, a best under half the screen is no main film', () => {
+  // The share law lives among rivals: two to one over the runner-up but
+  // still a quarter of the screen is a row that leads, not a page that
+  // belongs to one film.
+  const leading = film(0, 0, 400, 300);
+  const trailing = film(0, 0, 300, 160);
+  assert.equal(pickPrimary([leading, trailing]), null);
 });
 
 test('a two-film tie elects nothing', () => {

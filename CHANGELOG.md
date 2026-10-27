@@ -104,14 +104,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   shadow root, out of the anchor's reach.
 - **The badge stands outside the picture.** The pre-player pill no longer
   paints over the film: it hangs a breath below the bottom-right corner,
-  in the page's own margin, and the rim that bounds the room is read, not
-  assumed — every ancestor that clips its children is walked for its own
-  bottom edge, and the tightest rim wins the min() over the viewport's
-  own. A film in a tight `overflow: hidden` wrapper — the wrapper that
-  once painted the pill and clipped it to nothing — now seats the pill
-  inside the corner by hand instead, and the anchor keeps every seat no
-  clip nearer than the screen: the walk runs per visibility crossing, so
-  the drift between the two stays caught.
+  in the page's own margin, and the rim that bounds the room is the
+  viewport's own — no other can matter, because an ancestor's
+  `overflow: hidden` clips only its descendants, and a pill mounted at
+  `document.body` stands outside every wrapper the site builds around its
+  video. (An earlier reading walked the ancestors for clip rims and could
+  mistake the film's own player shell for a wall the pill never lives
+  behind; the walk is withdrawn.) The anchor keeps the seat for a film in
+  the light DOM, CSS answering every scroll itself; a film inside one of
+  the site's shadow roots is out of the anchor's reach and is carried by
+  hand, one rect per frame it stands still.
 - **The player speaks through one pill.** The half-moon that lit up over the
   double-tapped side is gone, machinery and all; a skip run now reports
   through the same toast every other notice uses — hold speed, subtitle and
@@ -139,11 +141,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   once-halved topbar is cut entirely: the frame carries no chrome above
   the picture, and the toast and sheets reseat to a breath from the top.
 - **The player belongs to one film.** The badge only appears when a page can
-  name one: a film that owns at least half of the screen and, where other
-  films are present, twice what the runner-up owns. A page of previews, a
-  results grid or a row of hover cards elects nothing, so the player opens
+  name one: where the page keeps several films, the film must own at least
+  half of the screen and twice what the runner-up owns. A page of previews,
+  a results grid or a row of hover cards elects nothing, so the player opens
   on nothing by accident; a portrait film — a shorts clip by shape — is
-  refused at the gate, before any arithmetic.
+  refused at the gate, before any arithmetic. A page with exactly one
+  playable film elects it outright: one film is the one the page is built
+  around, at whatever share its own chrome leaves it — a watch page's
+  masthead, sidebar and the room below never stop it from being the reason
+  the page stands, and a big window could once shrink the film's share
+  under the half and refuse it.
 - **The bar speaks from its own ink pill.** The full-width strip the
   controls rode on becomes a stadium container of the same ink the toast
   and the sheets speak from, rim and shadow lifting it off the film — and

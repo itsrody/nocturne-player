@@ -1,12 +1,16 @@
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
-// The player is a player for one film — the one a page is built around. Two
-// cheap readings say that a page has one: the film must own at least half of
-// the screen's area on its own, and where other films are present it must own
-// double what the runner-up owns. A page that is a gallery, a results grid or
-// a row of hover-preview cards elects no film at all — the right answer,
-// because nothing there is the main film, and the badge is quieter than a
-// player opened on a preview.
+// The player is a player for one film — the one a page is built around.
+// Where a page keeps several films, two cheap readings say which one it
+// belongs to: the film must own at least half of the screen's area on its
+// own, and double what the runner-up owns. A page that is a gallery, a
+// results grid or a row of hover-preview cards elects no film at all —
+// the right answer, because nothing there is the main film, and the badge
+// is quieter than a player opened on a preview. A page with exactly one
+// playable film is its own answer: one film is the film the page is built
+// around, at whatever share the site's own player chrome leaves it — a
+// watch page's masthead, sidebar and the room below never stop the film
+// from being the reason the page stands.
 const MAIN_MIN_SHARE = 0.5;
 const MAIN_DOMINANCE = 2;
 const RESCAN_DELAY_MS = 250;
@@ -98,6 +102,8 @@ const visibleArea = (rect) => {
 // Pick must rank on the visible area alone — not a weighted taste. What is
 // on screen decides who the screen belongs to; a preview that plays by
 // itself has no seniority, and a film that is still loading has no fault.
+// One playable film alone on the page is the page's film outright — the
+// rival arithmetic is only ever a judge among several.
 export const pickPrimary = (videos) => {
   const ranked = Array.from(videos)
     .map((video) => ({
@@ -107,10 +113,13 @@ export const pickPrimary = (videos) => {
     .filter(({ area }) => area > 0)
     .sort((first, second) => second.area - first.area);
 
+  // One playable film alone on the page is the page's film outright: the
+  // rival arithmetic only speaks when there are rival voices to judge.
+  if (ranked.length <= 1) return ranked[0]?.video ?? null;
+
   const best = ranked[0];
-  if (!best) return null;
   const runner = ranked[1];
-  if (runner && best.area < runner.area * MAIN_DOMINANCE) return null;
+  if (best.area < runner.area * MAIN_DOMINANCE) return null;
   if (best.area < window.innerWidth * window.innerHeight * MAIN_MIN_SHARE) {
     return null;
   }
