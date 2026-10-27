@@ -193,39 +193,6 @@
   overflow: hidden;
 }
 
-.seek-marks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.seek-mark {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  margin-left: -1.5px;
-  background: rgba(10, 9, 14, 0.75);
-}
-
-/* The name of the section being played, above the bar and out of the way. */
-.chapter {
-  margin: 0 0 8px 58px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0;
-  transition: opacity 220ms var(--ease);
-}
-
-.chapter.is-visible {
-  opacity: 0.92;
-}
-
 .seek-fill {
   position: absolute;
   inset: 0;

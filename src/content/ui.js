@@ -1,4 +1,3 @@
-import { readSiteChapters } from './video/chapters.js';
 import { createMenu } from './controls/menu.js';
 import { createAudioTracks } from './video/audiotracks.js';
 import { createQuality } from './video/quality.js';
@@ -33,7 +32,6 @@ const SIDE_SKIP_SECONDS = {
 // the half-moon's own rhythm, kept — so a sitting of quick side taps says one
 // growing sum instead of restarting at each run's border.
 const SKIP_LINGER_MS = 700;
-const CHAPTER_TRIES_MS = [1200, 4000, 10000];
 // A pull on the picture is judged like a sheet being put away: far enough
 // down the screen, or flung fast enough, and it leaves; short of both, it
 // comes back. The slide itself is timed to be felt, not watched.
@@ -634,16 +632,6 @@ export const createOverlay = ({
     applyWarmth(settings.warmth);
   };
 
-  // Walking the site's page data is not free, so it happens after the picture
-  // is up rather than in the way of it — and more than once, because a page
-  // that was navigated to fills its data in some time after the video starts.
-  const chapterTimers = CHAPTER_TRIES_MS.map((delay) =>
-    setTimeout(() => {
-      const chapters = readSiteChapters(playerHost);
-      if (chapters.length > 0) controlBar.setChapters(chapters);
-    }, delay),
-  );
-
   restoreSettings();
   // Kept as a list so the overlay can take itself off the screen again: the
   // shadow root outlives it when a feed moves on to its next video.
@@ -668,7 +656,6 @@ export const createOverlay = ({
       if (toastTimer !== null) clearTimeout(toastTimer);
       clearAccount(skipAccount.back);
       clearAccount(skipAccount.forward);
-      for (const timer of chapterTimers) clearTimeout(timer);
       surface.removeEventListener('pointermove', wakeChrome);
       chrome.removeEventListener('pointermove', wakeChrome);
       video.removeEventListener('pause', handlePlaybackChange);

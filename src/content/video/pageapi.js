@@ -57,8 +57,8 @@ export const call = (object, name, ...args) => {
     // Function.prototype.apply, which then tries to read `length` off an array
     // built in our compartment and is refused — "Permission denied to access
     // property length". Every call into a site's player failed that way, which
-    // is why the quality ladder, the caption list and the chapter list all came
-    // back empty on YouTube. Reflect is ours, so the arguments are unpacked on
+    // is why the quality ladder and the caption list both came back empty on
+    // YouTube. Reflect is ours, so the arguments are unpacked on
     // this side and the page only ever sees the values.
     const value = Reflect.apply(method, object, args);
     return value === undefined ? null : value;

@@ -128,6 +128,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   once-halved topbar is cut entirely: the frame carries no chrome above
   the picture, and the toast and sheets reseat to a breath from the top.
 
+### Removed
+
+- **Chapters are gone.** The reader that picked chapter names and start
+  times out of the site's page blobs, the dividers it drew on the ruler,
+  and the section name it held above the bar. The shapes kept moving under
+  the search that refused to pin a path, and the reading cost more lives
+  to keep alive than the label was worth. The ruler and the clock are
+  unchanged.
+
 ## [0.9.1][] - 2026-10-20
 
 ### Changed
