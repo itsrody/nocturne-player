@@ -27,8 +27,9 @@
 
   /* The seek bar and everything that lines up with it stay clear of the
      strip along the bottom where the Android home swipe lives. Seated a
-     little lower than before: the strip behind the bar is gesture land, and
-     a lift of 8% still keeps the row and the bubble above it. */
+     little lower than before: the pill the bar lives in is gesture land's
+     neighbour, and a lift of 8% still keeps the pill and the bubble above
+     it clear. */
   --seek-lift: 8%;
 }
 
@@ -118,11 +119,20 @@
 
 .controlbar {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: max(30px, env(safe-area-inset-left));
+  right: max(30px, env(safe-area-inset-right));
   bottom: var(--seek-lift);
-  padding: 0 max(30px, env(safe-area-inset-right)) 0
-    max(30px, env(safe-area-inset-left));
+  /* The bar speaks from one ink container now — a stadium rounded into a
+     pill, the same material the toast and the sheets speak from. Its rim
+     and shadow lift it off the film. The container itself stays blind: a
+     tap on its own gaps answers the picture, and only what it carries —
+     the ruler, the buttons — names its touch. */
+  background: var(--ink);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+    var(--shadow-soft);
+  padding: 10px 12px;
   pointer-events: none;
 }
 
@@ -176,9 +186,9 @@
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   /* One label holding both readings: "current / duration" is a single
-     sentence, and a narrow row must never break it in two. */
+     sentence, and a narrow row must never break it in two. It rides the
+     bar's own ink, so it needs no shadow of its own. */
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .seek-track {
@@ -393,14 +403,14 @@
 }
 
 /* The sheet hangs above the control bar's far right, where the gear sits —
-   and hangs there by plain numbers, not anchors: the bar is a fixed strip
-   (12% up, its controls a known 44px row), the gear is always its last
-   child, so there is nothing to read dynamically, nothing that can
-   mis-place the sheet across a DOM subtree, and nothing that can let the
-   sheet and the bar meet. */
+   and hangs there by plain numbers, not anchors: the bar is a fixed pill
+   (12% up, a known 64px body — 44px of row under 10px pads — and a hairline
+   edge), the gear is always its last child, so there is nothing to read
+   dynamically, nothing that can mis-place the sheet across a DOM subtree,
+   and nothing that can let the sheet and the pill meet. */
 .menu {
   top: auto;
-  bottom: calc(var(--seek-lift) + 52px); /* 44px of row + an 8px breath */
+  bottom: calc(var(--seek-lift) + 72px); /* 64px of pill + an 8px breath */
   right: max(30px, env(safe-area-inset-right));
   left: auto;
   width: min(340px, 54vw);
@@ -650,12 +660,13 @@
   pointer-events: none;
 }
 
-/* Cues sit above the seek bar and are set with textContent, never parsed. */
+/* Cues sit above the pill the bar lives in and are set with textContent,
+   never parsed. */
 .cue {
   position: absolute;
   left: 8%;
   right: 8%;
-  bottom: calc(var(--seek-lift) + 46px);
+  bottom: calc(var(--seek-lift) + 72px);
   text-align: center;
   font-size: 20px;
   line-height: 1.35;

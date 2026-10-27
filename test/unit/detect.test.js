@@ -77,7 +77,7 @@ test('a portrait film is refused at the gate', () => {
   assert.equal(isPlayable(clip), false);
 });
 
-test('a portrait refusad needs dimensions for its verdict', () => {
+test('a portrait refusal needs dimensions for its verdict', () => {
   const fresh = film(0, 0, VIEW.width, VIEW.height);
   fresh.videoWidth = 0;
   fresh.videoHeight = 0;
