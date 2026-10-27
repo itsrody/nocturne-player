@@ -68,6 +68,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The moments the code says to itself get one mouth.** A signal — a
+  moment one side says and every side that reached it in time hears —
+  is the small vocabulary the late-bound cycles were waiting for: the
+  frame's badge grants and its announcements, the session's exit and
+  fullscreen commands, the pill's tap and the subtitle's name all say
+  themselves through it now, and the hand-bound bags that carried the
+  reach between the two halves of each cycle — the no-op stub, the
+  `null` field, the four-slot `refs` — are gone, their queries rebound
+  once their answer exists and their moments said without knowing who
+  hears. And the one unbounded poll left in the content script goes
+  quiet: the site captions' probe had been reading the container and
+  asking after it every second forever, where the observer already
+  owns the painting — the tick now keeps only the arranging question,
+  and only in the second that contains something to arrange, settling
+  once the container stands.
+
 - **The gestures and the adapters answer to the same verbs the rest
   of the player keeps.** The recognizer's two timers join the moment
   slots: the hold's moment — armed per press, lost to anything that

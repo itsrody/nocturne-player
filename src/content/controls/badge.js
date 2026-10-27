@@ -1,4 +1,5 @@
 import { createShadowHost, el, pinStyle } from '../shell.js';
+import { createSignal } from '../../lib/signals.js';
 import badgeCss from './badge.css';
 
 const SIZE_PX = 44;
@@ -187,13 +188,17 @@ export const createBadge = () => {
     isMounted = false;
   };
 
-  const api = { show, hide, refresh: scheduleReposition, onActivate: null };
+  // The pill's tap is a moment said to whoever mounted the frame's wiring:
+  // the badge knows only that a film under it was asked for; what opening
+  // means is the frame's answer, registered here after the badge exists —
+  // which is why the tap is a signal and not a field the wiring assigns.
+  const activate = createSignal();
 
   button.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (target && api.onActivate) api.onActivate(target);
+    if (target) activate.emit(target);
   });
 
-  return api;
+  return { show, hide, refresh: scheduleReposition, activate };
 };

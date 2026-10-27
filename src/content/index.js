@@ -4,6 +4,7 @@ import {
   readSettings,
   writeSettings,
 } from '../lib/settings.js';
+import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
 import { LEGACY_OPENINGS_KEY, STATE_QUERY } from '../lib/words.js';
 import { createBadge } from './controls/badge.js';
@@ -78,15 +79,17 @@ const start = async () => {
   const ticket = mintTicket();
   let granted = isTop;
 
-  // Late-bound, the way the player session binds its own actions: the verdict
-  // and the arbitration both have to reach the watcher created below them,
-  // and the watcher has to reach the same things on events of its own.
-  const refs = {
-    wantsBadge: () => false,
-    onGrant: () => {},
-    announce: () => {},
-    liveCount: () => 0,
-  };
+  // The wiring of this frame is a cycle, and it is cut two ways rather than
+  // by one hand-bound bag: the questions asked late — the count a claimant
+  // reports with, and whether this frame wants the badge, both of which need
+  // the watcher standing below them — are queries rebound once their answer
+  // exists, and the moments said across the cycle — a grant arriving from
+  // the judge, and the announcement that closes the arrangement — are
+  // signals, fired by whoever says them without knowing who hears yet.
+  let liveCount = () => 0;
+  let wantsBadge = () => false;
+  const grant = createSignal();
+  const announce = createSignal();
 
   const claimant = isTop
     ? null
@@ -95,13 +98,13 @@ const start = async () => {
         ticket,
         (next) => {
           granted = next;
-          refs.onGrant();
+          grant.emit();
         },
-        { getCount: () => refs.liveCount() },
+        { getCount: () => liveCount() },
       );
 
   const judge = isTop
-    ? createJudge(window, { ownWant: () => refs.wantsBadge() })
+    ? createJudge(window, { ownWant: () => wantsBadge() })
     : null;
 
   // The badge's answer for a film, said once and asked of wherever the
@@ -116,27 +119,28 @@ const start = async () => {
   const watcher = createVideoWatcher((primary) => {
     if (session) return;
     retune(primary);
-    refs.announce();
+    announce.emit();
   });
 
-  refs.liveCount = () => watcher.getCount();
+  liveCount = () => watcher.getCount();
 
-  refs.onGrant = () => retune(watcher.getPrimary());
+  // A grant arriving from the judge is the badge's news with the film the
+  // watcher holds: the answer is re-asked of the frame as it stands now.
+  grant.on(() => retune(watcher.getPrimary()));
 
-  refs.wantsBadge = () =>
-    !session && watcher.getPrimary() !== null && isWatched();
+  wantsBadge = () => !session && watcher.getPrimary() !== null && isWatched();
 
-  refs.announce = () => {
+  announce.on(() => {
     // One call covers all three sides of the arrangement: the frame tells
     // the judge what it wants, the count rides the same word (the frame
     // may have films to report without a claim in force, so the word is
     // said even when the want is unchanged), and the judge — when this
     // frame is the judge — reconsiders its seating with that knowledge in
     // hand.
-    claimant?.setWant(refs.wantsBadge());
+    claimant?.setWant(wantsBadge());
     claimant?.tell();
     judge?.decide();
-  };
+  });
 
   const apply = () => {
     if (isWatched()) {
@@ -149,7 +153,7 @@ const start = async () => {
       // a film running on under it.
       if (session) session.exit();
     }
-    refs.announce();
+    announce.emit();
   };
 
   // Every document — the top's included — keeps its children's slots: the
@@ -159,7 +163,7 @@ const start = async () => {
   // session that asked.
   createSlotKeeper(window, document);
 
-  badge.onActivate = async (video) => {
+  badge.activate.on(async (video) => {
     if (session) return;
     badge.hide();
     const openedSession = createSession(video, {
@@ -174,17 +178,17 @@ const start = async () => {
         session = null;
         claimant?.slot(false);
         retune(lastVideo);
-        refs.announce();
+        announce.emit();
       },
     });
     session = openedSession;
-    refs.announce();
+    announce.emit();
     await session.enter();
     // A session that went away while the door was still opening leaves no
     // slot held: the exit has already said its word.
     if (session !== openedSession) return;
     claimant?.slot(true);
-  };
+  });
 
   apply();
   onSettingsChanged((next) => {

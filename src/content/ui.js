@@ -7,6 +7,7 @@ import { createSeeker } from './video/seek.js';
 import { createTrackManager } from './video/tracks.js';
 import { createVisuals } from './video/visuals.js';
 import { el } from './shell.js';
+import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
 import { ZONE } from './gestures/zones.js';
 
@@ -165,7 +166,10 @@ export const createOverlay = ({
     play: null,
     fullscreen: null,
   };
-  const menuRef = { setSubtitle: () => {} };
+  // The subtitle's name rides a moment said by the track manager — which
+  // exists first — and heard by the menu once the menu exists. The late
+  // binding is the hearing, not a stub handed out and replaced.
+  const subtitleSet = createSignal();
 
   // Playback speed is deliberately not restored: it belongs to the film you
   // were watching, not to the next one.
@@ -180,7 +184,7 @@ export const createOverlay = ({
       cueBox.textContent = text;
       cueBox.classList.toggle('is-visible', text !== '');
     },
-    (id) => menuRef.setSubtitle(id),
+    (id) => subtitleSet.emit(id),
     playerHost,
   );
 
@@ -296,7 +300,7 @@ export const createOverlay = ({
     },
   });
 
-  menuRef.setSubtitle = menu.setSubtitle;
+  subtitleSet.on(menu.setSubtitle);
 
   const isPanelOpen = () => menu.isOpen();
 

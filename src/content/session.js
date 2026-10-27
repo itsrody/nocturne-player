@@ -1,5 +1,6 @@
 import { createOverlay } from './ui.js';
 import { createShadowHost, el, pinStyle } from './shell.js';
+import { createSignal } from '../lib/signals.js';
 import { findApiAncestor } from './video/pageapi.js';
 import { createMediaBridge } from './video/mediasession.js';
 import { lockPageFullscreen } from './fullscreenlock.js';
@@ -315,9 +316,13 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     relayoutFrame = requestAnimationFrame(relayout);
   };
 
-  // Late-bound: showing a video needs the way out and the way to the next
-  // video, and both of those need to be able to show one.
-  const actions = { exit: () => {}, fullscreen: () => {} };
+  // The session's own commands, said as signals: a teardown noticed mid-open,
+  // the bridge's stop and the sheet's own buttons all ask for the way out
+  // before `exit` exists to answer, and the fullscreen ask rides the same
+  // shape. Whoever later owns the command registers for it — the moment said
+  // before a listener stands is lost the same way the no-op stub heard
+  // everything.
+  const actions = { exit: createSignal(), fullscreen: createSignal() };
 
   // Takes one video out of the page, puts it on the stage with the controls
   // over it, and returns what is needed to hand it back exactly as it was.
@@ -405,7 +410,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     }
 
     frame.prepend(video);
-    watchForTeardown(video, own, () => actions.exit());
+    watchForTeardown(video, own, () => actions.exit.emit());
 
     // The metadata event can outrun the picture: an MSE stream is allowed
     // to revise its dimensions after the metadata says them, and the site
@@ -427,7 +432,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     own.listen(video, 'resize', scheduleRelayout);
 
     const mediaBridge = createMediaBridge(video, {
-      onExit: () => actions.exit(),
+      onExit: () => actions.exit.emit(),
     });
 
     overlay = createOverlay({
@@ -436,11 +441,11 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
       frame,
       shadow: ui.shadow,
       layers,
-      onExit: () => actions.exit(),
+      onExit: () => actions.exit.emit(),
       settings,
       onPersist,
       playerHost,
-      onFullscreen: () => actions.fullscreen(),
+      onFullscreen: () => actions.fullscreen.emit(),
       isChromeShown,
     });
     overlay.setScreen(readScreen());
@@ -495,10 +500,10 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     onExit(lastVideo);
   };
 
-  actions.exit = exit;
-  actions.fullscreen = () => {
+  actions.exit.on(exit);
+  actions.fullscreen.on(() => {
     requestFullscreen(stage).then(scheduleRelayout);
-  };
+  });
 
   const openStage = () => {
     stage.dataset.nocturnePlayer = '';

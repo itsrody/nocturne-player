@@ -2,6 +2,11 @@ import { call, isFunction, read, toArray, toPage } from './pageapi.js';
 import { createTimerSlot } from '../../lib/time.js';
 
 const PROBE_INTERVAL_MS = 1000;
+// While the container stands and the observer paints, the arrange tick has
+// only one question left and no hurry to ask it. A site that swaps caption
+// containers mid-film is rarer than a second battery waking every one —
+// the settle is the price of the swap being noticed, and the swap is rare.
+const PROBE_SETTLED_MS = 5000;
 
 // Players that paint their own captions instead of exposing a text track. The
 // element the site draws into is still updated while the video sits on our
@@ -140,18 +145,22 @@ export const createSiteCaptions = (onText, host = null) => {
   };
 
   // The container is created the moment captions are first switched on, which
-  // may be long after the player opened, so it is looked for on a slow tick.
-  // The tick is a timer slot: each probe re-arms itself, whatever it found.
+  // may be long after the player opened, so it is looked for on a slow tick —
+  // and once it stands and the observer is painting it, the tick keeps only
+  // the arranging question, still connected? — at a settled pace. A site that
+  // swaps its container out is heard again within a settle rather than a
+  // second, and the observer is the only painter in between.
   const probeTimer = createTimerSlot(probe);
   function probe() {
     if (container !== null && !container.isConnected) unwatch();
+    // A find paints at once — watch() reads the container the moment it is
+    // standing — and from there the observer alone paints, so the tick's
+    // only remaining duty is asking whether the container is still here.
     if (container === null) {
       const found = findContainer();
       if (found !== null) watch(found);
-    } else {
-      readNow();
     }
-    probeTimer.set(PROBE_INTERVAL_MS);
+    probeTimer.set(container === null ? PROBE_INTERVAL_MS : PROBE_SETTLED_MS);
   }
 
   probe();
