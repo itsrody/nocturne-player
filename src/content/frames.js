@@ -16,7 +16,7 @@
 // on its own content all the same. The ticket filters out everything the
 // protocol did not itself put on the wire.
 import { CLAIM_TAG, SLOT_TAG } from '../lib/words.js';
-import { targetOf } from './slot.js';
+import { postWord, targetOf } from './slot.js';
 const RENEW_MS = 2000;
 const STALE_MS = 6000;
 
@@ -82,33 +82,30 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   // pays the width back within beats if the session frame dies before it
   // can say its goodbyes.
   const say = () => {
-    try {
-      home.top.postMessage(
-        { [CLAIM_TAG]: ticket, want, count: getCount() },
-        targetOf(home.location, true),
-      );
-    } catch {
-      // A window that went away with the page. A claim that cannot be sent
-      // has no consequence the next claim cannot repair.
-    }
+    postWord(home.top, targetOf(home.location, true), {
+      [CLAIM_TAG]: ticket,
+      want,
+      count: getCount(),
+    });
     if (slotOpen) {
-      try {
-        home.parent.postMessage(
-          { [SLOT_TAG]: ticket, open: true },
-          targetOf(home.location),
-        );
-      } catch {
-        // The word cannot get out; the holds below expire on their own.
-      }
+      postWord(home.parent, targetOf(home.location), {
+        [SLOT_TAG]: ticket,
+        open: true,
+      });
     }
   };
+
+  // What keeps the heart beating: a claim in force, films to count, or a
+  // slot held open. One answer, said once — the renew beat and the story
+  // of stopping below both ask it.
+  const worthSaying = () => want || slotOpen || getCount() > 0;
 
   // The next beat, when the frame still has something to keep alive on the
   // rail.
   const renew = () => {
     renewTimer = null;
     say();
-    if (want || slotOpen || getCount() > 0) {
+    if (worthSaying()) {
       renewTimer = setTimeout(renew, RENEW_MS);
     }
   };
@@ -119,7 +116,7 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   // quiet frames pays the rail nothing.
   const tell = () => {
     say();
-    if (want || slotOpen || getCount() > 0) {
+    if (worthSaying()) {
       if (renewTimer === null) {
         renewTimer = setTimeout(renew, RENEW_MS);
       }
@@ -145,16 +142,20 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   // strangers carries it as well as a family of same-origin frames. The
   // answer comes back as it went: what was widened is widened by each
   // document's own hand, and un-widened the same way.
+  //
+  // An open arrives as a hold on the page and then rides the heartbeat —
+  // tell() has just said it, so a second copy of the same word buys
+  // nothing the next beat does not renew. A close has no beat to ride
+  // (the hold is nothing worth keeping alive) and is sent now: a shell
+  // gone for good should not wait on a clock for the width back.
   const slot = (open) => {
     slotOpen = open;
     tell();
-    try {
-      home.parent.postMessage(
-        { [SLOT_TAG]: ticket, open },
-        targetOf(home.location),
-      );
-    } catch {
-      // A wall that went away with the page. Nothing to hold open then.
+    if (!open) {
+      postWord(home.parent, targetOf(home.location), {
+        [SLOT_TAG]: ticket,
+        open: false,
+      });
     }
   };
 
@@ -225,14 +226,10 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
       // verdict says otherwise. A claimant that cannot be told is one that
       // is gone, and its claim can go with it.
       if (claim.granted) {
-        try {
-          claim.source.postMessage(
-            { [CLAIM_TAG]: ticket, granted: false },
-            claim.origin,
-          );
-        } catch {
-          // The claimant is closing behind our back; it will not need news.
-        }
+        postWord(claim.source, claim.origin, {
+          [CLAIM_TAG]: ticket,
+          granted: false,
+        });
       }
       claims.delete(ticket);
     }
@@ -247,15 +244,13 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
       const seated = ticket === winner;
       if (claim.granted === seated) continue;
       claim.granted = seated;
-      try {
-        claim.source.postMessage(
-          { [CLAIM_TAG]: ticket, granted: seated },
-          claim.origin,
-        );
-      } catch {
-        // The claimant is closing behind our back; it will not need news.
-        claims.delete(ticket);
-      }
+      // A claimant closing behind our back will not need the news: the
+      // word goes nowhere, and a claim that cannot be told can go with it.
+      const delivered = postWord(claim.source, claim.origin, {
+        [CLAIM_TAG]: ticket,
+        granted: seated,
+      });
+      if (!delivered) claims.delete(ticket);
     }
   };
 

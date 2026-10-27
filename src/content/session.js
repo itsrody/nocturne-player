@@ -3,6 +3,7 @@ import { createShadowHost, el, pinStyle } from './shell.js';
 import { findApiAncestor } from './video/pageapi.js';
 import { createMediaBridge } from './video/mediasession.js';
 import { lockPageFullscreen } from './fullscreenlock.js';
+import { createGuardBudget } from './ground.js';
 import playerCss from './player.css';
 
 // The names a site's own player hangs off the element wrapping the video.
@@ -22,7 +23,6 @@ const STALL_GRACE_MS = 400;
 const EMPTIED_GRACE_MS = 6000;
 const NETWORK_EMPTY = 0;
 const RECOVER_DELAY_MS = 250;
-const MAX_REPINS = 240;
 // Below this share of the screen, a player that has lost fullscreen is playing
 // in the box the site gave it — an embedded player's frame — rather than over
 // the whole page, where it would still want its full set of controls.
@@ -317,7 +317,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
 
   // Late-bound: showing a video needs the way out and the way to the next
   // video, and both of those need to be able to show one.
-  const actions = { exit: () => {}, step: () => {}, fullscreen: () => {} };
+  const actions = { exit: () => {}, fullscreen: () => {} };
 
   // Takes one video out of the page, puts it on the stage with the controls
   // over it, and returns what is needed to hand it back exactly as it was.
@@ -329,16 +329,18 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
 
     let styleGuard = null;
     let pinnedStyle = null;
-    let repinCount = 0;
     let overlay = null;
 
-    // Re-pinning is bounded: a site that fights back with !important of its
-    // own would otherwise trade writes with us for as long as the film lasts.
-    // After the budget runs out the guard steps aside and the picture is
-    // re-fitted on the ordinary relayout events instead. Only a write that
-    // actually changed the watched style counts against the budget: our own
-    // crop writes reach this observer too, and a long pinch used to spend a
+    // The video's pin guarded: repairs against a budget, and a site that
+    // keeps fighting wins the field once the budget is gone — only a write
+    // that actually changed the watched style counts, because our own crop
+    // writes reach this observer too, and a long pinch used to spend a
     // frame of it per movement without the site doing a thing.
+    const budget = createGuardBudget(() => {
+      if (styleGuard) styleGuard.disconnect();
+      styleGuard = null;
+      console.warn('Nocturne: the site keeps rewriting the video, leaving it');
+    });
     const pin = () => {
       const before = readStyle(video);
       if (isSameStyle(pinnedStyle, before)) return;
@@ -347,17 +349,8 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
       if (overlay) overlay.repin();
       const after = readStyle(video);
 
-      if (!isSameStyle(before, after)) {
-        repinCount += 1;
-        if (repinCount > MAX_REPINS) {
-          if (styleGuard) styleGuard.disconnect();
-          styleGuard = null;
-          console.warn(
-            'Nocturne: the site keeps rewriting the video, leaving it',
-          );
-          return;
-        }
-      }
+      const foreign = !isSameStyle(before, after);
+      if (foreign && !budget()) return;
       pinnedStyle = after;
     };
 
@@ -381,18 +374,18 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     // nothing deeper can concern us), and the anchor is put back where the
     // capture says it lived. Only the comment moves; the picture stays on the
     // stage. Bounded, in case the site wants the spot empty more than once.
-    let anchorRepins = 0;
-    const anchorGuard = new MutationObserver(() => {
+    let anchorGuard = null;
+    const anchorBudget = createGuardBudget(() => {
+      if (anchorGuard) anchorGuard.disconnect();
+      anchorGuard = null;
+      console.warn('Nocturne: the anchor keeps losing its place');
+    });
+    anchorGuard = new MutationObserver(() => {
       if (anchor.isConnected) return;
       // A page that has left the film behind entirely has no house to put it
       // back to; playback goes on until the viewer leaves for good.
       if (state.parent === null || !state.parent.isConnected) return;
-      anchorRepins += 1;
-      if (anchorRepins > MAX_REPINS) {
-        anchorGuard.disconnect();
-        console.warn('Nocturne: the anchor keeps losing its place');
-        return;
-      }
+      if (!anchorBudget()) return;
       if (
         state.nextSibling !== null &&
         state.nextSibling.parentNode === state.parent

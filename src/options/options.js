@@ -73,8 +73,7 @@ const readSlider = (slider) => {
   });
 
   return {
-    input,
-    paint,
+    isHeld: () => input === document.activeElement,
     set: (value) => {
       input.value = value;
       paint();
@@ -89,7 +88,7 @@ const readToggle = (toggle) => {
     writeSettings({ [toggle.key]: input.checked });
   });
   return {
-    input,
+    isHeld: () => input === document.activeElement,
     set: (value) => {
       input.checked = value;
     },
@@ -127,11 +126,11 @@ const renderSites = (hosts) => {
 // the popup and two copies of this page agree without fighting over inputs.
 const sync = (settings) => {
   for (const view of sliderViews) {
-    if (view.input === document.activeElement) continue;
+    if (view.isHeld()) continue;
     view.set(settings[view.key]);
   }
   for (const view of toggleViews) {
-    if (view.input === document.activeElement) continue;
+    if (view.isHeld()) continue;
     view.set(settings[view.key]);
   }
   renderSites(settings.disabledHosts);

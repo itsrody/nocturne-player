@@ -1,4 +1,5 @@
 import { SLOT_TAG } from '../lib/words.js';
+import { createGuardBudget } from './ground.js';
 
 const HOLD_GRACE_MS = 12000;
 
@@ -19,7 +20,23 @@ export const targetOf = (loc, fromTheTop = false) => {
     typeof origin === 'string' && origin !== '' && origin !== 'null';
   return named ? origin : '*';
 };
-const MAX_REPINS = 240;
+
+// The one verb for putting a word on the rails: aimed, at the address its
+// caller chose, and stonewalled only in the way the rails know — a word a
+// gone wall cannot carry has no consequence the next beat cannot repair.
+// Every sender on both ends of this protocol posts through here, so the
+// story of a window that went away with its page is told once. The answer
+// says whether the word left at all, for the one sender that trades on it:
+// the judge forgets a claim whose claimant cannot be told.
+export const postWord = (win, origin, word) => {
+  try {
+    win.postMessage(word, origin);
+    return true;
+  } catch {
+    // A wall that went away with the page.
+    return false;
+  }
+};
 const TOP_Z = '2147483647';
 
 // A document asked to make room for the session below it measures the room
@@ -72,16 +89,15 @@ export const createSlotKeeper = (home, doc) => {
   // after our own pen.
   const buildHold = (ticket, element) => {
     const original = element.getAttribute('style');
-    let repins = 0;
-    let guard = new MutationObserver(() => {
+    let guard = null;
+    const budget = createGuardBudget(() => {
+      if (guard) guard.disconnect();
+      guard = null;
+      console.warn('Nocturne: the site keeps rewriting the slot, leaving it');
+    });
+    guard = new MutationObserver(() => {
       if (isWide(element)) return;
-      repins += 1;
-      if (repins > MAX_REPINS) {
-        if (guard) guard.disconnect();
-        guard = null;
-        console.warn('Nocturne: the site keeps rewriting the slot, leaving it');
-        return;
-      }
+      if (!budget()) return;
       for (const [name, value] of Object.entries(WIDE)) {
         element.style.setProperty(name, value, 'important');
       }
@@ -140,12 +156,7 @@ export const createSlotKeeper = (home, doc) => {
     // word carries the parent's own name, read from this document's
     // location like every other aimed word on the rails.
     if (home.top !== home) {
-      try {
-        home.parent.postMessage(data, targetOf(home.location));
-      } catch {
-        // A wall that went away with the page; the hold below is ours and
-        // stays honest either way.
-      }
+      postWord(home.parent, targetOf(home.location), data);
     }
 
     if (data.open) {

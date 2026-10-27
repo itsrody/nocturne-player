@@ -68,6 +68,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The methods that were hidden in three hand-copies get one home.** The
+  discipline of holding a line a rewriting site wants to move — repair,
+  count, exceed the budget, sound off once, step aside — is now a guard
+  budget of its own, keeping the video's pin, the film's anchor and the
+  framed slot from three same stories and the 240 they used to spell
+  twice. The words on the rails are aimed by one verb that answers
+  whether a word left at all, so a judge forgets a claim it cannot tell;
+  the framed slot's open rides the heartbeat that just said it instead of
+  being said twice; the claimant's beat answers once what keeps it
+  beating; the settings page's controls answer for their own held or not
+  state; and a never-wired stub leaves the session's late-bound actions.
+
 - **The words shared across a boundary have one mouth.** The string two
   files must agree on — the rail tags the frames protocol speaks, the
   popup's question about how many films a page holds, the storage keys
