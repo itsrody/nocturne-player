@@ -54,6 +54,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **A page with its film behind glass answers for it whole.** The chain
+  of named origins between a film and the eye comes from the frame's own
+  location now — `ancestorOrigins`, shipped in Firefox 148 and therefore
+  guaranteed at the floor of 158 — so a host decision is read from the
+  whole nesting without a cross-origin window ever being touched, and the
+  old throw-and-guess path (the top host read that throws, then a
+  `document.referrer` whose truth was the framer's policy to give) is
+  gone. The popup speaks for the page with one voice: every frame carries
+  its living film count on the very rail it already beats on, and the
+  frame the viewer is looking at totals them — before, a film living
+  entirely behind an iframe counted as no video at all. And a full screen
+  is no longer promised where the embedding chain has not allowed one:
+  `document.fullscreenEnabled` decides whether the fullscreen control is
+  offered, because a control that throws when pressed is not a control.
+- **The frame tree answers for its own.** A claim is credited only to a
+  window the judge can find in its own tree — reference walks, safe
+  across origins — so a window that can spell our words but is nobody's
+  frame hears nothing back. And the player's host page keeps the room it
+  asks for: a session in a framed film tells its parent one hop at a
+  time, each document widening the box that hosts the one below, so an
+  embed that was built a paragraph tall plays across the whole viewport
+  and pays the width back fully at release — strangers' frames and
+  same-origin frames alike on the same rail, holds expiring on their own
+  beats if a session dies before it can say so.
 - **The quality sheet stops promising what the site cannot honor.** A
   `<source>` switch carried the position by hand and armed its restore on
   `loadedmetadata` — and nothing else. A load that died left the listener

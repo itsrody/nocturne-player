@@ -143,6 +143,7 @@ export const createOverlay = ({
   onPersist,
   playerHost,
   onFullscreen,
+  isFullscreenAllowed = document.fullscreenEnabled,
   isChromeShown = true,
 }) => {
   const surface = el('div', { class: 'layer surface' });
@@ -562,6 +563,16 @@ export const createOverlay = ({
     setChromeVisible(false);
   });
   buttons.fullscreen.classList.add('is-windowed-only');
+  // A frame chain that has not said "full screen is allowed" is a promise
+  // the button cannot keep: requestFullscreen would throw, and the honest
+  // control bar is the one that does not offer a way it cannot give. The
+  // stage stays inline instead — which, with permission, is exactly what
+  // the button was going to ask for anyway.
+  const tail = [buttons.menu, buttons.exit];
+  if (isFullscreenAllowed) {
+    tail.push(buttons.fullscreen);
+    buttons.fullscreen.classList.add('is-windowed-only');
+  }
 
   // The control bar carries everything the thumb works — transport before
   // the ruler, and the tail trailing the clock: the gear, the way out at
@@ -576,7 +587,7 @@ export const createOverlay = ({
       buttons.play,
       buildSkipButton(SKIP_SECONDS),
     ],
-    [buttons.menu, buttons.exit, buttons.fullscreen],
+    tail,
   );
 
   const fullOnly = [buttons.exit, buttons.menu];
