@@ -35,28 +35,80 @@ export const isShakaPlayer = (value) =>
 export const isPlayerjsInstance = (value) =>
   isFunction(value, 'api') && typeof probe(value, 'api', 'id') === 'string';
 
-const ATTACHED_KEYS = ['hls', '_hls', '__hls', 'hlsPlayer'];
+const ATTACHED_KEYS = [
+  'hls',
+  '_hls',
+  '__hls',
+  'hlsPlayer',
+  // The video.js shapes sit here too, and so do the names sites hang
+  // engines on when 'hls' was taken: every key is shape-checked before it
+  // is believed, so a name that belongs to somebody else costs nothing.
+  'player',
+  'playerInstance',
+  'playerObject',
+  'playerApi',
+  'engine',
+];
+
+// The seats a handle can hang from, most likely first: the element itself,
+// then the film's own furniture — pages habitually hang the engine on the
+// wrapper the player was built inside of — and the host answering for its
+// own last.
+const seatsOf = (video, host) => {
+  const seats = [video.wrappedJSObject ?? video];
+  let at = video.parentElement ?? null;
+  for (let hops = 0; at !== null && hops < 5; hops++) {
+    seats.push(at.wrappedJSObject ?? at);
+    at = at.parentElement ?? null;
+  }
+  if (host !== null) seats.push(host.wrappedJSObject ?? host);
+  return seats;
+};
 
 // Cheapest first: some pages hang the engine straight off the media element,
 // and some hang it off the named player object the caller has already found —
 // `playerEl.hls` being the common shape there. The element sits first, the
 // host answers for its own furniture.
-const findAttachedHls = (video, host) => {
-  const seats = [video.wrappedJSObject ?? video];
-  if (host !== null) seats.push(host.wrappedJSObject ?? host);
-  for (const seat of seats) {
+const findAttached = (video, host, shape) => {
+  for (const seat of seatsOf(video, host)) {
     for (const key of ATTACHED_KEYS) {
       const candidate = read(seat, key);
-      if (candidate && isHlsEngine(candidate)) return candidate;
+      if (candidate && shape(candidate)) return candidate;
     }
   }
   return null;
+};
+
+// video.js keeps its ladder in the technology that reads the stream, and
+// its public door is qualityLevels() — bundled with the player since the
+// seventh major, and present on almost every page that calls itself
+// video.js. The word 'tech' rides along so a lookalike with a decorative
+// list of levels is not believed by mistake.
+export const isVideojsPlayer = (value) =>
+  isFunction(value, 'qualityLevels') && isFunction(value, 'tech');
+
+// Sites that ship video.js bundled usually keep the constructor global even
+// when the players themselves are born in closures — and the constructor
+// keeps its own registry at videojs.players, every entry answering the
+// shape. That registry is the widest door into a closed player there is.
+const registeredVideojs = () => {
+  const registry = read(read(pageWindow(), 'videojs'), 'players');
+  if (typeof registry !== 'object' || registry === null) return [];
+  const players = [];
+  for (const key of Object.keys(registry)) {
+    const candidate = read(registry, key);
+    if (candidate !== null && isVideojsPlayer(candidate)) {
+      players.push(candidate);
+    }
+  }
+  return players;
 };
 
 const MATCHERS = [
   { name: 'hls', matches: isHlsEngine },
   { name: 'dash', matches: isDashPlayer },
   { name: 'shaka', matches: isShakaPlayer },
+  { name: 'videojs', matches: isVideojsPlayer },
   { name: 'playerjs', matches: isPlayerjsInstance },
 ];
 
@@ -78,7 +130,9 @@ export const findEngines = (video, host = null) => {
   const matchers = hasPlayerjs()
     ? MATCHERS
     : MATCHERS.filter((one) => one.name !== 'playerjs');
-  const found = findGlobalMatches(matchers);
+  const found = findGlobalMatches(matchers, (total) => {
+    debug('the sweep gave up at its budget', `${total} globals on the page`);
+  });
   if (host !== null) {
     for (const matcher of matchers) {
       try {
@@ -89,8 +143,12 @@ export const findEngines = (video, host = null) => {
     }
   }
   if (found.hls === undefined) {
-    const attached = findAttachedHls(video, host);
+    const attached = findAttached(video, host, isHlsEngine);
     if (attached !== null) found.hls = attached;
+  }
+  if (found.videojs === undefined) {
+    const [first] = registeredVideojs();
+    if (first !== undefined) found.videojs = first;
   }
   const names = Object.keys(found);
   debug(

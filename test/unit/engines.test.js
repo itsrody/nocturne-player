@@ -5,8 +5,13 @@ import {
   findEngines,
   hasPlayerjs,
   isHlsEngine,
+  isVideojsPlayer,
 } from '../../src/content/video/engines.js';
-import { call, probe } from '../../src/content/video/pageapi.js';
+import {
+  call,
+  findGlobalMatches,
+  probe,
+} from '../../src/content/video/pageapi.js';
 
 const afterEachStubs = [];
 
@@ -96,6 +101,76 @@ test('an element\u2019s own engine outranks the host\u2019s furniture', () => {
   const found = findEngines(video, host);
 
   assert.equal(found.hls, first);
+});
+
+test('a handle hanging on the film\u2019s wrapper is found too', () => {
+  installWindow({});
+  const engine = hlsEngine();
+  const wrapper = { wrappedJSObject: { hls: engine } };
+  const video = { wrappedJSObject: {}, parentElement: wrapper };
+
+  const found = findEngines(video);
+  assert.equal(found.hls, engine);
+});
+
+test('a name nobody owns is still a handle, once the shape says so', () => {
+  installWindow({});
+  const engine = hlsEngine();
+  const video = { wrappedJSObject: { playerInstance: engine } };
+
+  const found = findEngines(video);
+  assert.equal(found.hls, engine);
+});
+
+test('a video.js player arrives from the constructor\u2019s registry', () => {
+  const player = {
+    qualityLevels: () => [],
+    tech: () => ({}),
+  };
+  installWindow({ videojs: { players: { mainPlayer: player } } });
+
+  const found = findEngines({});
+  assert.equal(found.videojs, player);
+});
+
+test('a video.js lookalike without the technology is not believed', () => {
+  installWindow({
+    noTech: {
+      qualityLevels: () => [],
+    },
+    noList: {
+      tech: () => ({}),
+    },
+  });
+
+  const found = findEngines({});
+  assert.equal(found.videojs, undefined);
+});
+
+test('a page too big for the sweep says where it stopped', () => {
+  const globals = {};
+  for (let index = 0; index < 2100; index++) {
+    globals[`stranger${index}`] = { junk: index };
+  }
+  installWindow(globals);
+
+  const cuts = [];
+  const found = findGlobalMatches(
+    [{ name: 'hls', matches: isHlsEngine }],
+    (total) => cuts.push(total),
+  );
+  assert.deepEqual(cuts, [2100], 'the cut names the page\u2019s size');
+  assert.deepEqual(found, {});
+});
+
+test('a video.js ladder is the shape the matcher asks for', () => {
+  assert.equal(
+    isVideojsPlayer({ qualityLevels: () => [], tech: () => {} }),
+    true,
+  );
+  assert.equal(isVideojsPlayer({ qualityLevels: () => [] }), false);
+  assert.equal(isVideojsPlayer({ tech: () => {} }), false);
+  assert.equal(isVideojsPlayer(null), false);
 });
 
 test('a throwing identification is no console noise', () => {

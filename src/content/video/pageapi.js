@@ -132,7 +132,7 @@ export const findApiAncestor = (element, names) => {
 // that answers to a matcher is kept for it. Sweeping once per engine instead
 // meant walking the page's globals several times over, through
 // cross-compartment wrappers, in the moment the viewer was waiting.
-export const findGlobalMatches = (matchers) => {
+export const findGlobalMatches = (matchers, onCut = null) => {
   const scope = pageWindow();
   const found = {};
   if (scope === null) return found;
@@ -142,6 +142,12 @@ export const findGlobalMatches = (matchers) => {
   } catch {
     return found;
   }
+
+  // A page with more globals than the budget is read only to a cut, and
+  // whoever asked deserves to know that the cut happened: an engine behind
+  // the cut is indistinguishable from no engine on the page, and the debug
+  // switch is the place the difference says itself.
+  if (onCut !== null && keys.length > MAX_SCANNED_KEYS) onCut(keys.length);
 
   let missing = matchers.length;
   const limit = Math.min(keys.length, MAX_SCANNED_KEYS);

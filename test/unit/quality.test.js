@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import { createQuality } from '../../src/content/video/quality.js';
 import {
+  buildVideojsAdapter,
   createSourceAdapter,
   createYouTubeAdapter,
 } from '../../src/content/video/qualityadapters.js';
@@ -228,4 +229,112 @@ test('a player without a data call keeps the synthesized labels', () => {
   quality.refresh();
   const labels = quality.getOptions().map((option) => option.label);
   assert.deepEqual(labels, ['Auto', '720p', '1080p']);
+});
+
+// --- video.js ------------------------------------------------------------
+
+// A rung the way video.js hands it over: a height, a bitrate, and the
+// enabled switch that says whether the site's own ABR is still free to
+// choose it.
+const videojsPlayer = (rungs) => ({
+  tech: () => ({}),
+  qualityLevels: () => rungs,
+});
+
+test('a video.js ladder answers best first, with Auto at its head', () => {
+  const adapter = buildVideojsAdapter(
+    videojsPlayer([
+      { height: 720, bitrate: 3_000_000, enabled: true },
+      { height: 360, bitrate: 1_100_000, enabled: true },
+      { height: 1080, bitrate: 5_000_000, enabled: true },
+    ]),
+  );
+  assert.notEqual(adapter, null);
+
+  const labels = adapter.list().map((rung) => rung.label);
+  assert.deepEqual(labels, ['1080p', '720p', '360p']);
+});
+
+test('an open ABR answers Auto, and a silenced field names the rung', () => {
+  const adapter = buildVideojsAdapter(
+    videojsPlayer([
+      { height: 720, bitrate: 3_000_000, enabled: true },
+      { height: 360, bitrate: 1_100_000, enabled: true },
+    ]),
+  );
+  assert.equal(
+    adapter.current(),
+    'auto',
+    'every rung open is the site\u2019s own',
+  );
+
+  const silencer = buildVideojsAdapter(
+    videojsPlayer([
+      { height: 720, bitrate: 3_000_000, enabled: false },
+      { height: 360, bitrate: 1_100_000, enabled: true },
+    ]),
+  );
+  assert.equal(silencer.current(), '1');
+});
+
+test('asking for a rung silences every rung but one', () => {
+  const rungs = [
+    { height: 720, bitrate: 3_000_000, enabled: true },
+    { height: 360, bitrate: 1_100_000, enabled: true },
+  ];
+  const adapter = buildVideojsAdapter(videojsPlayer(rungs));
+
+  assert.equal(adapter.select('0'), true);
+  assert.deepEqual(
+    rungs.map((rung) => rung.enabled),
+    [true, false],
+  );
+});
+
+test('auto reopens every rung the player closed', () => {
+  const rungs = [
+    { height: 720, bitrate: 3_000_000, enabled: true },
+    { height: 360, bitrate: 1_100_000, enabled: false },
+  ];
+  const adapter = buildVideojsAdapter(videojsPlayer(rungs));
+
+  assert.equal(adapter.select('auto'), true);
+  assert.deepEqual(
+    rungs.map((rung) => rung.enabled),
+    [true, true],
+  );
+});
+
+test('a rung the player does not list is refused', () => {
+  const adapter = buildVideojsAdapter(
+    videojsPlayer([
+      { height: 720, bitrate: 3_000_000, enabled: true },
+      { height: 360, bitrate: 1_100_000, enabled: true },
+    ]),
+  );
+
+  assert.equal(adapter.select('9'), false);
+  assert.equal(adapter.select('banana'), false);
+  assert.equal(adapter.current(), 'auto', 'nothing was asked of the site');
+});
+
+test('a player with a single rung offers nothing — no ladder to climb', () => {
+  assert.equal(
+    buildVideojsAdapter(
+      videojsPlayer([{ height: 720, bitrate: 3_000_000, enabled: true }]),
+    ),
+    null,
+  );
+});
+
+test('a rung without a height answers in kilobits', () => {
+  const adapter = buildVideojsAdapter(
+    videojsPlayer([
+      { height: 0, bitrate: 2_450_000, enabled: true },
+      { height: 0, bitrate: 800_000, enabled: true },
+    ]),
+  );
+
+  const labels = adapter.list().map((rung) => rung.label);
+  assert.deepEqual(labels, ['2450k', '800k']);
 });

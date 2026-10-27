@@ -438,12 +438,66 @@ export const buildPlayerjsAdapter = (instance) => ({
   },
 });
 
+// --- video.js ----------------------------------------------------------------
+
+// The ladder lives in the technology reading the stream, and the public door
+// to it is qualityLevels(): a live list where every rung answers for its own
+// height and bitrate, and the site's own ABR is 'every rung enabled at
+// once'. Asking for a rung means silencing every rung but one — the shape
+// the site's own quality pickers use.
+export const buildVideojsAdapter = (player) => {
+  const rungs = () => toArray(call(player, 'qualityLevels')) ?? [];
+  if (rungs().length < 2) return null;
+
+  return {
+    name: 'video.js',
+    hasAuto: true,
+    list: () =>
+      rungs()
+        .map((rung, index) => ({
+          id: String(index),
+          height: read(rung, 'height') ?? 0,
+          bitrate: read(rung, 'bitrate') ?? 0,
+        }))
+        .sort(byHeightDescending)
+        .map((rung) => ({
+          id: rung.id,
+          label: heightLabel(
+            rung.height,
+            `${Math.round(rung.bitrate / 1000)}k`,
+          ),
+        })),
+    current: () => {
+      const open = rungs().filter((rung) => Boolean(read(rung, 'enabled')));
+      // ABR answers with every rung open at once, or more than one open:
+      // either way the site is choosing, and the chip says Auto.
+      if (open.length !== 1) return AUTO_ID;
+      const index = rungs().indexOf(open[0]);
+      return index >= 0 ? String(index) : AUTO_ID;
+    },
+    select: (id) => {
+      const wanted = id === AUTO_ID ? null : Number(id);
+      if (id !== AUTO_ID && !Number.isInteger(wanted)) return false;
+      const all = rungs();
+      if (id !== AUTO_ID && (wanted < 0 || wanted >= all.length)) return false;
+      let wrote = true;
+      all.forEach((rung, index) => {
+        if (!write(rung, 'enabled', id === AUTO_ID ? true : index === wanted)) {
+          wrote = false;
+        }
+      });
+      return wrote;
+    },
+  };
+};
+
 // An engine that hands over its ladder can say more about it than a player that
 // only answers in labels, so Playerjs is the last one asked.
 const BUILDERS = [
   { kind: 'hls', build: buildHlsAdapter },
   { kind: 'dash', build: buildDashAdapter },
   { kind: 'shaka', build: buildShakaAdapter },
+  { kind: 'videojs', build: buildVideojsAdapter },
   { kind: 'playerjs', build: buildPlayerjsAdapter },
 ];
 

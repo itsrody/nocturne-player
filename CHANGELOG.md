@@ -54,6 +54,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The sweep knows more hiding places, and video.js by name.** The handle
+  hunt for an engine now reads the film's own furniture too — a handle hung
+  on the wrapper the player was built inside is as good as one hung on the
+  element — and answers to more of the names sites give it, every key
+  shape-checked so a name that belongs to somebody else costs nothing. A
+  video.js player is identified by its public door (`qualityLevels` plus a
+  `tech` behind it) and found two ways: its own `videojs.players`
+  registry, which the constructor keeps even for players born in closures,
+  and the sweep of the page's globals. Its ladder speaks the native
+  language of the site's own ABR — every rung open is Auto, the chosen
+  rung is the one sole rung still enabled — and asking for a rung silences
+  every rung but one, exactly as the site's own quality pickers do. A page
+  with more globals than the sweep's budget can own now says where it
+  stopped: the debug switch reports the cut instead of leaving an engine
+  behind it indistinguishable from no engine at all.
 - **The lock cannot be written over.** The fullscreen lock still answers the
   page's take-the-screen calls as if they had worked, but its fake now stands
   behind a property the page cannot rewrite with plain assignment — a page
