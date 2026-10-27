@@ -4,6 +4,7 @@ import {
   readSettings,
   writeSettings,
 } from '../lib/settings.js';
+import { LEGACY_OPENINGS_KEY, STATE_QUERY } from '../lib/words.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import {
@@ -22,8 +23,7 @@ const PERSIST_DELAY_MS = 400;
 // what they heard in the extension's own storage. The sweep removes the dead
 // key once per boot: a device that ever carried the learned openings ends up
 // without them, quietly, by the time the viewer notices anything.
-const LEGACY_INTRO_KEY = 'nocturneIntros';
-browser.storage.local.remove(LEGACY_INTRO_KEY).catch(() => {});
+browser.storage.local.remove(LEGACY_OPENINGS_KEY).catch(() => {});
 
 const isDocumentSupported = () =>
   document.contentType === 'text/html' &&
@@ -192,7 +192,7 @@ const start = async () => {
   });
 
   browser.runtime.onMessage.addListener((message) => {
-    if (message?.type !== 'query-state') return false;
+    if (message?.type !== STATE_QUERY) return false;
     // One voice per page: the framed copies hear the same question and say
     // nothing, so the first answer is never one document's own count. The
     // top speaks for the page — its own films plus what every lively frame

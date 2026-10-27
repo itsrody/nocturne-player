@@ -1,5 +1,4 @@
-// The word a slot request carries, shared by the rail's two ends.
-export const SLOT_TAG = 'nocturneSlot';
+import { SLOT_TAG } from '../lib/words.js';
 
 const HOLD_GRACE_MS = 12000;
 

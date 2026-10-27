@@ -68,6 +68,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The words shared across a boundary have one mouth.** The string two
+  files must agree on — the rail tags the frames protocol speaks, the
+  popup's question about how many films a page holds, the storage keys
+  living and dead — is now spelled once in a words module, and every
+  consumer imports the spelling instead of keeping a copy that can drift
+  from somebody else's. Nothing answers differently; the words just can
+  no longer disagree with themselves.
+- **The settings schema describes itself.** Every key now says out loud
+  what it is — a colour dial, a range dial, a switch, a list — with the
+  ends dials are allowed between and the neutral value each falls back
+  to, and the defaults, the coercion and the schema-2 colour wipe all
+  walk that one table. Adding a key is one entry in one place, where it
+  used to be an entry plus edits in three lists that had to stay in step
+  by hand.
 - **The sweep knows more hiding places, and video.js by name.** The handle
   hunt for an engine now reads the film's own furniture too — a handle hung
   on the wrapper the player was built inside is as good as one hung on the

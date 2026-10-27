@@ -7,7 +7,8 @@ import {
   createJudge,
   mintTicket,
 } from '../../src/content/frames.js';
-import { SLOT_TAG, createSlotKeeper } from '../../src/content/slot.js';
+import { createSlotKeeper } from '../../src/content/slot.js';
+import { SLOT_TAG } from '../../src/lib/words.js';
 // A window trimmed to what the two ends of the protocol do with it: listen
 // for messages and deliver them. Deliveries are made by hand instead of by
 // the event loop of a real browser, and the target a post was aimed at is

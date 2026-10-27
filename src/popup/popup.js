@@ -4,6 +4,7 @@ import {
   resetSettings,
   setHostEnabled,
 } from '../lib/settings.js';
+import { STATE_QUERY } from '../lib/words.js';
 
 const hostLabel = document.getElementById('site-host');
 const enabledToggle = document.getElementById('site-enabled');
@@ -32,7 +33,7 @@ const describeVideo = async (tab) => {
   if (!tab) return 'No page to inspect.';
   try {
     const state = await browser.tabs.sendMessage(tab.id, {
-      type: 'query-state',
+      type: STATE_QUERY,
     });
     if (state?.videoCount > 0) {
       const plural = state.videoCount === 1 ? 'video' : 'videos';

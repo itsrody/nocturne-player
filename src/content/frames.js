@@ -15,9 +15,8 @@
 // badge drawn or withheld — which a page could bring about with a style rule
 // on its own content all the same. The ticket filters out everything the
 // protocol did not itself put on the wire.
-import { SLOT_TAG, targetOf } from './slot.js';
-
-const TAG = 'nocturneClaim';
+import { CLAIM_TAG, SLOT_TAG } from '../lib/words.js';
+import { targetOf } from './slot.js';
 const RENEW_MS = 2000;
 const STALE_MS = 6000;
 
@@ -85,7 +84,7 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
   const say = () => {
     try {
       home.top.postMessage(
-        { [TAG]: ticket, want, count: getCount() },
+        { [CLAIM_TAG]: ticket, want, count: getCount() },
         targetOf(home.location, true),
       );
     } catch {
@@ -175,7 +174,7 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
     // Verdicts name the ticket they answer to, and come from the judge
     // alone. A claim the page makes up with our words does not carry (or
     // cannot answer for) a ticket it was not given.
-    if (data[TAG] !== ticket) return;
+    if (data[CLAIM_TAG] !== ticket) return;
     if (event.source !== home.top) return;
     onVerdict(Boolean(data.granted));
   });
@@ -228,7 +227,7 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
       if (claim.granted) {
         try {
           claim.source.postMessage(
-            { [TAG]: ticket, granted: false },
+            { [CLAIM_TAG]: ticket, granted: false },
             claim.origin,
           );
         } catch {
@@ -250,7 +249,7 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
       claim.granted = seated;
       try {
         claim.source.postMessage(
-          { [TAG]: ticket, granted: seated },
+          { [CLAIM_TAG]: ticket, granted: seated },
           claim.origin,
         );
       } catch {
@@ -263,7 +262,7 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
   home.addEventListener('message', (event) => {
     const data = event.data;
     if (data === null || typeof data !== 'object') return;
-    const ticket = data[TAG];
+    const ticket = data[CLAIM_TAG];
     if (typeof ticket !== 'string' || ticket === '') return;
     // A claim is credited only to a window that is one of ours: a claimant
     // has to live in the frame tree below this document, and the walk that
