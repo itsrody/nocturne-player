@@ -134,6 +134,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   results grid or a row of hover cards elects nothing, so the player opens
   on nothing by accident; a portrait film — a shorts clip by shape — is
   refused at the gate, before any arithmetic.
+- **The bar speaks from its own ink pill.** The full-width strip the
+  controls rode on becomes a stadium container of the same ink the toast
+  and the sheets speak from, rim and shadow lifting it off the film — and
+  the container itself stays blind: a tap on its own dead space answers
+  the picture, only the ruler and the buttons name their touch. The
+  sheets and the subtitle cues hang a breath above the taller body, and
+  the clock needs no shadow on ink of its own kind.
 
 ### Removed
 
