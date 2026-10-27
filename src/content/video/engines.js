@@ -1,7 +1,7 @@
 import {
-  call,
   isFunction,
   pageWindow,
+  probe,
   read,
   findGlobalMatches,
 } from './pageapi.js';
@@ -24,18 +24,26 @@ export const isShakaPlayer = (value) =>
 
 // Playerjs hands out one method and keeps everything else in a closure. What
 // identifies it is that api('id') answers with the id of the element it was
-// built on — cheap, and true of a player that has no ladder to offer.
+// built on — cheap, and true of a player that has no ladder to offer. The
+// question is asked quietly: a call into an api that belongs to somebody is
+// answered 'no' without a word in the console.
 export const isPlayerjsInstance = (value) =>
-  isFunction(value, 'api') && typeof call(value, 'api', 'id') === 'string';
+  isFunction(value, 'api') && typeof probe(value, 'api', 'id') === 'string';
 
 const ATTACHED_KEYS = ['hls', '_hls', '__hls', 'hlsPlayer'];
 
-// Cheapest first: some pages hang the engine straight off the media element.
-const findAttachedHls = (video) => {
-  const element = video.wrappedJSObject ?? video;
-  for (const key of ATTACHED_KEYS) {
-    const candidate = read(element, key);
-    if (candidate && isHlsEngine(candidate)) return candidate;
+// Cheapest first: some pages hang the engine straight off the media element,
+// and some hang it off the named player object the caller has already found —
+// `playerEl.hls` being the common shape there. The element sits first, the
+// host answers for its own furniture.
+const findAttachedHls = (video, host) => {
+  const seats = [video.wrappedJSObject ?? video];
+  if (host !== null) seats.push(host.wrappedJSObject ?? host);
+  for (const seat of seats) {
+    for (const key of ATTACHED_KEYS) {
+      const candidate = read(seat, key);
+      if (candidate && isHlsEngine(candidate)) return candidate;
+    }
   }
   return null;
 };
@@ -50,10 +58,24 @@ const MATCHERS = [
 // One sweep of the page's globals for all of them. Sweeping once per engine
 // meant walking the page's globals four times over, through cross-compartment
 // wrappers, in the moment the viewer was waiting for the sheet to open.
+
+// Playerjs is only worth looking for once the page has said it has one: the
+// check is a call into an api() that belongs to somebody, and asking that of
+// every global with a method by that name is not a question worth asking.
+export const hasPlayerjs = () => isFunction(pageWindow(), 'Playerjs');
+
 export const findEngines = (video, host = null) => {
-  const found = findGlobalMatches(MATCHERS);
+  // Playerjs is asked for only once the page has said the word: asking the
+  // page's every api-bearing object for the id is a call into other people's
+  // code at identification time, and a page that has not admitted Playerjs
+  // owes it to nobody. The gate lives here, so the quality sheet and the
+  // audio sheet both inherit it instead of minding it separately.
+  const matchers = hasPlayerjs()
+    ? MATCHERS
+    : MATCHERS.filter((one) => one.name !== 'playerjs');
+  const found = findGlobalMatches(matchers);
   if (host !== null) {
-    for (const matcher of MATCHERS) {
+    for (const matcher of matchers) {
       try {
         if (matcher.matches(host)) found[matcher.name] = host;
       } catch {
@@ -62,13 +84,8 @@ export const findEngines = (video, host = null) => {
     }
   }
   if (found.hls === undefined) {
-    const attached = findAttachedHls(video);
+    const attached = findAttachedHls(video, host);
     if (attached !== null) found.hls = attached;
   }
   return found;
 };
-
-// Playerjs is only worth looking for once the page has said it has one: the
-// check is a call into an api() that belongs to somebody, and asking that of
-// every global with a method by that name is not a question worth asking.
-export const hasPlayerjs = () => isFunction(pageWindow(), 'Playerjs');

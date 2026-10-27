@@ -43,7 +43,7 @@ export const read = (object, key) => {
   }
 };
 
-export const call = (object, name, ...args) => {
+const apply = (object, name, args, quiet) => {
   if (object === null || typeof object !== 'object') return null;
   let method;
   try {
@@ -63,10 +63,20 @@ export const call = (object, name, ...args) => {
     const value = Reflect.apply(method, object, args);
     return value === undefined ? null : value;
   } catch (error) {
-    console.warn(`Nocturne: ${name}() failed on the site's player`, error);
+    if (!quiet) {
+      console.warn(`Nocturne: ${name}() failed on the site's player`, error);
+    }
     return null;
   }
 };
+
+export const call = (object, name, ...args) => apply(object, name, args, false);
+
+// An identification-phase call is a question about shape, not an order:
+// 'no' is an answer, and it is nobody's console noise — the sweep may ask
+// hundreds of the page's objects, and a decorative api() that raises is a
+// page that has said nothing to say.
+export const probe = (object, name, ...args) => apply(object, name, args, true);
 
 export const write = (object, key, value) => {
   if (object === null || typeof object !== 'object') return false;

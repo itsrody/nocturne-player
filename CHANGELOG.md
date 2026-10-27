@@ -188,6 +188,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   through the ancestors: a container opacity-zeroed, a visibility hidden
   above, a layout collapsed around a video no longer elects a badge over
   a thing nobody can see.
+- **The engine sweep asks only the rooms that can answer.** The playerjs
+  matcher was identification by invocation — `api('id')` called on every
+  global that carried a method by that name, in the moment the viewer was
+  waiting for the sheet — and the page's own word (a `Playerjs` global)
+  was checked after the ids were already asked. The word is fetched first
+  and the question gated behind it: a page that has not admitted Playerjs
+  is asked nothing, by the quality sheet or the audio sheet — the gate
+  lives where the engines are found, so both inherit it instead of
+  minding it separately. The questions the sweep does ask are quiet: an
+  identification call that raises is an answer, not a console warning,
+  while a real order to a site's player keeps its witness. And the hunt
+  for an element-attached engine walks the named player object too —
+  `playerEl.hls`, the common hang-off, was a page the host path went
+  blind on.
 - **The bar speaks from its own ink pill.** The full-width strip the
   controls rode on becomes a stadium container of the same ink the toast
   and the sheets speak from, rim and shadow lifting it off the film — and

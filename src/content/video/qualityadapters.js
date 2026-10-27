@@ -1,5 +1,5 @@
 import { call, isFunction, read, toArray, toPage, write } from './pageapi.js';
-import { findEngines, hasPlayerjs } from './engines.js';
+import { findEngines } from './engines.js';
 
 export const AUTO_ID = 'auto';
 
@@ -405,7 +405,6 @@ const createEngineAdapter = (video, host) => {
   for (const { kind, build } of BUILDERS) {
     const engine = engines[kind];
     if (engine === undefined) continue;
-    if (kind === 'playerjs' && !hasPlayerjs()) continue;
     try {
       const adapter = build(engine);
       // A player with nothing to offer is not an answer; the next one might be.
