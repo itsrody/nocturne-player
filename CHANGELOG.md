@@ -54,6 +54,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The system's mirror speaks the player's film, and pays it back at
+  release.** The bridge between the player's film and the notification
+  and the media keys once set handlers and stood aside; now it says where
+  the film stands — position state pushed at the moments the film's own
+  rules change: a seek, a rate held (the pause-hold speed moves the rate
+  under the site's feet), a length the stream revises, play and pause,
+  with a paused film pushed at rate zero and a live stream left to the
+  browser's own guess, whose Infinity the platform still refuses — and
+  it honours the fast-seek flag the system sends for a hand dragging the
+  timeline, keyframe-near there to beat frame-exact, and treats a zero
+  seek offset as no offset at all, the way the Android plumbing's error
+  path has been caught emitting. The name comes from the page's own
+  words first: where the site declares its session metadata — real
+  titles, real thumbnails — the bridge keeps its silence, and its
+  favicon fallback carries the icon's size and type so the system picks
+  rather than scales blind. At the bridge's release the page gets its
+  own picture back — metadata restored to what the page itself had
+  declared, timeline dropped, playback state resynced — instead of the
+  player's film still being advertised after it has gone.
 - **The player stopped learning openings.** The intro-skip feature — the
   listening, the learned openings, the orange opening band on the bar and
   its settings toggle — is gone. Settings learned before this release are
