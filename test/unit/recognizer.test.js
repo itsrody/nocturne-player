@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { beforeEach, mock, test } from 'node:test';
 
 import { createRecognizer } from '../../src/content/gestures/recognizer.js';
-import { SWIPE } from '../../src/content/gestures/swipe.js';
 
 const WIDTH = 800;
 const HEIGHT = 360;
@@ -28,27 +27,22 @@ const createSurface = () => {
   };
 };
 
-const setUp = (options = {}) => {
+const setUp = () => {
   const surface = createSurface();
   const events = [];
   const record = (name) => (detail) => events.push({ name, ...detail });
-  createRecognizer(
-    surface,
-    {
-      tap: record('tap'),
-      multiTap: record('multiTap'),
-      holdStart: record('holdStart'),
-      holdEnd: record('holdEnd'),
-      dragStart: record('dragStart'),
-      dragMove: record('dragMove'),
-      dragEnd: record('dragEnd'),
-      dismissStart: record('dismissStart'),
-      dismissMove: record('dismissMove'),
-      dismissEnd: record('dismissEnd'),
-      swipe: record('swipe'),
-    },
-    { canSwipe: options.canSwipe },
-  );
+  createRecognizer(surface, {
+    tap: record('tap'),
+    multiTap: record('multiTap'),
+    holdStart: record('holdStart'),
+    holdEnd: record('holdEnd'),
+    dragStart: record('dragStart'),
+    dragMove: record('dragMove'),
+    dragEnd: record('dragEnd'),
+    dismissStart: record('dismissStart'),
+    dismissMove: record('dismissMove'),
+    dismissEnd: record('dismissEnd'),
+  });
   const tapAt = (xRatio, yRatio) => {
     surface.fire('pointerdown', xRatio, yRatio);
     surface.fire('pointerup', xRatio, yRatio);
@@ -241,23 +235,6 @@ test('a downward drag hands the player over to be pulled away', () => {
   const end = dismissal[dismissal.length - 1];
   assert.equal(end.name, 'dismissEnd');
   assert.ok(Math.abs(end.progress - 0.4) < 0.001, 'end progress');
-  assert.equal(events.includes('swipe'), false);
-  mock.timers.reset();
-});
-
-test('a downward drag dismisses even where the page is a feed', () => {
-  const { events, surface } = setUp({ canSwipe: () => true });
-  surface.fire('pointerdown', 0.5, 0.3);
-  surface.fire('pointermove', 0.5, 0.6);
-  surface.fire('pointerup', 0.5, 0.6);
-  assert.equal(
-    events.some((event) => event.name === 'swipe'),
-    false,
-  );
-  assert.equal(
-    events.some((event) => event.name === 'dismissStart'),
-    true,
-  );
   mock.timers.reset();
 });
 
@@ -277,15 +254,11 @@ test('a downward pull at the strip still pulls the player away', () => {
   assert.ok(Math.abs(events.at(-1).progress - 0.1) < 0.001, 'progress');
   mock.timers.reset();
 });
-test('an upward flick still steps a feed to the next video', () => {
-  const { events, surface } = setUp({ canSwipe: () => true });
+test('an upward flick is a dead lift — feeds are out of the scope', () => {
+  const { events, surface } = setUp();
   surface.fire('pointerdown', 0.5, 0.5);
   surface.fire('pointermove', 0.5, 0.3);
   surface.fire('pointerup', 0.5, 0.25);
-  assert.deepEqual(
-    events.map((event) => event.name),
-    ['swipe'],
-  );
-  assert.equal(events[0].direction, SWIPE.NEXT);
+  assert.deepEqual(events, []);
   mock.timers.reset();
 });

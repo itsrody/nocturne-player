@@ -1,7 +1,6 @@
 import { createOverlay } from './ui.js';
 import { createShadowHost, el, pinStyle } from './shell.js';
 import { findApiAncestor } from './video/pageapi.js';
-import { findFeedScroller, stepFeed, waitForNextVideo } from './video/feed.js';
 import { createMediaBridge } from './video/mediasession.js';
 import { lockPageFullscreen } from './fullscreenlock.js';
 import playerCss from './player.css';
@@ -188,7 +187,7 @@ const isSmallerThanScreen = () => {
 
 // Everything a part of the player hooks into the page is undone together. The
 // stage keeps one scope for as long as the player is open; each video it shows
-// gets a scope of its own, which goes when a feed moves on to the next one.
+// gets a scope of its own, which goes with it.
 const createScope = () => {
   const undos = [];
   const timers = new Set();
@@ -280,10 +279,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
   const layers = {
     warm: el('div', { class: 'layer warm' }),
   };
-  const loader = el('div', { class: 'feed-loader', hidden: '' });
-
   let isActive = false;
-  let isStepping = false;
   let shown = null;
   let lastVideo = firstVideo;
   let relayoutFrame = 0;
@@ -405,14 +401,13 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     frame.prepend(video);
     watchForTeardown(video, own, () => actions.exit());
 
-    // The metadata event can outrun the picture. A feed step recycles the
-    // element while it is still painting the previous film's last frame, and
-    // an MSE stream is allowed to revise its dimensions after the metadata
-    // says them. One more fit, timed to the first frame that is actually
-    // presented, is the only moment the crop and the picture agree on what
-    // is showing — a frame the timeline reports at all only when one is
-    // playing; a paused film has its picture fitted as before, straight
-    // away.
+    // The metadata event can outrun the picture: an MSE stream is allowed
+    // to revise its dimensions after the metadata says them, and the site
+    // can recycle the element for its own next film. One more fit, timed
+    // to the first frame that is actually presented, is the only moment
+    // the crop and the picture agree on what is showing — a frame the
+    // timeline reports at all only when one is playing; a paused film has
+    // its picture fitted as before, straight away.
     own.listen(video, 'loadedmetadata', () => {
       scheduleRelayout();
       if (
@@ -439,7 +434,6 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
       settings,
       onPersist,
       playerHost,
-      onFeedStep: (direction) => actions.step(direction),
       onFullscreen: () => actions.fullscreen(),
       isChromeShown,
     });
@@ -495,45 +489,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     onExit(lastVideo);
   };
 
-  // The video goes back into the page before the feed is moved: the site has
-  // to find it where it left it, or it cannot pause it, recycle it, or tell
-  // which one is next. The stage stays in fullscreen the whole time, so moving
-  // on never needs a fresh gesture from the user to take the screen again.
-  const step = async (direction) => {
-    if (isStepping || shown === null) return;
-    isStepping = true;
-
-    const previous = shown.video;
-    const previousSource = previous.currentSrc;
-    shown.release();
-    shown = null;
-    loader.hidden = false;
-
-    stepFeed(findFeedScroller(previous), direction);
-    const next = await waitForNextVideo(
-      previous,
-      previousSource,
-      () => !isActive,
-    );
-
-    loader.hidden = true;
-    isStepping = false;
-    if (!isActive) return;
-
-    const target = next ?? (previous.isConnected ? previous : null);
-    if (target === null) {
-      exit();
-      return;
-    }
-    // A swipe is a request for the next video, not for the controls: it comes
-    // up the way the feed shows it, with nothing drawn over the picture.
-    shown = show(target, { shouldPlay: true, isChromeShown: false });
-    if (next === null) shown.notify('No more videos this way');
-    scheduleRelayout();
-  };
-
   actions.exit = exit;
-  actions.step = step;
   actions.fullscreen = () => {
     requestFullscreen(stage).then(scheduleRelayout);
   };
@@ -544,7 +500,7 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     pinStyle(frame, FRAME_STYLE);
     stage.append(frame);
     frame.append(ui.host);
-    ui.shadow.append(layers.warm, loader);
+    ui.shadow.append(layers.warm);
     document.body.append(stage);
   };
 

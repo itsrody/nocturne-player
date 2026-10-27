@@ -7,7 +7,6 @@ import { createSeeker } from './video/seek.js';
 import { createTrackManager } from './video/tracks.js';
 import { createVisuals } from './video/visuals.js';
 import { el } from './shell.js';
-import { isFeedShaped } from './gestures/swipe.js';
 import { ZONE } from './gestures/zones.js';
 
 // Controls that show themselves are timed from the moment they show: three
@@ -125,7 +124,6 @@ export const createOverlay = ({
   settings,
   onPersist,
   playerHost,
-  onFeedStep,
   onFullscreen,
   isChromeShown = true,
 }) => {
@@ -425,83 +423,69 @@ export const createOverlay = ({
     }, DISMISS_MS);
   };
 
-  const canSwipe = () =>
-    !isPanelOpen() &&
-    isFeedShaped(
-      window.innerWidth,
-      window.innerHeight,
-      video.videoWidth,
-      video.videoHeight,
-    );
-
-  const recognizer = createRecognizer(
-    surface,
-    {
-      tap: () => {
-        if (isPanelOpen()) {
-          closePanels();
-          return;
-        }
-        // Every tap on the picture toggles the controls — middle, sides and
-        // all. The seek bar answers taps itself now: its pill is a real
-        // element that takes its own finger, so nothing here reads bars off
-        // the picture any more.
-        setChromeVisible(chrome.hasAttribute('hidden'));
-      },
-      multiTap: ({ zone }) => {
-        if (isPanelOpen()) {
-          closePanels();
-          return;
-        }
-        const seconds = SIDE_SKIP_SECONDS[zone];
-        if (seconds === undefined) {
-          setChromeVisible(chrome.hasAttribute('hidden'));
-          return;
-        }
-        skip(seconds);
-        // Every tap that reaches here sought once, so the ledger adds per
-        // seeking tap and nothing rides on the recognizer's run bookkeeping.
-        const side = seconds > 0 ? skipAccount.forward : skipAccount.back;
-        side.total += SKIP_SECONDS;
-        const text =
-          seconds > 0 ? `▶▶ ${side.total} seconds` : `◀◀ ${side.total} seconds`;
-        showToast(text);
-        // The other direction's ledger closes when this one speaks: a flip
-        // is a fresh walk, not a step of the old one.
-        clearAccount(seconds > 0 ? skipAccount.back : skipAccount.forward);
-        if (side.timer !== null) clearTimeout(side.timer);
-        side.timer = setTimeout(() => clearAccount(side), SKIP_LINGER_MS);
-      },
-      holdStart: () => {
-        if (isPanelOpen()) return;
-        stopHold();
-        releaseHold = holdForward();
-        showToast(`${holdSpeed}x ▶▶`, null);
-      },
-      holdEnd: () => stopHold(),
-      dragStart: ({ x, y }) => {
-        setChromeVisible(true);
-        controlBar.start({ x, y });
-      },
-      dragMove: (detail) => controlBar.move(detail),
-      dragEnd: () => controlBar.end(),
-      dismissStart: () => {
-        // A drag takes the whole player, sheets and all, off the screen;
-        // one already open is settled first, so nothing is twitching under
-        // the moving picture.
-        if (isPanelOpen()) closePanels();
-      },
-      dismissMove,
-      dismissEnd,
-      pinchStart: () => {
-        pinchBase = visuals.beginPinch();
-      },
-      pinchMove: ({ scale }) => visuals.pinchTo(pinchBase * scale),
-      pinchEnd: () => visuals.endPinch(),
-      swipe: ({ direction }) => onFeedStep(direction),
+  const recognizer = createRecognizer(surface, {
+    tap: () => {
+      if (isPanelOpen()) {
+        closePanels();
+        return;
+      }
+      // Every tap on the picture toggles the controls — middle, sides and
+      // all. The seek bar answers taps itself now: its pill is a real
+      // element that takes its own finger, so nothing here reads bars off
+      // the picture any more.
+      setChromeVisible(chrome.hasAttribute('hidden'));
     },
-    { canSwipe },
-  );
+    multiTap: ({ zone }) => {
+      if (isPanelOpen()) {
+        closePanels();
+        return;
+      }
+      const seconds = SIDE_SKIP_SECONDS[zone];
+      if (seconds === undefined) {
+        setChromeVisible(chrome.hasAttribute('hidden'));
+        return;
+      }
+      skip(seconds);
+      // Every tap that reaches here sought once, so the ledger adds per
+      // seeking tap and nothing rides on the recognizer's run bookkeeping.
+      const side = seconds > 0 ? skipAccount.forward : skipAccount.back;
+      side.total += SKIP_SECONDS;
+      const text =
+        seconds > 0 ? `▶▶ ${side.total} seconds` : `◀◀ ${side.total} seconds`;
+      showToast(text);
+      // The other direction's ledger closes when this one speaks: a flip
+      // is a fresh walk, not a step of the old one.
+      clearAccount(seconds > 0 ? skipAccount.back : skipAccount.forward);
+      if (side.timer !== null) clearTimeout(side.timer);
+      side.timer = setTimeout(() => clearAccount(side), SKIP_LINGER_MS);
+    },
+    holdStart: () => {
+      if (isPanelOpen()) return;
+      stopHold();
+      releaseHold = holdForward();
+      showToast(`${holdSpeed}x ▶▶`, null);
+    },
+    holdEnd: () => stopHold(),
+    dragStart: ({ x, y }) => {
+      setChromeVisible(true);
+      controlBar.start({ x, y });
+    },
+    dragMove: (detail) => controlBar.move(detail),
+    dragEnd: () => controlBar.end(),
+    dismissStart: () => {
+      // A drag takes the whole player, sheets and all, off the screen;
+      // one already open is settled first, so nothing is twitching under
+      // the moving picture.
+      if (isPanelOpen()) closePanels();
+    },
+    dismissMove,
+    dismissEnd,
+    pinchStart: () => {
+      pinchBase = visuals.beginPinch();
+    },
+    pinchMove: ({ scale }) => visuals.pinchTo(pinchBase * scale),
+    pinchEnd: () => visuals.endPinch(),
+  });
 
   buttons.play = buildButton(
     'Play or pause',
@@ -607,8 +591,8 @@ export const createOverlay = ({
   // Only the path data changes, so swapping play for pause cannot make the
   // button flicker or shift. A pause brings the controls up, since the next
   // thing wanted is usually one of them; a start only restarts their idle
-  // timer if they are already up. A feed starts every video it moves on to,
-  // and that is no reason to cover the picture.
+  // timer if they are already up — a film the page starts by itself is no
+  // reason to cover the picture.
   // A hold wakes and re-pauses the film on its own account, and that is no
   // reason to bring the controls up over the picture it is running through.
   const handlePlaybackChange = () => {
@@ -634,7 +618,7 @@ export const createOverlay = ({
 
   restoreSettings();
   // Kept as a list so the overlay can take itself off the screen again: the
-  // shadow root outlives it when a feed moves on to its next video.
+  // shadow root outlives it when the page moves on.
   const roots = [surface, cueBox, chrome, toast, filePicker];
   shadow.append(...roots);
   setChromeVisible(isChromeShown);

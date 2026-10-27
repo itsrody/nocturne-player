@@ -16,10 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the page itself declares.
 - **Three zones, one everywhere.** The picture reads as just what it is:
   left, middle and right, full height, no more guessed bands. Every
-  anywhere-gesture — hold, the pull to dismiss, the feed's flick, the
-  horizontal scrub — works wherever the finger starts; every tap toggles
-  the controls; and the seek bar is a real element that answers for its
-  own taps and drags instead of a region the player guessed at.
+  anywhere-gesture — hold, the pull to dismiss, the horizontal scrub —
+  works wherever the finger starts; every tap toggles the controls; and
+  the seek bar is a real element that answers for its own taps and drags
+  instead of a region the player guessed at.
 - **A mouse over the picture keeps the controls up.** On a desktop, moving
   the pointer over the film holds them and rewinds their idle fade with the
   pointer; a tap still brings them, and a finger's drift does not.
@@ -28,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   page with it. The pull leaves the player out the moment it passes a third
   of the screen's height, or when it is flung at the lift; a shorter, slower
   pull snaps back where it was. Downward used to mean the video before in
-  feed pages; down now always means out, and up still means the next video.
+  feed pages; down now always means out. An upward drag is now a dead lift,
+  the feed stepping it used to ask for being cut.
 - **A playback head on the seek bar.** A white ball rides the tip of the
   line as the film runs, glides between the timeline's own updates, and
   grows under the finger while a scrub is under way. It is itself a second
@@ -136,6 +137,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the search that refused to pin a path, and the reading cost more lives
   to keep alive than the label was worth. The ruler and the clock are
   unchanged.
+- **Feed pages are out of the scope.** The flick up for the next video and
+  down for the previous — the site's own column being scrolled, the wait
+  for the page to settle on the next film, and the loader that covered the
+  gap, with the shape-matching that gated the flick — are gone. The player
+  is a player for one film again: the pull to dismiss stays everywhere it
+  worked, an upward drag is a dead lift, and whatever comes next is the
+  page's own autoplay.
 
 ## [0.9.1][] - 2026-10-20
 

@@ -56,8 +56,8 @@ const start = async () => {
   // One settings object stays put for the whole lifetime of this frame, and
   // every change is merged into it. The session and the overlays it opens
   // hold this same reference, so a value set on the film in hand is already
-  // in place when the feed moves on to the next video — rebinding, as a
-  // fresh object did, left the session carrying the value it opened with.
+  // in place for the next film the page hands over — rebinding, as a fresh
+  // object did, left the session carrying the value it opened with.
   const current = await readSettings();
   let persistTimer = null;
   let pendingPatch = null;
@@ -154,11 +154,11 @@ const start = async () => {
     session = createSession(video, {
       settings: current,
       onPersist: persist,
-      // A feed may have moved on while the player was open, so the badge goes
-      // back on whichever video the player was showing last. But only when
-      // the frame may still have it: the site may have been switched off, or
-      // the seat may have been handed to another frame while the player was
-      // on the film.
+      // The page may have moved on while the player was open, so the badge
+      // goes back on whichever video the player was showing last. But only
+      // when the frame may still have it: the site may have been switched
+      // off, or the seat may have been handed to another frame while the
+      // player was on the film.
       onExit: (lastVideo) => {
         session = null;
         if (granted && isWatched()) badge.show(lastVideo);

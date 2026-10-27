@@ -1,5 +1,4 @@
 import { hitTest, isSide, ZONE } from './zones.js';
-import { isVerticalMove, readSwipe } from './swipe.js';
 
 const HOLD_DELAY_MS = 350;
 // How far a drag must travel before the scrub stands up — the same boundary
@@ -19,6 +18,13 @@ const MULTI_TAP_WINDOW_MS = 320;
 // two taps that started it.
 const SEEK_RUN_MS = 700;
 const MOVE_TOLERANCE_PX = 12;
+// A vertical move must be mostly vertical before it counts as the pull to
+// dismiss: a thumb scrubbing along the seek band drifts up and down a
+// little, and that drift must never be read as a request the band did not
+// make.
+const VERTICAL_BIAS = 1.5;
+
+const isVerticalMove = (dx, dy) => Math.abs(dy) > Math.abs(dx) * VERTICAL_BIAS;
 
 const MODE = {
   IDLE: 'idle',
@@ -26,7 +32,6 @@ const MODE = {
   DRAG: 'drag',
   HOLD: 'hold',
   PINCH: 'pinch',
-  SWIPE: 'swipe',
   DISMISS: 'dismiss',
   ABANDONED: 'abandoned',
 };
@@ -37,14 +42,7 @@ const distanceBetween = (first, second) => {
   return Math.hypot(dx, dy);
 };
 
-// `canSwipe` is asked at the moment a finger starts to travel, not once up
-// front: the phone may have been turned, or the feed moved on to a film of a
-// different shape, since the player opened.
-export const createRecognizer = (
-  surface,
-  handlers,
-  { canSwipe = () => false } = {},
-) => {
+export const createRecognizer = (surface, handlers) => {
   const pointers = new Map();
 
   let mode = MODE.IDLE;
@@ -210,8 +208,7 @@ export const createRecognizer = (
       handlePinchMove();
       return;
     }
-    const isSettled =
-      mode === MODE.ABANDONED || mode === MODE.HOLD || mode === MODE.SWIPE;
+    const isSettled = mode === MODE.ABANDONED || mode === MODE.HOLD;
     if (isSettled) return;
 
     if (mode === MODE.PENDING) {
@@ -219,17 +216,13 @@ export const createRecognizer = (
       const dy = point.y - anchor.y;
       if (Math.hypot(dx, dy) < MOVE_TOLERANCE_PX) return;
       clearHoldTimer();
-      // Checked before anything else: a flick is the same gesture wherever
-      // on the picture it starts, middle and sides alike.
+      // Checked before anything else: a vertical pull is the same gesture
+      // wherever on the picture it starts, middle and sides alike.
       if (isVerticalMove(dx, dy)) {
         if (dy < 0) {
-          // Finger up means the next video, where the page is a feed at
-          // all. Anywhere else an upward drag has no business of its own,
-          // and the gesture is abandoned so the lift stays a dead lift.
-          if (canSwipe()) {
-            mode = MODE.SWIPE;
-            return;
-          }
+          // An upward drag has no business of its own — feed pages are out
+          // of the player's scope — so the gesture is abandoned and the
+          // lift stays a dead lift.
           mode = MODE.ABANDONED;
           return;
         }
@@ -281,12 +274,6 @@ export const createRecognizer = (
     anchor.lastY = point.y;
   };
 
-  const finishSwipe = (event) => {
-    const point = localPoint(event);
-    const direction = readSwipe(point.y - anchor.y, point.height);
-    if (direction !== null) emit('swipe', { direction });
-  };
-
   // The pull is reported on two counts: how far it went, and how fast it
   // lifted. The pace comes from the last measured stretch of the drag —
   // the same report whether the finger ran a long way slowly or a short
@@ -327,7 +314,6 @@ export const createRecognizer = (
     clearHoldTimer();
     if (mode === MODE.DRAG) emit('dragEnd', { zone: anchor.zone });
     else if (mode === MODE.HOLD) emit('holdEnd', { zone: anchor.zone });
-    else if (mode === MODE.SWIPE) finishSwipe(event);
     else if (mode === MODE.DISMISS) finishDismiss(event);
     else if (mode === MODE.PENDING) registerTap(anchor.zone, settled);
     mode = MODE.IDLE;
