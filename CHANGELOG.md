@@ -104,9 +104,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   shadow root, out of the anchor's reach.
 - **The badge stands outside the picture.** The pre-player pill no longer
   paints over the film: it hangs a breath below the bottom-right corner,
-  in the page's own margin, and only where the film runs to the viewport's
-  bottom rim is there no outside to be had — then, and only then, it falls
-  back to its old seat inside the corner.
+  in the page's own margin, and the rim that bounds the room is read, not
+  assumed — every ancestor that clips its children is walked for its own
+  bottom edge, and the tightest rim wins the min() over the viewport's
+  own. A film in a tight `overflow: hidden` wrapper — the wrapper that
+  once painted the pill and clipped it to nothing — now seats the pill
+  inside the corner by hand instead, and the anchor keeps every seat no
+  clip nearer than the screen: the walk runs per visibility crossing, so
+  the drift between the two stays caught.
 - **The player speaks through one pill.** The half-moon that lit up over the
   double-tapped side is gone, machinery and all; a skip run now reports
   through the same toast every other notice uses — hold speed, subtitle and
