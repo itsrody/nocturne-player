@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createWireTap, isMediaShaped } from '../../src/background/network.js';
-// The eye's side of the stub browser: the one listener it registers, kept
+import {
+  createWireTap,
+  isMediaShaped,
+  sayEngineShape,
+} from '../../src/background/network.js';
+// The eye’s side of the stub browser: the one listener it registers, kept
 // to be fired by hand with the details the platform would hand over, and
 // the filter and spec recorded beside it — the shape of the listener is
 // itself the story told here.
@@ -46,7 +50,7 @@ test('the streaming libraries’ words are shaped into the corpus', () => {
     true,
   );
   // A segment whose uniform resource locator carries no extension at all
-  // is named by the query's own marks.
+  // is named by the query’s own marks.
   assert.equal(
     isMediaShaped(
       'xmlhttprequest',
@@ -96,6 +100,56 @@ test('the types the filter never admits are turned away', () => {
   );
 });
 
+test('the crossing names the family the manifest speaks for', () => {
+  // The manifest formats speak in the sweep’s own words: hls for the
+  // m3u8 family, dash for a mpeg-dash manifest, mss for the
+  // smooth-streaming one — a format word, not a promise.
+  assert.equal(
+    sayEngineShape('xmlhttprequest', 'https://cdn.example/master.m3u8?v=2'),
+    'hls',
+  );
+  assert.equal(
+    sayEngineShape('xmlhttprequest', 'https://cdn.example/a.m3u'),
+    'hls',
+  );
+  assert.equal(
+    sayEngineShape('xmlhttprequest', 'https://cdn.example/manifest.mpd'),
+    'dash',
+  );
+  assert.equal(
+    sayEngineShape('xmlhttprequest', 'https://cdn.example/manifest.isml'),
+    'mss',
+  );
+  assert.equal(
+    sayEngineShape('xmlhttprequest', 'https://cdn.example/apple?format=m3u8'),
+    'hls',
+    'the query’s mark names the family the extension hid',
+  );
+});
+
+test('a crossing that names no family is honestly nameless', () => {
+  // A segment file is a format both libraries speak, an element’s own
+  // load is no script’s act, and a plain video url on the fetch family
+  // is a page buffering it itself — none of them say which engine.
+  assert.equal(
+    sayEngineShape('xmlhttprequest', 'https://cdn.example/chunk1.ts'),
+    null,
+  );
+  assert.equal(
+    sayEngineShape('xmlhttprequest', 'https://cdn.example/seg-4.m4s'),
+    null,
+  );
+  assert.equal(
+    sayEngineShape('media', 'https://cdn.example/master.m3u8'),
+    null,
+    'the element’s own load names no engine',
+  );
+  assert.equal(
+    sayEngineShape('xmlhttprequest', 'https://cdn.example/api?mime=video/mp4'),
+    null,
+  );
+});
+
 test('the tap stands exactly one listener, aimed and unblocking', () => {
   const browser = makeBrowser();
   createWireTap(browser, () => undefined);
@@ -127,7 +181,7 @@ test('the tap names the frame a media request crossed', () => {
   });
   // The ear rides with the name: where the bytes came from, what spoke
   // for them, the document that owns the frame, and every origin above
-  // it — the dossier's raw material, straight from the platform.
+  // it — the dossier’s raw material, straight from the platform.
   assert.deepEqual(strained, [
     {
       tabId: 7,
@@ -136,6 +190,9 @@ test('the tap names the frame a media request crossed', () => {
       resource: 'xmlhttprequest',
       doc: 'https://site.example/watch',
       chain: ['https://site.example/'],
+      // The family the crossing names rides the ear too: the sweep’s
+      // narrowing begins at the bus.
+      shape: 'hls',
     },
   ]);
 
@@ -155,9 +212,11 @@ test('the tap names the frame a media request crossed', () => {
     resource: 'media',
     doc: undefined,
     chain: [],
+    // The element’s own load is a browser act: no family is named.
+    shape: null,
   });
 
-  // Nobody's request — the browser's own housekeeping — names no frame.
+  // Nobody’s request — the browser’s own housekeeping — names no frame.
   browser.taps[0].listener({
     tabId: -1,
     frameId: 0,

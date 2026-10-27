@@ -12,7 +12,7 @@ import { asDossier, asStrain, asVerdict } from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import { createDomManager } from './dom.js';
-import { warmEngines } from './video/engines.js';
+import { knockWarm, warmEngines } from './video/engines.js';
 import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
 
@@ -123,6 +123,13 @@ const start = async () => {
   // shouting; it is spoken into the diagnostics when they are on.
   let heard = null;
 
+  // The family the bus named for this frame’s film, read fresh at every
+  // asking. The dossier is spoken once per document’s life and the
+  // shape rides it already, so the reading here is the dossier’s own
+  // word handed onward — the sweep narrows by it when the stamp still
+  // agrees, and falls back whole when the hint answers nothing.
+  const hearShape = () => (heard === null ? null : heard.shape);
+
   // Three words ride back, and each is heard through the protocol’s own
   // guard, so a half-formed word is refused whole and never half-acted
   // on: the seat’s news by the badge’s own arrangement, the wire’s
@@ -185,8 +192,15 @@ const start = async () => {
 
   // The wire’s strain is the sweep’s earliest knock: a film’s manifest is
   // often fetched before its element is ever inserted, so the hearing
-  // here can open the walk a beat before the eye’s own.
-  strain.on(() => watcher.poke());
+  // here can open the walk a beat before the eye’s own — and the engine
+  // arm re-rests on the same knock, because the manifest is fetched
+  // through the engine it rides, an engine is never more findable than
+  // in that moment, and the answer’s old stamp was never older than it
+  // is now.
+  strain.on(() => {
+    watcher.poke();
+    knockWarm();
+  });
 
   announce.on(() => {
     // One call covers the whole arrangement: the frame tells the hub what
@@ -250,12 +264,15 @@ const start = async () => {
 
   apply();
 
-  // The engines' sweep is the page's own document-wide ask, and it is
-  // asked now at the page's ease instead of at the sheet's opening: a
+  // The engines' sweep is the page’s own document-wide ask, and it is
+  // asked now at the page’s ease instead of at the sheet’s opening: a
   // quiet page answers its first sheet out of the quiet, and a page
   // that has since moved on answers as it always did — the walk stamped
-  // by the manager, never believed stale.
-  warmEngines(dom);
+  // by the manager, never believed stale. The family the dossier named
+  // rides the ask as a fresh reading, so the consult narrows by the
+  // very word the crossing said and falls back whole when the hint
+  // names nothing the page holds.
+  warmEngines(dom, hearShape);
 
   onSettingsChanged((next) => {
     // The popup writes too, and the write also comes back here when it is

@@ -34,7 +34,7 @@ test('a report half-heard is refused whole', () => {
     asReport({ type: 'nocturneVerdict', want: true, count: 1 }),
     null,
   );
-  // A want that is not a boolean is not the frame's word.
+  // A want that is not a boolean is not the frame’s word.
   assert.equal(asReport({ type: 'nocturneReport', want: 1, count: 1 }), null);
   // A count that cannot be a film count is refused, want and all.
   assert.equal(
@@ -74,8 +74,9 @@ test('the dossier carries the ear whole and copies its chain', () => {
     resource: 'xmlhttprequest',
     doc: 'https://mid.example/embed',
     chain: ['https://top.example/', 'https://mid.example/'],
+    shape: null,
   });
-  // The word travels alone: the ear's own list is not the word's.
+  // The word travels alone: the ear’s own list is not the word’s.
   chain.push('https://latecomer.example/');
   assert.equal(said.chain.length, 2);
 
@@ -87,6 +88,7 @@ test('the dossier carries the ear whole and copies its chain', () => {
     resource: 'xmlhttprequest',
     doc: 'https://mid.example/embed',
     chain: ['https://top.example/', 'https://mid.example/'],
+    shape: null,
   });
   heard.chain.length = 0;
   assert.equal(said.chain.length, 2, 'the listener holds a copy too');
@@ -109,6 +111,32 @@ test('a dossier that names no film is not a dossier', () => {
   );
 });
 
+test('the dossier’s shape rides only as a family word', () => {
+  const said = sayDossier({
+    url: 'https://cdn.example/master.m3u8',
+    chain: ['https://top.example/'],
+    shape: 'hls',
+  });
+  assert.equal(said.shape, 'hls');
+  assert.equal(asDossier(said).shape, 'hls');
+
+  // A string the corpus never said is nobody’s family: the word holds,
+  // the hint does not — asDossier is the admission gate, not enough of
+  // a description to refuse a good dossier for one stray field.
+  const stranger = sayDossier({
+    url: 'https://cdn.example/manifest.mpd',
+    chain: [],
+    shape: 'playerjs',
+  });
+  assert.equal(asDossier(stranger).shape, null);
+  assert.equal(asDossier(stranger).url, 'https://cdn.example/manifest.mpd');
+
+  // And a dossier without a shape is without one, honestly.
+  const bare = sayDossier({ url: 'https://cdn.example/a.mp4', chain: [] });
+  assert.equal(bare.shape, null);
+  assert.equal(asDossier(bare).shape, null);
+});
+
 test('the popup’s question carries its tab or carries nothing', () => {
   assert.deepEqual(asStateQuery(askState(3)), { tabId: 3 });
   assert.equal(asStateQuery({ type: 'query-state' }), null);
@@ -124,7 +152,7 @@ test('the page wire’s slot word is believed only well-formed', () => {
     ticket: 'ticket',
     open: false,
   });
-  // The admission gate, not the word's whole description: extra fields a
+  // The admission gate, not the word’s whole description: extra fields a
   // future wire carries ride in as they came.
   assert.deepEqual(asSlot({ [SLOT_TAG]: 'ticket', open: true, another: 'a' }), {
     ticket: 'ticket',

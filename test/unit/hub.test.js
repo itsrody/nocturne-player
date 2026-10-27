@@ -326,6 +326,8 @@ const wireEar = {
   resource: 'xmlhttprequest',
   doc: 'https://site.example/watch',
   chain: ['https://site.example/'],
+  // The crossing's manifest names a family the sweep believes in.
+  shape: 'hls',
 };
 
 test('the dossier rides the port once, despite the roads', async () => {
@@ -345,6 +347,7 @@ test('the dossier rides the port once, despite the roads', async () => {
       resource: 'xmlhttprequest',
       doc: 'https://site.example/watch',
       chain: ['https://site.example/'],
+      shape: 'hls',
     },
   ]);
 

@@ -68,6 +68,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The bus names the family the sweep believes in.** The eye at the bus
+  already knew the shapes of the URLs a streaming library fetches; now
+  it says which family the manifest speaks for — `hls`, `dash`, or the
+  smooth family — and the word rides the dossier down to the frame. The
+  engine sweep is asked in the family's own matchers first, so a page
+  the hint is right about — the stream pages, the common case — stops
+  paying four matchers' worth of guarded reads over its globals on
+  every cold consult; a family whose ask answers nothing loses nothing,
+  and the page's whole truth is asked instead, because a manifest's URL
+  is a hint by design, never a promise. The family's word is the warm
+  answer's third stamp reading, beside the count of moves and the word
+  for Playerjs — and the bus's knock re-rests the sweep at the page's
+  ease: the manifest is being fetched through the engine it rides, an
+  engine is never more findable than in that moment, and the warm
+  answer's stamp was never older than it is now.
 - **The engine sweep is asked at the page's quiet.** The walk over the
   page's globals used to be paid at every sheet opening, in the moment
   the viewer was waiting; now the dom manager makes it at its own ease

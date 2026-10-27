@@ -1,21 +1,21 @@
 // The eye at the bus. Every request the tab dishes up crosses this one
-// listener — uBO's observation post, borrowed whole and beats shorter:
+// listener — uBO’s observation post, borrowed whole and beats shorter:
 // nothing is blocked, redirected, rewritten, or answered; the listener
 // returns nothing, and the blocking permission beside it in the manifest
 // stands for nobody here. What it watches for is a shape: the request the
 // network carries *away from* a video — a manifest read, a segment booked,
-// an element's own source — bound for a frame the URL never says.
+// an element’s own source — bound for a frame the URL never says.
 //
 // The platform says the rest on its own: `type: 'media'` is the browser
 // telling us a `<video>` or `<audio>` element asked for bytes; `type:
 // 'xmlhttprequest'` covers the XHR and fetch calls every streaming
 // library rides its segments on. `details.frameId` — the frame whose
 // document made the request — is attested by the browser, the same trust
-// the port's envelope carries, so a strain is written into the hub's book
+// the port’s envelope carries, so a strain is written into the hub’s book
 // under a key nobody can forge.
 //
 // And the event, like every `onBeforeRequest`, is a push: nothing here
-// polls, ever. The stream's own cadence is the heartbeat — a segment
+// polls, ever. The stream’s own cadence is the heartbeat — a segment
 // every few seconds re-crosses the bus, and each crossing is the context
 // refreshing itself.
 
@@ -26,7 +26,7 @@
 // shapes rather than a filter list — because the warm word it feeds is
 // a hint by design: the DOM sweep remains the only teller of truth, and a
 // wrong warm word costs one popup line, never a badge. Segment formats
-// that hide their extension (googlevideo's `videoplayback`, apple's
+// that hide their extension (googlevideo’s `videoplayback`, apple’s
 // `format=m3u8`, the `mime=video/` query family) are named by their query
 // marks instead.
 const extensions = [
@@ -45,15 +45,51 @@ const extensions = [
 ];
 const marks = ['videoplayback', 'mime=video/', 'mime=audio/', 'format=m3u8'];
 
+// The two readings a URL answers its question with: the path inside the
+// query’s first door, and the extension that closes it.
+const bareOf = (url) => url.split('?')[0].toLowerCase();
+const extensionOf = (bare) => {
+  const slash = bare.lastIndexOf('.');
+  return slash === -1 ? '' : bare.slice(slash + 1);
+};
+
 export const isMediaShaped = (type, url) => {
   if (type === 'media') return true;
   if (type !== 'xmlhttprequest') return false;
-  const bare = url.split('?')[0].toLowerCase();
-  const slash = bare.lastIndexOf('.');
-  const mark = bare.slice(slash + 1);
-  if (slash !== -1 && extensions.includes(mark)) return true;
+  if (extensions.includes(extensionOf(bareOf(url)))) return true;
   const asked = url.toLowerCase();
   return marks.some((word) => asked.includes(word));
+};
+
+// The manifest formats whose crossings name a family in the engine
+// sweep’s own words (`hls`, `dash`, `mss` — see the protocol’s SHAPES).
+// Segment shapes name no family: mpeg-dash’s and hls.js’s segment
+// corpora are the same three letters, an element’s own load is a
+// browser act no script engine stands behind, and a plain video URL on
+// the fetch family is a page buffering it itself. A family absent from
+// the answer is honest absence, and the sweep falls back to the whole
+// matcher set when the family it was hinted comes up with nothing.
+const FAMILY_EXTENSIONS = {
+  m3u8: 'hls',
+  m3u: 'hls',
+  mpd: 'dash',
+  ism: 'mss',
+  isml: 'mss',
+  f4m: 'mss',
+};
+const FAMILY_MARKS = {
+  'format=m3u8': 'hls',
+};
+
+export const sayEngineShape = (type, url) => {
+  if (type !== 'xmlhttprequest') return null;
+  const family = FAMILY_EXTENSIONS[extensionOf(bareOf(url))];
+  if (family !== undefined) return family;
+  const asked = url.toLowerCase();
+  for (const [mark, family] of Object.entries(FAMILY_MARKS)) {
+    if (asked.includes(mark)) return family;
+  }
+  return null;
 };
 
 // The one tap listener the background page stands up, wired from the hub
@@ -67,21 +103,24 @@ export const createWireTap = (browser, onStrain) => {
   browser.webRequest.onBeforeRequest.addListener(
     (details) => {
       // A request with no tab behind it — service-worker chatter,
-      // speculative connections, the browser's own housekeeping — is no
-      // page's film.
+      // speculative connections, the browser’s own housekeeping — is no
+      // page’s film.
       if (details.tabId < 0) return;
       if (!isMediaShaped(details.type, details.url)) return;
-      // The ear's evidence rides with the name: where the bytes come from,
+      // The ear’s evidence rides with the name: where the bytes come from,
       // what spoke for them, the document that owns this frame, and every
       // origin nested above it — all attested by the same envelope that
-      // named the frame. It is the dossier's raw material and the
-      // recruiter's law, and it costs nothing: the platform listed it
+      // named the frame. It is the dossier’s raw material and the
+      // recruiter’s law, and it costs nothing: the platform listed it
       // before the listener ever ran.
       onStrain(details.tabId, details.frameId, {
         url: details.url,
         resource: details.type,
         doc: details.documentUrl,
         chain: details.frameAncestors ?? [],
+        // The family the crossing’s URL names, when it names one: the
+        // sweep’s narrowing begins here, from the corpus the eye owns.
+        shape: sayEngineShape(details.type, details.url),
       });
     },
     // The types are the whole story: media elements and the script-ridden

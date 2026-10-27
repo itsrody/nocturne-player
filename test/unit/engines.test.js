@@ -6,6 +6,7 @@ import {
   hasPlayerjs,
   isHlsEngine,
   isVideojsPlayer,
+  knockWarm,
   warmEngines,
 } from '../../src/content/video/engines.js';
 import {
@@ -217,8 +218,9 @@ test('a throwing identification is no console noise', () => {
 });
 
 // The manager’s arm at the page’s quiet, in a stub realm: the ease is
-// called and fired by hand, the count of moves is moved by hand, and
-// the word for Playerjs is whatever window says. The stop word is
+// called and fired by hand, the count of moves is moved by hand, the
+// word for Playerjs is whatever window says, and the family’s word is
+// whatever the asker’s reader answers right now. The stop word is
 // carried to the test’s own teardown, so a failed assertion leaves no
 // warm answer behind for the next page.
 const makeQuiet = () => {
@@ -244,9 +246,9 @@ const makeQuiet = () => {
   };
 };
 
-const askQuietly = () => {
+const askQuietly = (readShape) => {
   const quiet = makeQuiet();
-  const stop = warmEngines(quiet);
+  const stop = warmEngines(quiet, readShape);
   afterEachStubs.push(stop);
   return quiet;
 };
@@ -302,4 +304,79 @@ test('the page’s word for Playerjs is part of the stamp', () => {
   const found = findEngines({});
   assert.equal(found.playerjs, playerjsEngine, 'the new word made it new');
   assert.equal(found.hls, undefined, 'the old word’s answer is not kept');
+});
+
+test('the family the bus named is asked first, alone while it answers', () => {
+  const hls = hlsEngine();
+  const dash = { getBitrateInfoListFor() {}, setQualityFor() {} };
+  installWindow({ attachedEngine: hls, theDash: dash });
+  const quiet = askQuietly(() => 'hls');
+  quiet.rest();
+
+  // The rest’s answer carries both families (the sweep at the page’s
+  // quiet is the page’s whole truth), so the consult answers from it —
+  // and a move makes the page new: the walk now pays the narrowed ask
+  // the crossing named, and the other family’s matcher is never told.
+  quiet.move();
+  const found = findEngines({});
+  assert.equal(found.hls, hls, 'the family the crossing named was asked');
+  assert.equal(
+    found.dash,
+    undefined,
+    'the other family was not asked while the hint held',
+  );
+});
+
+test('a family that answers nothing is asked the whole truth again', () => {
+  const dash = { getBitrateInfoListFor() {}, setQualityFor() {} };
+  installWindow({ theDash: dash });
+  const quiet = askQuietly(() => 'hls');
+  quiet.rest();
+
+  // The crossing said hls and was a lie: the page holds a dash-shaped
+  // engine alone. The narrow ask answers nothing, so the whole matcher
+  // set is asked before the sheet is told the page has nothing.
+  quiet.move();
+  const found = findEngines({});
+  assert.equal(found.dash, dash, 'the whole truth was asked');
+  assert.equal(found.hls, undefined);
+});
+
+test('the family’s word is part of the stamp', () => {
+  let shape = 'hls';
+  const hls = hlsEngine();
+  const dash = { getBitrateInfoListFor() {}, setQualityFor() {} };
+  installWindow({ attachedEngine: hls, theDash: dash });
+  const quiet = askQuietly(() => shape);
+  quiet.rest();
+
+  // The crossing now says dash — no move was made, and yet the stamp
+  // cannot answer it: the fresh consult sweeps the new family’s
+  // matchers, and the old word’s answer is not kept.
+  shape = 'dash';
+  const found = findEngines({});
+  assert.equal(found.dash, dash, 'the new word made the sweep new');
+  assert.equal(found.hls, undefined, 'the old word’s answer is not kept');
+});
+
+test('the knock re-arms the quiet the rest already kept', () => {
+  const engine = hlsEngine();
+  const quiet = askQuietly(() => 'hls');
+
+  // The first rest finds a page with nothing, and stamps nothing with
+  // it: the absence is not the page’s answer to keep.
+  installWindow({});
+  quiet.rest();
+
+  // The knock: the manifest is on the wire, the engine it rides is as
+  // findable as it will ever be, and the rest is asked again — a rest
+  // that would be hollow if the knock re-armed nothing.
+  installWindow({ attachedEngine: engine });
+  knockWarm();
+  quiet.rest();
+
+  // And the sheet opens on the answer the knock’s hour made.
+  installWindow({});
+  const found = findEngines({});
+  assert.equal(found.hls, engine);
 });

@@ -115,6 +115,16 @@ const MATCHERS = [
 // The gate said no to Playerjs: those are the matchers the sweep carries.
 const WITHOUT_PLAYERJS = MATCHERS.filter((one) => one.name !== 'playerjs');
 
+// The families the bus can name (the protocol’s SHAPES), and the matcher
+// names each one believes in, likeliest first. A family is a format
+// word, not a promise: a sweep narrowed by one still owes the page the
+// whole truth the moment the family’s own ask answers nothing.
+const FAMILY_MATCHERS = {
+  hls: ['hls'],
+  dash: ['dash', 'shaka'],
+  mss: ['shaka', 'dash'],
+};
+
 // One bounded pass of the page’s globals for every matcher at once.
 // Sweeping once per engine meant walking the page’s globals several
 // times over, through cross-compartment wrappers, in the moment the
@@ -132,34 +142,78 @@ export const hasPlayerjs = () => isFunction(pageWindow(), 'Playerjs');
 // The sweep’s answer, warm in hand. This is the manager’s arm at the
 // page’s own quiet: the walk over the page’s globals is a document-wide
 // ask, and it is made while the viewer is not waiting for it. The
-// answer is stamped with the page’s count of moves and with the page’s
-// word for Playerjs, so a consult can tell whether it is still the
-// page’s answer or a memory of an earlier page.
+// answer is stamped with the page’s count of moves, with the page’s
+// word for Playerjs, and with the family the bus last named in the
+// dossier — so a consult can tell whether it is still the page’s
+// answer or a memory of an earlier page and an un-named crossing.
 let warm = null;
 
-// Ask the sweep at the page’s ease. The word back clears the arm — the
-// answer’s bookkeeping goes with it, so a consult afterwards asks the
-// page anew; the tests carry the word, a page-lifetime arm does not.
-export const warmEngines = (dom) => {
-  warm = { dom, turn: null, playerjs: null, found: null };
-  const off = dom.atEase(() => {
-    if (warm.dom !== dom) return;
-    warm.playerjs = hasPlayerjs();
+// Ask the sweep at the page’s ease. `readShape` is the frame’s fresh
+// reading of the dossier’s shape word, asked again at the hour the
+// rest keeps, so the answer carries the family the bus named at that
+// hour, not the one it named when the arm was handed in. The word back
+// clears the arm — the answer’s bookkeeping goes with it, so a consult
+// afterwards asks the page anew; the tests carry the word, a
+// page-lifetime arm does not.
+export const warmEngines = (dom, readShape = () => null) => {
+  // The rest’s work, kept under a name so a knock can re-arm the same
+  // asking: atEase is one rest per work, so a re-ask while the hour is
+  // still pending costs nothing, and the hour stamps everything fresh
+  // when it finally keeps.
+  const work = () => {
+    if (warm === null || warm.dom !== dom) return;
+    const playerjs = hasPlayerjs();
+    const found = globalSweep(playerjs ? MATCHERS : WITHOUT_PLAYERJS);
+    // An empty answer is not stamped, here as anywhere: a page that
+    // builds its engine later must not be answered from the memory of
+    // the nothing before it.
+    if (Object.keys(found).length === 0) return;
+    warm.playerjs = playerjs;
+    warm.shape = readShape();
     warm.turn = dom.turn();
-    warm.found = globalSweep(warm.playerjs ? MATCHERS : WITHOUT_PLAYERJS);
-  });
+    warm.found = found;
+  };
+  warm = {
+    dom,
+    readShape,
+    work,
+    turn: null,
+    playerjs: null,
+    shape: null,
+    found: null,
+  };
+  const off = dom.atEase(work);
   return () => {
     if (warm !== null && warm.dom === dom) warm = null;
     off();
   };
 };
 
-// The warm answer, if it is still the page’s. The stamp is read twice —
-// the count of moves, and the page’s word for Playerjs — because both
-// can change without the other.
-const warmSweep = (playerjs) => {
+// The network’s knock, from the bus: the film’s manifest is on the
+// wire. Two truths arrive with it — the engine the film rides is, at
+// that exact moment, at its most findable (the manifest is being
+// fetched through it, before its element is ever inserted), and the
+// old answer, if one was stamped, was made before the crossing. The
+// stamp is dropped so no consult in between answers from it, and the
+// rest is asked again — one rest per asking, so a pending hour is
+// kept and not doubled.
+export const knockWarm = () => {
+  if (warm === null) return;
+  warm.turn = null;
+  warm.dom.atEase(warm.work);
+};
+
+// The warm answer, if it is still the page’s. The stamp is read three
+// times — the count of moves, the page’s word for Playerjs, and the
+// family the bus last named — because all three can change without
+// the others.
+const warmSweep = (playerjs, shape) => {
   if (warm === null) return null;
-  if (warm.turn !== warm.dom.turn() || warm.playerjs !== playerjs) {
+  if (
+    warm.turn !== warm.dom.turn() ||
+    warm.playerjs !== playerjs ||
+    warm.shape !== shape
+  ) {
     return null;
   }
   return warm.found;
@@ -177,10 +231,28 @@ export const findEngines = (video, host = null) => {
   // audio sheet both inherit it instead of minding it separately.
   const playerjs = hasPlayerjs();
   const matchers = playerjs ? MATCHERS : WITHOUT_PLAYERJS;
+  // The family the bus named, read fresh at every ask — the stamp is
+  // lied to by no stale reading, and a crossing that named another
+  // family since the answer was made makes the answer a memory’s.
+  const shape = warm !== null ? warm.readShape() : null;
 
-  let raw = warmSweep(playerjs);
+  let raw = warmSweep(playerjs, shape);
   if (raw === null) {
-    raw = globalSweep(matchers);
+    // The family the bus named is asked first, its matchers alone: on
+    // a page the hint is right about — the stream pages, the common
+    // case — four matchers' worth of guarded reads over the page’s
+    // globals are not paid. A family that answers nothing was no
+    // promise (the URL is a hint by design), and the page’s whole
+    // truth is asked for it instead.
+    const family = FAMILY_MATCHERS[shape];
+    if (family === undefined) {
+      raw = globalSweep(matchers);
+    } else {
+      const narrowed = globalSweep(
+        matchers.filter((one) => family.includes(one.name)),
+      );
+      raw = Object.keys(narrowed).length > 0 ? narrowed : globalSweep(matchers);
+    }
     // A fresh sweep is its own stamp: one sheet opening pays, and the
     // next one on a page that has been quiet opens on the answer. An
     // empty answer is not stamped — a page that builds its engine later
@@ -188,6 +260,7 @@ export const findEngines = (video, host = null) => {
     if (warm !== null && Object.keys(raw).length > 0) {
       warm.turn = warm.dom.turn();
       warm.playerjs = playerjs;
+      warm.shape = shape;
       warm.found = raw;
     }
   }
