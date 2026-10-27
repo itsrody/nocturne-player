@@ -102,6 +102,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   and being "mostly on screen" is an observation rather than an arithmetic.
   The one case left to the hand-held pin is a film living inside the site's
   shadow root, out of the anchor's reach.
+- **The badge stands outside the picture.** The pre-player pill no longer
+  paints over the film: it hangs a breath below the bottom-right corner,
+  in the page's own margin, and only where the film runs to the viewport's
+  bottom rim is there no outside to be had — then, and only then, it falls
+  back to its old seat inside the corner.
 - **The player speaks through one pill.** The half-moon that lit up over the
   double-tapped side is gone, machinery and all; a skip run now reports
   through the same toast every other notice uses — hold speed, subtitle and

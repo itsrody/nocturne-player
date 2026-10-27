@@ -3,6 +3,7 @@ import badgeCss from './badge.css';
 
 const SIZE_PX = 44;
 const INSET_PX = 12;
+const GAP_PX = 8;
 const MIN_VISIBLE_RATIO = 0.35;
 const ANCHOR_NAME = '--nocturne-film';
 
@@ -60,19 +61,27 @@ export const createBadge = () => {
     anchored = null;
   };
 
-  // In the corner, down and to the right: the looked-at corner a fullscreen
-  // affordance reads like, where a viewer's eye goes first. Its tap is its
-  // own — a shadow-hosted button that stops propagation — so the site's
-  // controls that most skins paint into this corner stay reachable around
-  // it. This is the fallback's own answer — a film pinned by hand, one rect
-  // read per frame it stands still.
+  // Below the film's bottom-right corner, not over it: the pill hangs
+  // outside the picture — a line's gap under the corner — so no film pixel
+  // is covered while the player is closed. Only when the film runs to the
+  // viewport's bottom rim is there no outside to be had, and the pill
+  // falls back to its old seat inside the corner. Vertically the answer is
+  // min(): the outside seat unless the viewport is out of screen below.
+  // Horizontally it stays at the corner's own inset either way.
+  const topSeat = (bottom) =>
+    Math.min(bottom + GAP_PX, window.innerHeight - SIZE_PX - INSET_PX);
+
+  // In the corner, down and to the right — its fallback, when a scroll
+  // event or a viewport rim decides the pill has no outside to stand on.
+  // Its tap is its own — a shadow-hosted button that stops propagation — so
+  // the site's own controls that most skins paint into this corner stay
+  // reachable around it. A film pinned by hand, one rect read per frame it
+  // stands still.
   const placement = (rect) => {
     const left = rect.right - SIZE_PX - INSET_PX;
-    const top = rect.bottom - SIZE_PX - INSET_PX;
-    const maxTop = window.innerHeight - SIZE_PX - INSET_PX;
     return {
       left: `${Math.max(INSET_PX, left)}px`,
-      top: `${Math.min(maxTop, Math.max(INSET_PX, top))}px`,
+      top: `${topSeat(rect.bottom)}px`,
     };
   };
 
@@ -110,9 +119,9 @@ export const createBadge = () => {
       return;
     }
     reveal();
-    // An anchored badge rides the film's own edge, near as it is — even past
-    // what a viewport clamp would allow at the screen's rim. Only the
-    // fallback clamps.
+    // The anchored badge's seat is the pill-below-the-corner rule too —
+    // min() folds the viewport's bottom rim into it, so the pill falls
+    // back inside the corner on the same arithmetic the fallback reads.
     pinStyle(shell.host, placement(rect));
   };
 
@@ -145,7 +154,9 @@ export const createBadge = () => {
       pinStyle(shell.host, {
         'position-anchor': ANCHOR_NAME,
         left: `calc(anchor(right) - ${SIZE_PX + INSET_PX}px)`,
-        top: `calc(anchor(bottom) - ${SIZE_PX + INSET_PX}px)`,
+        top: `min(calc(anchor(bottom) + ${GAP_PX}px), calc(100vh - ${
+          SIZE_PX + INSET_PX
+        }px))`,
       });
       // The anchor answers the scrolling page itself; a scroll listener would
       // only wake the fallback's redraw for no reason.
