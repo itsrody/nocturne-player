@@ -76,6 +76,30 @@ const slotOf = (doc, source) => {
 export const createSlotKeeper = (home, doc) => {
   const held = new Map();
 
+  // A slot word rides the claimant's own heartbeat, so the hunt for the box
+  // of the window posting it used to walk the whole document every two
+  // seconds to re-answer a question it had answered a beat ago. What each
+  // window's box is is remembered instead, and the hunt re-runs only when
+  // the remembering runs dry: elements a site has torn out of the document
+  // are swept the moment any word arrives, and an element that is no longer
+  // the very box of its window — a site that repointed it — sends the hunt
+  // looking fresh. The score of steady beats while a session plays is zero
+  // walks, in every document of the chain at once.
+  const boxes = new Map();
+
+  const boxOf = (source) => {
+    for (const [win, box] of boxes) {
+      if (!box.isConnected) boxes.delete(win);
+    }
+    const remembered = boxes.get(source);
+    if (remembered !== undefined && remembered.contentWindow === source) {
+      return remembered;
+    }
+    const found = slotOf(doc, source);
+    if (found !== null) boxes.set(source, found);
+    return found;
+  };
+
   const close = (ticket) => {
     const hold = held.get(ticket);
     if (hold === undefined) return;
@@ -147,7 +171,7 @@ export const createSlotKeeper = (home, doc) => {
     if (data === null || typeof data !== 'object') return;
     const ticket = data[SLOT_TAG];
     if (typeof ticket !== 'string' || ticket === '') return;
-    const element = slotOf(doc, event.source);
+    const element = boxOf(event.source);
     if (element === null) return;
 
     // One hop up, each document for the one below it — every document

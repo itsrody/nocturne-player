@@ -68,6 +68,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The rail's last per-beat work goes quiet.** A slot word rides the
+  claimant's own heartbeat, and every document of the chain that heard
+  it walked its whole document — every iframe, every embed, every
+  object — to re-answer what box the posting window lives in, a
+  question it had answered one beat ago. What each window's box is is
+  remembered now, re-hunted only when the remembering runs dry: the
+  element a site has torn out is swept the moment any word arrives,
+  and a steady session costs the chain no walks at all. And the
+  judge's claim record stops carrying what nobody reads — the tree
+  walk that proves a claimant is one of ours stays, but its depth
+  by-product, orphaned the day the seat order became the tickets'
+  arrival order, departs.
+
 - **The moments the code says to itself get one mouth.** A signal — a
   moment one side says and every side that reached it in time hears —
   is the small vocabulary the late-bound cycles were waiting for: the

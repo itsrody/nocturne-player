@@ -179,7 +179,8 @@ export const createClaimant = (home, ticket, onVerdict, opts = {}) => {
 // The walk reads nothing but references — the frames list and the
 // WindowProxies inside it are handed out across origins, and a document's
 // content never is — so a page built of strangers is climbed all the same.
-// The answer is how deep the child sits, one hop deeper with every wall.
+// Only the finding itself is used: a claim the walk cannot place in the
+// tree is a claim from nowhere.
 const locate = (source, from, depth) => {
   const frames = from.frames;
   if (typeof frames !== 'object' || frames === null) return null;
@@ -256,8 +257,7 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
     // finds it reads nothing but references. Anything else is a window
     // that can spell our words but is not one of our pages' frames — it is
     // answered the way a door is answered: nobody is home.
-    const depth = locate(event.source, home, 0);
-    if (depth === null) return;
+    if (locate(event.source, home, 0) === null) return;
     const previous = claims.get(ticket);
     claims.set(ticket, {
       source: event.source,
@@ -274,7 +274,6 @@ export const createJudge = (home, { ownWant = null, now = Date.now } = {}) => {
       count: readCount(data, previous),
       renewedAt: now(),
       granted: previous === undefined ? false : previous.granted,
-      depth,
     });
     decide();
   });
