@@ -68,6 +68,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The gestures and the adapters answer to the same verbs the rest
+  of the player keeps.** The recognizer's two timers join the moment
+  slots: the hold's moment — armed per press, lost to anything that
+  decides the press was not a hold — and the tap window's fast and
+  slow rhythms are slots now, with the fire asking the mode rather
+  than trusting its arm. Every quality adapter answers for its own
+  ladder — sources, hls.js, dash.js, shaka, video.js — so the sheet's
+  note no longer guesses for the adapters that kept quiet, and the
+  ask carries no guards: video.js names both of its numbers, the rungs
+  and how many are still open, since that pair is what explains its
+  Auto chip. The three deliberately right shapes were read once more
+  with current eyes — the menu's DOM builders, the page reads that
+  stay free functions over whatever the page hands them, the scope's
+  cleanup ledger beside the slot (a ledger of many moments undone
+  together is not a slot, which holds one), and the bridge's no-op
+  release — and each verdict stands.
+
 - **The rungs and the moments get homes of their own.** The quality row
   and the audio row had written the same ceremony twice — find the site's
   player once per sheet opening, list what it offers, carry the viewer's

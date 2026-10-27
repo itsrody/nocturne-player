@@ -43,7 +43,8 @@ export const createQuality = (video, host = null, adapters = ADAPTERS) => {
 
   // Says which of the two things went wrong, because "no quality here" and
   // "found the player, it is offering nothing yet" want different answers from
-  // whoever is looking at it.
+  // whoever is looking at it. Every adapter answers for its own ladder, so
+  // the asking needs no guards.
   const describe = () => {
     const size =
       video.videoWidth === 0
@@ -51,8 +52,7 @@ export const createQuality = (video, host = null, adapters = ADAPTERS) => {
         : `${video.videoWidth}×${video.videoHeight} · `;
     const adapter = rungs.getAdapter();
     if (adapter !== null) {
-      const detail = adapter.diagnose ? adapter.diagnose() : 'no levels yet';
-      return `${size}${adapter.name}: ${detail}`;
+      return `${size}${adapter.name}: ${adapter.diagnose()}`;
     }
     return `${size}set by the site`;
   };

@@ -1,3 +1,4 @@
+import { createTimerSlot } from '../../lib/time.js';
 import { hitTest, isSide, ZONE } from './zones.js';
 
 const HOLD_DELAY_MS = 350;
@@ -47,8 +48,6 @@ export const createRecognizer = (surface, handlers) => {
 
   let mode = MODE.IDLE;
   let anchor = null;
-  let holdTimer = null;
-  let tapTimer = null;
   let tapCount = 0;
   let tapZone = ZONE.MIDDLE;
   let dismissAnchor = null;
@@ -78,18 +77,27 @@ export const createRecognizer = (surface, handlers) => {
     };
   };
 
-  const clearHoldTimer = () => {
-    if (holdTimer === null) return;
-    clearTimeout(holdTimer);
-    holdTimer = null;
-  };
+  // The hold's moment: armed once per press, cleared by anything that
+  // decides the press is not a hold — the pinch, the drift out of the
+  // tolerance, the finger's leaving. The fire asks the mode rather than
+  // trusting the arm: a fire racing a decision the fingers won has to lose
+  // quietly, and a slot that tidies itself the moment its work runs keeps
+  // no echo of that bookkeeping behind.
+  const holdTimer = createTimerSlot(() => {
+    if (mode !== MODE.PENDING) return;
+    mode = MODE.HOLD;
+    emit('holdStart', { zone: anchor.zone });
+  });
 
-  const flushTaps = () => {
-    tapTimer = null;
+  // The tap window's moment, spoken two ways: the fast rhythm a fresh tap
+  // opens, and the slower one a live side run keeps. The slot is told which
+  // by whoever arms it — each `set` simply carries its duration.
+  const tapTimer = createTimerSlot(flushTaps);
+  function flushTaps() {
     // Everything a tap had to say was said where it happened; the window
     // was only ever about whether more taps were still on their way.
     tapCount = 0;
-  };
+  }
 
   // Every tap speaks the moment the finger lifts: the controls come up under
   // it sooner than any window can allow, and a run of side seeks is paid per
@@ -115,14 +123,15 @@ export const createRecognizer = (surface, handlers) => {
       });
       // Between taps of a live run the window is the run's own, a slower
       // rhythm than the double-tap that started it: tapping on to go further
-      // is a habit, not a reflex.
-      tapTimer = setTimeout(flushTaps, SEEK_RUN_MS);
+      // is a habit, not a reflex. Rearming is replacement, so the run's
+      // window slides forward with every tap that joins.
+      tapTimer.set(SEEK_RUN_MS);
       return;
     }
     // A fresh tap, whatever the last run left behind: the run's timer is
     // cancelled rather than waited out, so a tap that lands just past a run
-    // is judged on its own merits.
-    if (tapTimer !== null) clearTimeout(tapTimer);
+    // is judged on its own merits — and arming the fresh window replaces
+    // what was pending, which is that cancellation said another way.
     tapCount = 1;
     tapZone = zone;
     // Zones are named from the press, but the coordinates that travel are
@@ -141,11 +150,11 @@ export const createRecognizer = (surface, handlers) => {
     });
     // The window after a first tap exists only to know whether a second is
     // coming; nothing is decided when it runs out.
-    tapTimer = setTimeout(flushTaps, MULTI_TAP_WINDOW_MS);
+    tapTimer.set(MULTI_TAP_WINDOW_MS);
   };
 
   const startPinch = () => {
-    clearHoldTimer();
+    holdTimer.clear();
     if (mode === MODE.DRAG) emit('dragEnd', { zone: anchor.zone });
     if (mode === MODE.HOLD) emit('holdEnd', { zone: anchor.zone });
     // A second finger arrives while a pull to dismiss is under way: the
@@ -183,12 +192,7 @@ export const createRecognizer = (surface, handlers) => {
       zone: hitTest(point.x, point.width),
     };
     mode = MODE.PENDING;
-    holdTimer = setTimeout(() => {
-      holdTimer = null;
-      if (mode !== MODE.PENDING) return;
-      mode = MODE.HOLD;
-      emit('holdStart', { zone: anchor.zone });
-    }, HOLD_DELAY_MS);
+    holdTimer.set(HOLD_DELAY_MS);
   };
 
   const handlePinchMove = () => {
@@ -215,7 +219,7 @@ export const createRecognizer = (surface, handlers) => {
       const dx = point.x - anchor.x;
       const dy = point.y - anchor.y;
       if (Math.hypot(dx, dy) < MOVE_TOLERANCE_PX) return;
-      clearHoldTimer();
+      holdTimer.clear();
       // Checked before anything else: a vertical pull is the same gesture
       // wherever on the picture it starts, middle and sides alike.
       if (isVerticalMove(dx, dy)) {
@@ -311,7 +315,7 @@ export const createRecognizer = (surface, handlers) => {
     }
     if (pointers.size > 0) return;
 
-    clearHoldTimer();
+    holdTimer.clear();
     if (mode === MODE.DRAG) emit('dragEnd', { zone: anchor.zone });
     else if (mode === MODE.HOLD) emit('holdEnd', { zone: anchor.zone });
     else if (mode === MODE.DISMISS) finishDismiss(event);
@@ -322,7 +326,7 @@ export const createRecognizer = (surface, handlers) => {
   const handleCancel = (event) => {
     if (!pointers.has(event.pointerId)) return;
     pointers.delete(event.pointerId);
-    clearHoldTimer();
+    holdTimer.clear();
     if (mode === MODE.DRAG) emit('dragEnd', { zone: anchor.zone });
     if (mode === MODE.HOLD) emit('holdEnd', { zone: anchor.zone });
     // A pull that the system took the finger away from is returned, not
@@ -352,8 +356,8 @@ export const createRecognizer = (surface, handlers) => {
       isEnabled = value;
     },
     destroy: () => {
-      clearHoldTimer();
-      if (tapTimer !== null) clearTimeout(tapTimer);
+      holdTimer.clear();
+      tapTimer.clear();
       surface.removeEventListener('contextmenu', blockContextMenu);
       surface.removeEventListener('pointerdown', handleDown);
       surface.removeEventListener('pointermove', handleMove);

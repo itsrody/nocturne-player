@@ -74,6 +74,9 @@ export const createSourceAdapter = (video) => {
   return {
     name: 'sources',
     hasAuto: false,
+    // An element carrying a <source> ladder has one fact to give: how many
+    // sources it was handed.
+    diagnose: () => `${options.length} sources on the element`,
     list: () => options.map(({ id, label }) => ({ id, label })),
     current: () => {
       const found = options.find((option) => option.src === video.currentSrc);
@@ -242,6 +245,9 @@ const buildHlsAdapter = (engine) => {
   return {
     name: 'hls.js',
     hasAuto: true,
+    // The engine's own ladder length is the whole of what a flat sheet needs
+    // explained: the engine knows its segments, it has reported this many.
+    diagnose: () => `${levels().length} levels reported`,
     list: () =>
       levels()
         .sort(byHeightDescending)
@@ -286,6 +292,8 @@ const buildDashAdapter = (player) => {
   return {
     name: 'dash.js',
     hasAuto: true,
+    // The bitrate list is where dash.js keeps its ladder; how long it is.
+    diagnose: () => `${levels().length} entries in the bitrate list`,
     list: () =>
       levels()
         .sort(byHeightDescending)
@@ -338,6 +346,9 @@ const buildShakaAdapter = (player) => {
   return {
     name: 'shaka',
     hasAuto: true,
+    // Variant tracks are shaka's rungs; the count is its one honest answer
+    // about a ladder that does not move.
+    diagnose: () => `${collect().length} variant tracks on the player`,
     list: () =>
       collect()
         .sort(byHeightDescending)
@@ -452,6 +463,14 @@ export const buildVideojsAdapter = (player) => {
   return {
     name: 'video.js',
     hasAuto: true,
+    // The open count is the working end of this player's ladder: one rung
+    // open is a pin, any other number is the site's own ABR choosing, and
+    // that is what the chip reads as Auto — both numbers explain the chip.
+    diagnose: () => {
+      const all = rungs();
+      const open = all.filter((rung) => Boolean(read(rung, 'enabled')));
+      return `${all.length} levels, ${open.length} open`;
+    },
     list: () =>
       rungs()
         .map((rung, index) => ({
