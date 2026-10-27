@@ -22,6 +22,10 @@ const staticAssets = [
 
 const bundles = [
   { entry: `${SOURCE_DIR}/content/index.js`, out: `${OUTPUT_DIR}/content.js` },
+  {
+    entry: `${SOURCE_DIR}/background/index.js`,
+    out: `${OUTPUT_DIR}/background.js`,
+  },
   { entry: `${SOURCE_DIR}/popup/popup.js`, out: `${OUTPUT_DIR}/popup.js` },
   {
     entry: `${SOURCE_DIR}/options/options.js`,

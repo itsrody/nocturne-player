@@ -68,6 +68,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The seat leaves the pages' wires, for the background's own room.** The
+  extension had no background at all — every cross-frame bargain ran
+  through windows the pages own, and every safeguard it carried was the
+  price of that route: the ticket minted to say who a claim answered to,
+  the judge seated in the top frame, the walk over its tree to credit a
+  claim to somebody's child, the presence beat that told life from
+  silence. A persistent background page stands up a frame hub now, and
+  the frames say their want and their film count to it on a runtime port
+  opened once per document — a channel no page can spell a word on, with
+  the tab and frame attested on the envelope by the browser itself, so
+  the hub's book is written in read-off facts and none of the page-wire
+  machinery ships any more. And death, the thing the page wire could
+  never have: a content script's port fires `onDisconnect` when its
+  document is torn down — navigation, iframe lifted out, tab closed — so
+  presence is connectivity, a gone frame frees its seat as an event with
+  no clock to wait out, and the walking belt and its staleness window
+  depart with the ticket. The seat's rule is mended in the move: only a
+  frame that wants the seat can hold it (the old judge's
+  first-key rule would have seated a frame that only counted, had one
+  ever spoken first), turns are drawn in first-want order with a
+  reconnect re-entering at the back, and the top document's own film
+  still outranks the framed ones — the top is believed when it says it
+  holds the seat, and no framed frame is ever seated while it wants. The
+  popup's count question goes to the hub too — one ask, one answer from
+  the hot book, no round trip through the pages — and the manifest gains
+  the background entry without a new permission: the book is session
+  memory, never persisted, and the collection answer stays "none".
+  What a frame alone can do stays with the frame — the sweep, the badge,
+  the session — and the slot keeps its climb through the page's own DOM
+  for now, each document still widening the box that hosts the child
+  below it, at the same slow beat the keeper's hold expects; the hub's
+  speaking its own slot orders is the next room over, when the frame
+  tree's management moves in.
+
 - **The rail dies by word, not by window.** A claim on the pages' own
   wires was kept alive the one way a connectionless wire knows: every
   claimant re-said itself every two seconds, and the judge believed an

@@ -6,13 +6,12 @@ import {
 } from '../lib/settings.js';
 import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
-import { LEGACY_OPENINGS_KEY, STATE_QUERY } from '../lib/words.js';
+import { LEGACY_OPENINGS_KEY, REPORT, VERDICT } from '../lib/words.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import {
   chainHosts,
-  createClaimant,
-  createJudge,
+  createSlotRider,
   isTopFrame,
   mintTicket,
 } from './frames.js';
@@ -73,42 +72,58 @@ const start = async () => {
   const isWatched = () => hosts.every((host) => isHostEnabled(current, host));
 
   // The badge is mounted by one frame at a time. The frames take turns
-  // through the top frame: it seats one claimant at a time, and a seat is
-  // the only permission a frame outside the top one has to show a badge.
+  // through the hub: it seats one frame at a time, and a seat is the only
+  // permission a frame outside the top one has to show a badge. The top
+  // needs no turn — its own film is the film the page chose.
   const isTop = isTopFrame();
   const ticket = mintTicket();
   let granted = isTop;
 
+  // The slot keeps its climb on the page wire this round — widening an
+  // element means widening an element in a document the hub cannot reach
+  // into — and the rider below carries the frame's half of it. A rider is
+  // asked of every frame but the top: the top's room is the viewport
+  // itself, and there is no window above it to ask.
+
   // The wiring of this frame is a cycle, and it is cut two ways rather than
-  // by one hand-bound bag: the questions asked late — the count a claimant
+  // by one hand-bound bag: the questions asked late — the count this frame
   // reports with, and whether this frame wants the badge, both of which need
   // the watcher standing below them — are queries rebound once their answer
-  // exists, and the moments said across the cycle — a grant arriving from
-  // the judge, and the announcement that closes the arrangement — are
+  // exists, and the moments said across the cycle — a verdict arriving from
+  // the hub, and the announcement that closes the arrangement — are
   // signals, fired by whoever says them without knowing who hears yet.
   let liveCount = () => 0;
   let wantsBadge = () => false;
   const grant = createSignal();
   const announce = createSignal();
 
-  const claimant = isTop
-    ? null
-    : createClaimant(
-        window,
-        ticket,
-        (next) => {
-          granted = next;
-          grant.emit();
-        },
-        { getCount: () => liveCount() },
-      );
+  // The frame's seat of life: one runtime port to the background's hub,
+  // opened once and kept for the life of the document. The browser attests
+  // to the envelope — tab and frame are facts the pages cannot forge — so
+  // nothing is minted here anymore to say who is speaking. The port is
+  // also the death notice: when this document is torn down, the port's
+  // disconnect is the hub's word that the frame is gone, and the book
+  // frees the seat with no clock to wait out.
+  const up = browser.runtime.connect({ name: 'nocturneSeat' });
 
-  const judge = isTop
-    ? createJudge(window, { ownWant: () => wantsBadge() })
-    : null;
+  // The frame's word about itself, on the announce moment: what it wants
+  // and what it found, said plain. The hub keeps the book, so no beat
+  // needs to walk beneath the words — silence here is a fact with an
+  // event attached, not a guess the seat must ride out.
+  const report = () => {
+    up.postMessage({ type: REPORT, want: wantsBadge(), count: liveCount() });
+  };
+
+  // The seat's news, the hub's alone: one boolean, heard once and answered
+  // with the badge's own arrangement.
+  up.onMessage.addListener((word) => {
+    if (word?.type !== VERDICT) return;
+    granted = Boolean(word.granted);
+    grant.emit();
+  });
 
   // The badge's answer for a film, said once and asked of wherever the
-  // news comes from: a watcher's sweep, a grant arriving from the judge,
+  // news comes from: a watcher's sweep, a verdict arriving from the hub,
   // or the player handing its film back. The film is always given — each
   // caller knows it, and the answer needs no second opinion.
   const retune = (primary) => {
@@ -124,22 +139,17 @@ const start = async () => {
 
   liveCount = () => watcher.getCount();
 
-  // A grant arriving from the judge is the badge's news with the film the
+  // A verdict arriving from the hub is the badge's news with the film the
   // watcher holds: the answer is re-asked of the frame as it stands now.
   grant.on(() => retune(watcher.getPrimary()));
 
   wantsBadge = () => !session && watcher.getPrimary() !== null && isWatched();
 
   announce.on(() => {
-    // One call covers all three sides of the arrangement: the frame tells
-    // the judge what it wants, the count rides the same word (the frame
-    // may have films to report without a claim in force, so the word is
-    // said even when the want is unchanged), and the judge — when this
-    // frame is the judge — reconsiders its seating with that knowledge in
-    // hand.
-    claimant?.setWant(wantsBadge());
-    claimant?.tell();
-    judge?.decide();
+    // One call covers the whole arrangement: the frame tells the hub what
+    // it wants and what it found, and the hub — where the book of frames
+    // stands — reconsiders the seat with that knowledge in hand.
+    report();
   });
 
   const apply = () => {
@@ -159,9 +169,13 @@ const start = async () => {
   // Every document — the top's included — keeps its children's slots: the
   // session's request to grow the page arrives hop by hop, each document
   // widening the box of the child that spoke to it and passing the word
-  // up. The keeper is frame-neutral; only the claimant below knows the
-  // session that asked.
+  // up. The keeper is frame-neutral; only the rider of the frame below
+  // knows the session that asked.
   createSlotKeeper(window, document);
+
+  // The frame's rider from the paragraph above: every frame but the top
+  // keeps one, and it only speaks when a session of this frame's holds.
+  const rider = isTop ? null : createSlotRider(window, ticket);
 
   badge.activate.on(async (video) => {
     if (session) return;
@@ -176,7 +190,7 @@ const start = async () => {
       // player was on the film.
       onExit: (lastVideo) => {
         session = null;
-        claimant?.slot(false);
+        rider?.slot(false);
         retune(lastVideo);
         announce.emit();
       },
@@ -187,7 +201,7 @@ const start = async () => {
     // A session that went away while the door was still opening leaves no
     // slot held: the exit has already said its word.
     if (session !== openedSession) return;
-    claimant?.slot(true);
+    rider?.slot(true);
   });
 
   apply();
@@ -198,18 +212,6 @@ const start = async () => {
     // before it is assigned, so the whole is safe.
     Object.assign(current, next);
     apply();
-  });
-
-  browser.runtime.onMessage.addListener((message) => {
-    if (message?.type !== STATE_QUERY) return false;
-    // One voice per page: the framed copies hear the same question and say
-    // nothing, so the first answer is never one document's own count. The
-    // top speaks for the page — its own films plus what every lively frame
-    // keeps reporting on the claims rail.
-    if (!isTop) return false;
-    return Promise.resolve({
-      videoCount: watcher.getCount() + (judge ? judge.totalCount() : 0),
-    });
   });
 };
 

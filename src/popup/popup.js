@@ -32,8 +32,13 @@ const readHost = (tab) => {
 const describeVideo = async (tab) => {
   if (!tab) return 'No page to inspect.';
   try {
-    const state = await browser.tabs.sendMessage(tab.id, {
+    // The ask goes to the background's hub, which keeps the book of every
+    // frame's films for the tab: one message, no round trip through the
+    // pages, and the answer is the whole tab's count whatever frame of it
+    // the film lives in.
+    const state = await browser.runtime.sendMessage({
       type: STATE_QUERY,
+      tabId: tab.id,
     });
     if (state?.videoCount > 0) {
       const plural = state.videoCount === 1 ? 'video' : 'videos';
