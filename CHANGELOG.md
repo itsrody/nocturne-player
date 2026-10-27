@@ -120,6 +120,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   with them the per-frame GPU cost of being able to see through. The
   hairline rims and shadows that lifted the glass off dark scenes keep
   their jobs.
+- **The way out sits at the bar's end.** The exit button leaves the topbar
+  for the control bar, at the very end of the tail — leaving the film is a
+  reach along the edge the hand is already on, right of the settings gear —
+  and it speaks with the exit-fullscreen arrows rather than a cross. The
+  topbar keeps only the way back into fullscreen.
 
 ## [0.9.1][] - 2026-10-20
 

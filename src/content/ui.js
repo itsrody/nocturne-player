@@ -70,10 +70,10 @@ const buildGearPath = () => {
 };
 
 const ICON = {
-  exit: 'M6 6l12 12M18 6L6 18',
   settings: buildGearPath(),
   play: 'M8 5 19 12 8 19z',
   fullscreen: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  fullscreenExit: 'M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7',
   pause: 'M6 5h3.6v14H6zM14.4 5h3.6v14h-3.6z',
 };
 
@@ -539,21 +539,28 @@ export const createOverlay = ({
     'button',
   );
 
+  buttons.exit = buildButton(
+    'Exit player',
+    ICON.fullscreenExit,
+    () => onExit(),
+    'button exit-button',
+  );
+
   // The control bar carries everything the thumb works — transport before
-  // the ruler, and the gear trailing the clock at its far right: opening
-  // the settings is a reach along the edge the hand is already on, not a
-  // walk to the top corner it never visits while scrubbing. The middle of
-  // the picture belongs to the gestures alone.
+  // the ruler, and the tail trailing the clock: the gear, then the way out
+  // at its very end. Opening the settings and leaving the film are reaches
+  // along the edge the hand is already on, not walks to the top corner it
+  // never visits while scrubbing. The middle of the picture belongs to the
+  // gestures alone.
   controlBar.setControls(
     [
       buildSkipButton(-SKIP_SECONDS),
       buttons.play,
       buildSkipButton(SKIP_SECONDS),
     ],
-    [buttons.menu],
+    [buttons.menu, buttons.exit],
   );
 
-  buttons.exit = buildButton('Exit player', ICON.exit, () => onExit());
   buttons.fullscreen = buildButton('Fullscreen', ICON.fullscreen, () => {
     onFullscreen();
     setChromeVisible(false);
@@ -563,11 +570,7 @@ export const createOverlay = ({
   for (const node of fullOnly) node.classList.add('is-full-only');
   buttons.fullscreen.classList.add('is-windowed-only');
 
-  topbar.append(
-    buttons.exit,
-    el('div', { class: 'spacer' }),
-    buttons.fullscreen,
-  );
+  topbar.append(el('div', { class: 'spacer' }), buttons.fullscreen);
 
   // Whenever the player is out of fullscreen it offers the way back to it.
   // Playing in the box the site gave it — an embedded player's frame — it is

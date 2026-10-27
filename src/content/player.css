@@ -180,6 +180,14 @@
   gap: 8px;
 }
 
+/* The gear and the way out draw their ink at the topbar's 22px grade, whose
+   own margins would space them a hand wider than the transport's cluster
+   reads. Six pixels are pulled back on the pair alone — ink to ink they
+   now sit at the cluster's own spacing, and no hit box is touched. */
+.controlbar .exit-button {
+  margin-left: -6px;
+}
+
 /* The bar itself is blind — a tap on it answers the film, not the chrome —
    so everything it carries must name its own touch. The ruler and the
    round skips did; the gear is the first plain button to live here, and
