@@ -2,13 +2,22 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  asCipher,
+  asCipherAsk,
+  asCipherBytes,
+  asCipherPlan,
   asDossier,
   asReport,
   asSlot,
   asStateQuery,
   asStrain,
   asVerdict,
+  askCipherSegment,
   askState,
+  MAX_PLAN_SEGMENTS,
+  sayCipher,
+  sayCipherBytes,
+  sayCipherPlan,
   sayDossier,
   sayReport,
   saySlot,
@@ -162,4 +171,127 @@ test('the page wire’s slot word is believed only well-formed', () => {
   assert.equal(asSlot({ [SLOT_TAG]: '', open: true }), null);
   assert.equal(asSlot({ [SLOT_TAG]: 'ticket', open: 'yes' }), null);
   assert.equal(asSlot('nocturneSlot'), null);
+});
+
+test('the cipher’s voice is said and heard as its own word', () => {
+  const said = sayCipher('aes-128', 'https://f.example/vod/media.m3u8');
+  assert.deepEqual(said, {
+    type: 'nocturneCipher',
+    cipher: 'aes-128',
+    url: 'https://f.example/vod/media.m3u8',
+  });
+  assert.deepEqual(asCipher(said), {
+    cipher: 'aes-128',
+    url: 'https://f.example/vod/media.m3u8',
+  });
+  // Only the schemes the extension knows, and only a manifest that was
+  // actually seen: anything else is nobody’s cipher — the builder says
+  // what it is handed, and the guard refuses it.
+  assert.equal(
+    sayCipher('widevine', 'https://f.example/a.m3u8').cipher,
+    'widevine',
+  );
+  assert.equal(asCipher(null), null);
+  assert.equal(asCipher({ type: 'nocturneCipher' }), null);
+  assert.equal(
+    asCipher({ type: 'nocturneCipher', cipher: 'aes-128' }),
+    null,
+    'no manifest named, no word',
+  );
+  assert.equal(
+    asCipher({
+      type: 'nocturneCipher',
+      cipher: 'cleartext',
+      url: 'https://f.example/a.m3u8',
+    }),
+    null,
+    'a scheme the corpus never said is nobody’s cipher',
+  );
+
+  // And the ask rides one address: the ask is refused without it.
+  assert.deepEqual(asCipherAsk(askCipherSegment('https://f.example/s0.mp4')), {
+    url: 'https://f.example/s0.mp4',
+  });
+  assert.equal(asCipherAsk({ type: 'nocturneCipherAsk' }), null);
+
+  // The answer: bytes, or an honest null. Anything else — a string, a
+  // bare object, a word with no address — is refused whole.
+  const bytes = new ArrayBuffer(8);
+  assert.deepEqual(
+    asCipherBytes(sayCipherBytes('https://f.example/s0.mp4', bytes)),
+    {
+      url: 'https://f.example/s0.mp4',
+      bytes,
+    },
+  );
+  assert.deepEqual(
+    asCipherBytes(sayCipherBytes('https://f.example/s0.mp4', null)),
+    { url: 'https://f.example/s0.mp4', bytes: null },
+  );
+  assert.equal(
+    asCipherBytes(sayCipherBytes('https://f.example/s0.mp4', { length: 8 })),
+    null,
+  );
+});
+
+test('the plan is believed whole and trimmed at its bound', () => {
+  const plan = {
+    url: 'https://f.example/vod/media.m3u8',
+    codecs: 'avc1.640028,mp4a.40.2',
+    init: 'https://f.example/vod/init.mp4',
+    segments: [
+      { url: 'https://f.example/vod/seg0.mp4', seq: 41 },
+      { url: 'https://f.example/vod/seg1.mp4', seq: 42 },
+    ],
+  };
+  assert.deepEqual(asCipherPlan(sayCipherPlan(plan)), plan);
+  // A stream with codecs left unsaid — the manifest named none — is
+  // still a plan; the mime is built around what the manifest kept.
+  assert.deepEqual(
+    asCipherPlan(
+      sayCipherPlan({
+        ...plan,
+        codecs: null,
+        init: null,
+        segments: [plan.segments[0]],
+      }),
+    ),
+    { url: plan.url, codecs: null, init: null, segments: [plan.segments[0]] },
+  );
+
+  // A playlist that outgrows the bound is trimmed, because a promise
+  // that cannot be kept whole is no promise at all.
+  const many = [];
+  for (let at = 0; at < MAX_PLAN_SEGMENTS + 5; at += 1) {
+    many.push({ url: `https://f.example/vod/s${at}.mp4`, seq: at });
+  }
+  assert.equal(
+    asCipherPlan(sayCipherPlan({ ...plan, segments: many })).segments.length,
+    MAX_PLAN_SEGMENTS,
+  );
+
+  // And the refusals: no manifest, no segments, no sequence — all
+  // refused, the whole word with them.
+  assert.equal(asCipherPlan(null), null);
+  assert.equal(asCipherPlan({ type: 'nocturnePlan' }), null);
+  assert.equal(
+    asCipherPlan(sayCipherPlan({ ...plan, segments: [] })),
+    null,
+    'no segments, no plan',
+  );
+  assert.equal(
+    asCipherPlan(sayCipherPlan({ ...plan, init: 42 })),
+    null,
+    'an init that is not an address is no init',
+  );
+  assert.equal(
+    asCipherPlan(
+      sayCipherPlan({
+        ...plan,
+        segments: [{ url: 'https://f.example/vod/x.mp4', seq: -1 }],
+      }),
+    ),
+    null,
+    'a sequence that cannot be is no segment',
+  );
 });

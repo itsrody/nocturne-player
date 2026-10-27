@@ -298,3 +298,45 @@ test('the watch’s knock asks for a sweep only while it stands', () => {
     'stopping pays every arm back',
   );
 });
+
+test('the repair arm is asked before the judgement', () => {
+  // A page with its own small film and one being fed: the fed film is
+  // the bigger, so the beat after the metadata lands elects it.
+  const main = film(0, 0, 300, 160);
+  // An element the element itself gave up on: the error is not the
+  // sweep’s refusal — it is exactly the stream a feeder might be able
+  // to answer for — but a film being fed is eroded until the metadata
+  // lands, so the judgement that would take it now refuses it now.
+  const eroded = film(0, 0, 700, 500);
+  eroded.error = { code: 4 };
+  eroded.readyState = 0;
+  eroded.currentSrc = '';
+  const wire = makeWire([main, eroded]);
+  const asked = [];
+  const repair = (video) => asked.push(video);
+  const watcher = createVideoWatcher(wire.dom, wire.up, () => true, repair);
+
+  watcher.start();
+  assert.deepEqual(
+    asked,
+    [main, eroded],
+    'both films, in the order the walk met them',
+  );
+  assert.equal(watcher.getCount(), 1, 'the eroded film is refused for now');
+
+  // The feeder made the metadata land: the film is elected on the next
+  // beat like any film the walk has just met — with no special word for
+  // the way its bytes are being carried.
+  eroded.readyState = 4;
+  eroded.currentSrc = 'blob:https://site.example/fed';
+  wire.sweep();
+  assert.equal(watcher.getCount(), 2);
+  assert.equal(watcher.getPrimary(), eroded);
+
+  // And a watcher made without the arm judges as it always did: the
+  // feeder is nobody’s business but its caller’s.
+  const plainWire = makeWire([main]);
+  const plain = createVideoWatcher(plainWire.dom, plainWire.up, () => true);
+  plain.start();
+  assert.equal(plain.getCount(), 1);
+});

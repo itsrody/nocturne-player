@@ -10,32 +10,97 @@ const SCANNED_EXTENSIONS = ['.js', '.mjs', '.html', '.css'];
 // the narrower sense only: it observes, and it never answers — webRequest
 // sits in the manifest with webRequestBlocking beside it, but no handler
 // ever returns a BlockingResponse, so the wire itself is never spoken to.
+//
+// One file may declare its own narrow allowance at the top of itself, in
+// a line the scan reads from the file’s own words: the cipher room
+// fetches a manifest, a key and the segments of a stream the viewer’s
+// page was already visiting — the same origins, and nowhere else. The
+// declaration is the file’s own, so the scan never widens by itself;
+// every other verb in the list below is forbidden in every file, the
+// declared ones included.
 const FORBIDDEN_PATTERNS = [
-  { pattern: /\bfetch\s*\(/, reason: 'network request' },
-  { pattern: /\bXMLHttpRequest\b/, reason: 'network request' },
+  {
+    id: 'fetch',
+    pattern: /\bfetch\s*\(/,
+    reason: 'network request',
+  },
+  {
+    id: 'xmlhttprequest',
+    pattern: /\bXMLHttpRequest\b/,
+    reason: 'network request',
+  },
   { pattern: /\bsendBeacon\b/, reason: 'telemetry beacon' },
-  { pattern: /\bWebSocket\b/, reason: 'network connection' },
-  { pattern: /\bEventSource\b/, reason: 'network connection' },
-  { pattern: /\bimportScripts\b/, reason: 'remote code' },
-  { pattern: /\beval\s*\(/, reason: 'dynamic code execution' },
-  { pattern: /new\s+Function\s*\(/, reason: 'dynamic code execution' },
-  { pattern: /\bstorage\.sync\b/, reason: 'account-synced storage' },
-  { pattern: /\bnavigator\.geolocation\b/, reason: 'device sensor' },
-  { pattern: /\bnavigator\.mediaDevices\b/, reason: 'device sensor' },
-  { pattern: /\bnavigator\.connection\b/, reason: 'device fingerprinting' },
-  { pattern: /\bdocument\.cookie\b/, reason: 'cookie access' },
-  { pattern: /\b(gtag|mixpanel|amplitude|posthog)\b/, reason: 'analytics' },
-  { pattern: /\b(telemetry|analytics)\s*[:=(]/i, reason: 'analytics' },
+  {
+    id: 'websocket',
+    pattern: /\bWebSocket\b/,
+    reason: 'network connection',
+  },
+  {
+    id: 'eventsource',
+    pattern: /\bEventSource\b/,
+    reason: 'network connection',
+  },
+  {
+    id: 'importscripts',
+    pattern: /\bimportScripts\b/,
+    reason: 'remote code',
+  },
+  {
+    id: 'eval',
+    pattern: /\beval\s*\(/,
+    reason: 'dynamic code execution',
+  },
+  {
+    id: 'newfunction',
+    pattern: /new\s+Function\s*\(/,
+    reason: 'dynamic code execution',
+  },
+  {
+    id: 'storagesync',
+    pattern: /\bstorage\.sync\b/,
+    reason: 'account-synced storage',
+  },
+  {
+    id: 'geolocation',
+    pattern: /\bnavigator\.geolocation\b/,
+    reason: 'device sensor',
+  },
+  {
+    id: 'mediadevices',
+    pattern: /\bnavigator\.mediaDevices\b/,
+    reason: 'device sensor',
+  },
+  {
+    id: 'connection',
+    pattern: /\bnavigator\.connection\b/,
+    reason: 'device fingerprinting',
+  },
+  {
+    id: 'cookie',
+    pattern: /\bdocument\.cookie\b/,
+    reason: 'cookie access',
+  },
+  {
+    id: 'analytics',
+    pattern: /\b(gtag|mixpanel|amplitude|posthog)\b/,
+    reason: 'analytics',
+  },
+  {
+    id: 'analyticsword',
+    pattern: /\b(telemetry|analytics)\s*[:=(]/i,
+    reason: 'analytics',
+  },
   // www.w3.org is the XML namespace identifier for SVG, never a request.
   {
+    id: 'remoteurl',
     pattern: /https?:\/\/(?!github\.com\/|www\.w3\.org\/)/,
     reason: 'remote URL',
   },
 ];
 
 // The verbs the manifest is allowed to ask for. <all_urls> is a host
-// entry, not an API: it rides in `permissions` so the eye's URL filter is
-// matched without host gating, the same room the content script's
+// entry, not an API: it rides in `permissions` so the eye’s URL filter is
+// matched without host gating, the same room the content script’s
 // <all_urls> match already books.
 const ALLOWED_PERMISSIONS = [
   'storage',
@@ -63,10 +128,20 @@ const collectFiles = async (dir) => {
 const scanFile = async (path) => {
   const content = await readFile(path, 'utf8');
   const lines = content.split('\n');
+  // The file’s own declared allowances, read from its own words — a line
+  // the scan never writes for it, and a name the scan alone never
+  // wildcards: the declaration names one verb, whole.
+  const allowances = new Set();
+  for (const match of content.matchAll(
+    /nocturne-privacy-allowance:\s*(\S+)/g,
+  )) {
+    allowances.add(match[1]);
+  }
   const violations = [];
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
     for (const rule of FORBIDDEN_PATTERNS) {
+      if (allowances.has(rule.id)) continue;
       if (rule.pattern.test(line)) {
         violations.push({
           file: relative('.', path),

@@ -44,6 +44,43 @@ export const DOSSIER = 'nocturneDossier';
 // dash.js or shaka alike.
 export const SHAPES = ['hls', 'dash', 'mss'];
 
+// The manifest’s own cipher, said down once per generation like the
+// dossier: which non-DRM scheme the stream carries. `aes-128` is the
+// HLS standard’s whole-segment CBC — the one the frame can be handed
+// through the background’s key and decrypt work; `sample-aes` is the
+// sample-level scheme, named honestly so the diagnostics can say it is
+// known but not yet played; `clearkey` is CENC without a DRM system —
+// the element’s own EME asks, and only the key material would ever
+// cross. These are authentication words, public data in the manifest,
+// not circumvention: no DRM system is ever touched.
+export const CIPHER = 'nocturneCipher';
+export const CIPHERS = ['aes-128', 'sample-aes', 'clearkey'];
+
+// The playable plan behind the cipher word: one fetch of the manifest
+// the bus saw, parsed into the order the playback needs — the init
+// segment’s address (an fmp4 stream names one; the TS transport is not
+// played: Firefox’s media source has no support for it), and the
+// segments in play order with the sequence number the cipher’s default
+// answer derives its counter from. VOD only: an ENDLIST at the end. A
+// live playlist is a promise the frame cannot keep honestly yet, and a
+// plan that is not said is a plan the frame does not ask after.
+export const CIPHER_PLAN = 'nocturnePlan';
+
+// A bound on the plan’s own size, for the same reason the sweep has
+// its budget: a playlist that never ends cannot be promised to the
+// frame whole.
+export const MAX_PLAN_SEGMENTS = 4096;
+
+// One segment’s ask, up: the frame holds the plan, and the bytes are
+// asked for one address at a time — the key itself never crosses to
+// the page’s side of the wire.
+export const CIPHER_ASK = 'nocturneCipherAsk';
+
+// The segment’s answer, down: clonable bytes, or an honest null — a
+// fetch that failed or a segment the plan never knew is a miss, not an
+// error at the caller.
+export const CIPHER_BYTES = 'nocturneCipherBytes';
+
 // The popup’s one question and the hub’s alone to answer: how many films
 // the whole tab holds, and how many frames stream one the count cannot
 // confirm. A frame asking is answered nothing — the speaker’s envelope
@@ -86,6 +123,32 @@ export const sayDossier = (ear) => ({
   doc: ear?.doc,
   chain: (ear?.chain ?? []).slice(),
   shape: ear?.shape ?? null,
+});
+
+// The cipher’s voice, said from a manifest the bus fetched and read.
+export const sayCipher = (cipher, url) => ({ type: CIPHER, cipher, url });
+
+// The plan, said from a manifest parsed to end: the init segment’s
+// address or null, the segments in play order with the sequence number
+// each one is counted as. Both are a copy — an ear’s arrays are the
+// word’s own, not the worker’s.
+export const sayCipherPlan = (plan) => ({
+  type: CIPHER_PLAN,
+  url: plan.url,
+  codecs: plan.codecs,
+  init: plan.init,
+  segments: plan.segments.map((one) => ({ url: one.url, seq: one.seq })),
+});
+
+// One segment’s ask, said up by the frame holding the plan.
+export const askCipherSegment = (url) => ({ type: CIPHER_ASK, url });
+
+// The answer, said down with clonable bytes — or an honest null when
+// the ask came to nothing.
+export const sayCipherBytes = (url, bytes) => ({
+  type: CIPHER_BYTES,
+  url,
+  bytes,
 });
 
 // The popup’s question, carrying the tab it reads.
@@ -152,6 +215,65 @@ export const asDossier = (word) => {
     chain: word.chain.filter(isSpelled),
     shape: SHAPES.includes(word.shape) ? word.shape : null,
   };
+};
+
+// The cipher’s voice, believed only for a scheme the extension knows
+// and a manifest the wire actually saw.
+export const asCipher = (word) => {
+  if (!isWord(word) || word.type !== CIPHER || !CIPHERS.includes(word.cipher)) {
+    return null;
+  }
+  if (!isSpelled(word.url)) return null;
+  return { cipher: word.cipher, url: word.url };
+};
+
+// The plan, believed only whole: a manifest named, an fmp4 codec list
+// or none at all, an init address that is either spelled or absent,
+// and segments that each name an address and a whole sequence number —
+// trimmed to the plan’s bound, because a playlist that outgrows the
+// bound is live in spirit even if its ENDLIST says otherwise.
+export const asCipherPlan = (word) => {
+  if (!isWord(word) || word.type !== CIPHER_PLAN || !isSpelled(word.url)) {
+    return null;
+  }
+  if (word.init !== null && word.init !== undefined && !isSpelled(word.init)) {
+    return null;
+  }
+  if (!Array.isArray(word.segments)) return null;
+  const segments = [];
+  for (const one of word.segments) {
+    if (!isWord(one) || !isSpelled(one.url) || !isCount(one.seq)) return null;
+    segments.push({ url: one.url, seq: Math.floor(one.seq) });
+    if (segments.length === MAX_PLAN_SEGMENTS) break;
+  }
+  if (segments.length === 0) return null;
+  const codecs = isSpelled(word.codecs) ? word.codecs : null;
+  return {
+    url: word.url,
+    codecs,
+    init: isSpelled(word.init) ? word.init : null,
+    segments,
+  };
+};
+
+// A segment’s ask, believed only with an address.
+export const asCipherAsk = (word) => {
+  if (!isWord(word) || word.type !== CIPHER_ASK || !isSpelled(word.url)) {
+    return null;
+  }
+  return { url: word.url };
+};
+
+// The answer, believed only whole: an address, and bytes that are a
+// real buffer — or a plain null, the miss the caller is owed instead
+// of an error.
+export const asCipherBytes = (word) => {
+  if (!isWord(word) || word.type !== CIPHER_BYTES || !isSpelled(word.url)) {
+    return null;
+  }
+  if (word.bytes === null) return { url: word.url, bytes: null };
+  if (!(word.bytes instanceof ArrayBuffer)) return null;
+  return { url: word.url, bytes: word.bytes };
 };
 
 // The popup’s question, believed only with a tab to read.

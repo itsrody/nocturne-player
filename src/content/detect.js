@@ -129,7 +129,7 @@ export const pickPrimary = (videos) => {
 // session open, a site switched off — read fresh at every saying,
 // because a want the report could only copy once would go stale on the
 // book it answers.
-export const createVideoWatcher = (dom, up, want) => {
+export const createVideoWatcher = (dom, up, want, repair = null) => {
   const playable = new Set();
   const armed = new Set();
   let primary = null;
@@ -235,6 +235,14 @@ export const createVideoWatcher = (dom, up, want) => {
     // page, and the page is honest about that by itself.
     for (const video of found) {
       arm(video);
+      // The repair arm is asked before the judgement: an element the
+      // element’s own reading could not carry may be one the plan the
+      // bus said can be fed through — and an element being fed is
+      // eroded until the metadata lands, so the judgment that would
+      // refuse it now has it elected on the next beat instead, like
+      // any film the walk has just met. A watcher made without the arm
+      // (every caller but the cipher’s) judges as it always did.
+      if (repair !== null) repair(video);
       if (isPlayable(video)) playable.add(video);
       else playable.delete(video);
       // Every film the walk meets rides the approach watch: its drawing

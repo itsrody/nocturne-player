@@ -8,10 +8,17 @@ import { createDebug } from '../lib/debug.js';
 import { chainHosts } from '../lib/chain.js';
 import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
-import { asDossier, asStrain, asVerdict } from '../lib/protocol.js';
+import {
+  asCipher,
+  asCipherPlan,
+  asDossier,
+  asStrain,
+  asVerdict,
+} from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import { createDomManager } from './dom.js';
+import { createCipherFeeder } from './video/cipherfeeder.js';
 import { knockWarm, warmEngines } from './video/engines.js';
 import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
@@ -123,6 +130,13 @@ const start = async () => {
   // shouting; it is spoken into the diagnostics when they are on.
   let heard = null;
 
+  // The playable plan the bus said, kept under the same rules as the
+  // dossier: one copy, replaced whole by the next, never read by
+  // anything that does not already hold the film it is a plan of — the
+  // feeder below only plays it on an element errored on exactly the
+  // manifest the plan was read from.
+  let plan = null;
+
   // The family the bus named for this frame’s film, read fresh at every
   // asking. The dossier is spoken once per document’s life and the
   // shape rides it already, so the reading here is the dossier’s own
@@ -140,6 +154,19 @@ const start = async () => {
     const strainWord = asStrain(word);
     if (strainWord !== null) {
       strain.emit();
+      return;
+    }
+    const planWord = asCipherPlan(word);
+    if (planWord !== null) {
+      plan = planWord;
+      return;
+    }
+    const cipherWord = asCipher(word);
+    if (cipherWord !== null) {
+      // The cipher’s own voice is diagnostics only for now: a
+      // sample-aes stream is named honestly but not played, and an
+      // aes-128 stream’s playable half rides the plan word above.
+      debug('the bus named the cipher', cipherWord.cipher, cipherWord.url);
       return;
     }
     const dossierWord = asDossier(word);
@@ -171,11 +198,23 @@ const start = async () => {
   // observer of its own any more.
   const dom = createDomManager(window, document);
 
+  // The cipher’s playback arm: the feeder that takes an errored element
+  // over when the bus has said a plan for its stream. It is made here —
+  // before the watcher, which asks it the repair arm in every sweep —
+  // and it keeps its own asks and answers on the frame’s port.
+  const feeder = createCipherFeeder(up, () => plan);
+
   // The frame’s arm of the manager, ending in the handshake with the
   // background: the watch handed the manager’s story and the frame’s
-  // own port, and the want as a fresh reading — a session open, a site
-  // switched off — the watch answers for itself.
-  const watcher = createVideoWatcher(dom, up, () => !session && isWatched());
+  // own port, the want as a fresh reading — a session open, a site
+  // switched off — the watch answers for itself, and the feeder as the
+  // repair arm a film that errored is offered before it is judged.
+  const watcher = createVideoWatcher(
+    dom,
+    up,
+    () => !session && isWatched(),
+    feeder.repair,
+  );
 
   // The film in hand is the badge’s news: the badge is re-aimed where
   // the frame may still have a film, and the word to the background —
