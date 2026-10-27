@@ -273,23 +273,38 @@
   top: 20px;
   left: 50%;
   transform: translate(-50%, -8px);
-  /* Sized for a 12pt voice: the words keep their point size, and the bubble
-     carries them with less air round about. Shaped as the bar's own ink
-     pill — the same 999px stadium, the same rim inside the ink — so the
-     two containers read as one material speaking in two places. */
-  padding: 7px 14px;
+  /* Sized for a 14pt voice: the words keep their point size at the reading
+     size, and the bubble carries them with less air round about. Shaped
+     as the bar's own ink pill — the same 999px stadium, the same rim
+     inside the ink — so the two containers read as one material speaking
+     in two places. */
+  padding: 8px 15px;
   border-radius: 999px;
   background: var(--ink);
   box-shadow:
     inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
     var(--shadow-soft);
-  font-size: 12pt;
+  font-size: 14pt;
   font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   opacity: 0;
   pointer-events: none;
   transition:
     opacity 200ms var(--ease),
     transform 260ms var(--ease);
+}
+
+/* The drawn arrow pair before the words: solid wedges at the words' own
+   ink — bold the way the ▶▶ pairs were, narrow where those were wide,
+   standing taller than the words so the mark reads first. Sized in the
+   text's own measure (em), so the wedges ride whatever voice the words
+   are given and never drift out of scale with a line. */
+.toast svg {
+  width: 1.3em;
+  height: 1.3em;
+  display: block;
 }
 
 .toast.is-visible {

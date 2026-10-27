@@ -156,6 +156,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   clamp's to mute: a system asked for less motion gets the slide anyway,
   for its rise and fall is how the picture answers the hand, not
   ornament.
+- **The toast speaks in narrow chevrons.** The skip run's total and the
+  hold speed's mark are written behind a drawn pair of solid chevron
+  wedges — narrow, tucked one over the other, bold like the triangle
+  pairs that used to stand there — at a larger 14pt voice, the wedges
+  sized in the text's own measure so they scale with it rather than
+  holding a fixed footprint.
 - **A tap on the middle toggles the film.** Where a running picture
   stands, a tap on the narrow centre strip pauses it; where a resting one
   waits, it plays. The bar lifts with the icon's change, so the toggle

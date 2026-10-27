@@ -79,6 +79,23 @@ const buildIcon = (path) =>
     el('path', { d: path }),
   ]);
 
+// The toast's own mark: two solid chevron wedges, drawn narrow and tucked
+// so the front one's tip rides over the rear one's base — the pair reads
+// as one glyph of doubled direction, at the weight of the triangle pair it
+// replaced rather than the hairline the strokes would have given. The
+// union is one ink, so the overlap joins clean. The back is the same
+// drawing read from the other side.
+const buildNoticeArrow = (isForward) =>
+  el('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
+    el('path', {
+      d: isForward
+        ? 'M6 6.5 13 12 6 17.5ZM12.5 6.5 19.5 12 12.5 17.5Z'
+        : 'M18 6.5 11 12 18 17.5ZM11.5 6.5 4.5 12 11.5 17.5Z',
+      fill: 'currentColor',
+      stroke: 'none',
+    }),
+  ]);
+
 const buildButton = (label, icon, onClick, className = 'button') => {
   const attributes = { class: className, type: 'button', title: label };
   const graphic = typeof icon === 'string' ? buildIcon(icon) : icon;
@@ -212,9 +229,15 @@ export const createOverlay = ({
   let holdRate = 0;
 
   // A duration of null keeps the toast up until hideToast takes it down: the
-  // 2x label stays for as long as the finger does.
-  const showToast = (text, duration = TOAST_MS) => {
-    toast.textContent = text;
+  // 2x label stays for as long as the finger does. A lead icon — the drawn
+  // arrow pair — rides before the words when a voice is carried with it;
+  // plain notices keep textContent, since they need no mark at all.
+  const showToast = (text, duration = TOAST_MS, lead = null) => {
+    if (lead === null) {
+      toast.textContent = text;
+    } else {
+      toast.replaceChildren(lead, el('span', { text }));
+    }
     toast.classList.add('is-visible');
     if (toastTimer !== null) clearTimeout(toastTimer);
     toastTimer = null;
@@ -452,9 +475,13 @@ export const createOverlay = ({
       // seeking tap and nothing rides on the recognizer's run bookkeeping.
       const side = seconds > 0 ? skipAccount.forward : skipAccount.back;
       side.total += SKIP_SECONDS;
-      const text =
-        seconds > 0 ? `▶▶ ${side.total} seconds` : `◀◀ ${side.total} seconds`;
-      showToast(text);
+      // The mark is drawn, not typed: the arrow pair rides before the
+      // count, its direction the side the taps spoke.
+      showToast(
+        `${side.total} seconds`,
+        TOAST_MS,
+        buildNoticeArrow(seconds > 0),
+      );
       // The other direction's ledger closes when this one speaks: a flip
       // is a fresh walk, not a step of the old one.
       clearAccount(seconds > 0 ? skipAccount.back : skipAccount.forward);
@@ -465,7 +492,7 @@ export const createOverlay = ({
       if (isPanelOpen()) return;
       stopHold();
       releaseHold = holdForward();
-      showToast(`${holdSpeed}x ▶▶`, null);
+      showToast(`${holdSpeed}x`, null, buildNoticeArrow(true));
     },
     holdEnd: () => stopHold(),
     dragStart: ({ x, y }) => {
