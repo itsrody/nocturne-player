@@ -1,6 +1,6 @@
-// One duty, one file: the frame's story of the page it stands in. What a
+// One duty, one file: the frame’s story of the page it stands in. What a
 // move of the page is has one hearing here — a burst of mutations, a
-// resize, the tab seen again, a film drawing nearer, the network's knock
+// resize, the tab seen again, a film drawing nearer, the network’s knock
 // about bytes already crossing the bus — all of it is the same ask,
 // answered once, on one beat, by whoever asked to hear moves at all. The
 // discipline is the whole cost of the module:
@@ -21,20 +21,20 @@
 import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
 
-// The beat the page is heard on — the sweep's old own tempo, carried by
+// The beat the page is heard on — the sweep’s old own tempo, carried by
 // the manager now, because every ask is a move and the beat is where
 // moves are answered.
 const BEAT_MS = 250;
 
 // The margin the approach eye watches past the viewport. The option
-// shipped in Firefox 141 and the extension's floor is 158, so the option
+// shipped in Firefox 141 and the extension’s floor is 158, so the option
 // is always understood — and the coarse scroll listener an older page
 // once paid for instead has nothing left to stand in for.
 const APPROACH_MARGIN = '25%';
 
 // `home` is the window the resize is heard from; `doc` is the document
-// the eye watches and the hidden verdict is read from. The clock's knobs
-// are the timer slot's own: tests visit a ledger, production a real
+// the eye watches and the hidden verdict is read from. The clock’s knobs
+// are the timer slot’s own: tests visit a ledger, production a real
 // clock, and the manager is written as if the two were the same thing.
 export const createDomManager = (
   home,
@@ -45,8 +45,8 @@ export const createDomManager = (
   const moved = createSignal();
 
   // The elements the approach eye keeps under watch, until the page
-  // itself forgets them — the sweeping of the forgotten is the beat's
-  // own work, so nobody's bookkeeping ever has to say goodbye.
+  // itself forgets them — the sweeping of the forgotten is the beat’s
+  // own work, so nobody’s bookkeeping ever has to say goodbye.
   const kept = new Set();
 
   // How many ears stand, and the two eyes — none of which exist before
@@ -89,12 +89,12 @@ export const createDomManager = (
 
   function onVisibility() {
     // The beat that sat out while the page was hidden takes its arm
-    // here: the walk the hidden page deferred is the seen page's first
+    // here: the walk the hidden page deferred is the seen page’s first
     // business.
     if (!doc.hidden) ask();
   }
 
-  // The eye stands when the first ear stands: the document's own
+  // The eye stands when the first ear stands: the document’s own
   // MutationObserver, the visibility hearing, and the resize are one
   // arrangement, and no ear of the page changes it.
   function standUp() {
@@ -124,9 +124,9 @@ export const createDomManager = (
   }
 
   return {
-    // The ear of the page's story. The ear's leaving, if it was the
+    // The ear of the page’s story. The ear’s leaving, if it was the
     // last, is the story standing itself down — the eye, the approach
-    // eye and the beat all go with it, at no hand's word.
+    // eye and the beat all go with it, at no hand’s word.
     onMove: (listener) => {
       const off = moved.on(listener);
       ears += 1;
@@ -139,7 +139,7 @@ export const createDomManager = (
     },
 
     // Keep an element on the approach watch: its drawing nearer is a
-    // move, asked for by the eye, and its forgetting is the beat's work.
+    // move, asked for by the eye, and its forgetting is the beat’s work.
     // Asking twice for the same element is one watch — observing the
     // same element again is a cost with no gain.
     keepNear: (element) => {
@@ -153,8 +153,8 @@ export const createDomManager = (
       approacher.observe(element);
     },
 
-    // The one ask, for the moments outside the eye's own hearing: a
-    // media event the listener knows first, the network's knock from the
+    // The one ask, for the moments outside the eye’s own hearing: a
+    // media event the listener knows first, the network’s knock from the
     // background. It answers like any other move — one beat, for a burst
     // of asks one beat still.
     ask,

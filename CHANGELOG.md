@@ -68,6 +68,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The frame carries the manager's arm, and the arm ends in the
+  handshake.** The film watcher is three body parts in one file: the
+  budgeted walk (the only whole-document walk a frame keeps — mutations
+  say something changed, never what); the **hooks** — every film the
+  walk meets is armed on itself, its own native moments (play, pause,
+  metadata landing) and the approach watch re-asking where the change
+  is spoken instead of every stray media event in the page document-wide,
+  and the arms' only payback is the page forgetting the element; and
+  the **handshake** — the frame's word to the background is the
+  watcher's own, said on the port it is handed: the count and the want,
+  the want read fresh at every saying so a session open or a site
+  switched off is answered on the same word. The frame's era stays the
+  frame's: the announcement re-asks the word, and the word waits for it.
+  A sweep that settles nothing is silent — no news, no word — and a
+  count the book already carries is not said again.
 - **Every move the page makes is heard through one manager.** The frame's
   watch on its document — mutations, the tab seen again, a resize, a
   film drawing nearer, the network's knock — is one debounced beat told

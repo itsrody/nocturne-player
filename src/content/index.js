@@ -8,7 +8,7 @@ import { createDebug } from '../lib/debug.js';
 import { chainHosts } from '../lib/chain.js';
 import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
-import { asDossier, asStrain, asVerdict, sayReport } from '../lib/protocol.js';
+import { asDossier, asStrain, asVerdict } from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import { createDomManager } from './dom.js';
@@ -17,9 +17,9 @@ import { createSession } from './session.js';
 
 const PERSIST_DELAY_MS = 400;
 
-// The diagnostics voice of the wire room: the dossier's arrival is the
+// The diagnostics voice of the wire room: the dossier’s arrival is the
 // one thing this file can say that nothing else knows how to say — it is
-// the background's evidence about this frame's film, earned at the bus.
+// the background’s evidence about this frame’s film, earned at the bus.
 const debug = createDebug('wire');
 
 const isDocumentSupported = () =>
@@ -29,10 +29,10 @@ const isDocumentSupported = () =>
 
 const start = async () => {
   if (!isDocumentSupported()) return;
-  // The standing sign of this frame's field agent: set on the first boot
+  // The standing sign of this frame’s field agent: set on the first boot
   // and consulted before any of the arrangement below runs again. The
   // conscription may reach this bundle twice — a targeted boot for the
-  // film's own frame, and the relay sweep that names no frameIds — and
+  // film’s own frame, and the relay sweep that names no frameIds — and
   // the check and the set are synchronous on purpose: two evals racing
   // meet at exactly one statement, and the loser leaves without opening
   // a port.
@@ -41,7 +41,7 @@ const start = async () => {
 
   // A player embedded in an iframe honours the decision the user made about
   // the page they can actually see, and every named origin between the film
-  // and the eye counts — the whole chain arrives from this document's own
+  // and the eye counts — the whole chain arrives from this document’s own
   // location, same-origin and cross-origin alike.
   const hosts = chainHosts(location);
   let session = null;
@@ -61,7 +61,7 @@ const start = async () => {
   // dropped every field touched before it — a warmth turned down and then a
   // brightness turned up, and the warmth never reached storage at all. The
   // debouncer is a timer slot: rearms replace, and nothing about the ledger
-  // is the slot's business.
+  // is the slot’s business.
   const persistTimer = createTimerSlot(() => {
     const patchToWrite = pendingPatch;
     pendingPatch = null;
@@ -85,55 +85,47 @@ const start = async () => {
 
   // The slot keeps its climb on the page wire this round — widening an
   // element means widening an element in a document the hub cannot reach
-  // into — and the rider below carries the frame's half of it. A rider is
-  // asked of every frame but the top: the top's room is the viewport
+  // into — and the rider below carries the frame’s half of it. A rider is
+  // asked of every frame but the top: the top’s room is the viewport
   // itself, and there is no window above it to ask.
 
   // The wiring of this frame is a cycle, and it is cut two ways rather than
-  // by one hand-bound bag: the questions asked late — the count this frame
-  // reports with, and whether this frame wants the badge, both of which need
-  // the watcher standing below them — are queries rebound once their answer
-  // exists, and the moments said across the cycle — a verdict arriving from
-  // the hub, and the announcement that closes the arrangement — are
-  // signals, fired by whoever says them without knowing who hears yet.
-  let liveCount = () => 0;
-  let wantsBadge = () => false;
+  // by one hand-bound bag: the watcher’s want — whether this frame has a
+  // session open and whether the site is watched — is read fresh at every
+  // saying instead of copied once, and the moments said across the cycle —
+  // a verdict arriving from the hub, and the announcement that closes the
+  // arrangement — are signals, fired by whoever says them without knowing
+  // who hears yet.
   const grant = createSignal();
   const announce = createSignal();
-  // A moment the hub says and only the watcher hears: the network's word
-  // that a film's bytes are already crossing the tab — before the
+  // A moment the hub says and only the watcher hears: the network’s word
+  // that a film’s bytes are already crossing the tab — before the
   // element has landed, before the metadata has arrived. Fired by the
   // word, heard by whoever comes below it.
   const strain = createSignal();
 
-  // The frame's seat of life: one runtime port to the background's hub,
+  // The frame’s seat of life: one runtime port to the background’s hub,
   // opened once and kept for the life of the document. The browser attests
   // to the envelope — tab and frame are facts the pages cannot forge — so
   // nothing is minted here anymore to say who is speaking. The port is
-  // also the death notice: when this document is torn down, the port's
-  // disconnect is the hub's word that the frame is gone, and the book
-  // frees the seat with no clock to wait out.
+  // also the death notice: when this document is torn down, the port’s
+  // disconnect is the hub’s word that the frame is gone, and the book
+  // frees the seat with no clock to wait out. The watcher below carries
+  // the frame’s half of this same handshake: its own findings, said on
+  // the port it is handed.
   const up = browser.runtime.connect({ name: 'nocturneSeat' });
 
-  // The frame's word about itself, on the announce moment: what it wants
-  // and what it found, said plain. The hub keeps the book, so no beat
-  // needs to walk beneath the words — silence here is a fact with an
-  // event attached, not a guess the seat must ride out.
-  const report = () => {
-    up.postMessage(sayReport(wantsBadge(), liveCount()));
-  };
-
   // The dossier this frame hears back, kept only until the next: the
-  // background's evidence from the bus — where the film's bytes came
+  // background’s evidence from the bus — where the film’s bytes came
   // from, what spoke for them, every origin standing above this frame.
   // The DOM cannot see any of it, and this frame cannot re-earn it by
   // shouting; it is spoken into the diagnostics when they are on.
   let heard = null;
 
-  // Three words ride back, and each is heard through the protocol's own
+  // Three words ride back, and each is heard through the protocol’s own
   // guard, so a half-formed word is refused whole and never half-acted
-  // on: the seat's news by the badge's own arrangement, the wire's
-  // strain by the scheduling signal — the sweep's own debounce keeps a
+  // on: the seat’s news by the badge’s own arrangement, the wire’s
+  // strain by the scheduling signal — the sweep’s own debounce keeps a
   // burst of segment-fetch knocks from becoming a burst of walks — and
   // the dossier by the record above.
   up.onMessage.addListener((word) => {
@@ -154,8 +146,8 @@ const start = async () => {
     grant.emit();
   });
 
-  // The badge's answer for a film, said once and asked of wherever the
-  // news comes from: a watcher's sweep, a verdict arriving from the hub,
+  // The badge’s answer for a film, said once and asked of wherever the
+  // news comes from: a watcher’s sweep, a verdict arriving from the hub,
   // or the player handing its film back. The film is always given — each
   // caller knows it, and the answer needs no second opinion.
   const retune = (primary) => {
@@ -163,38 +155,45 @@ const start = async () => {
     else badge.hide();
   };
 
-  // The page's story of itself, one for the whole frame: a single eye on
+  // The page’s story of itself, one for the whole frame: a single eye on
   // the document, one beat for every origin of a move — mutations, the
-  // tab seen again, a resize, films drawing nearer, the network's knock
+  // tab seen again, a resize, films drawing nearer, the network’s knock
   // — stood when the first listener reaches it and stood down behind the
   // last. The watcher below is its first ear; nothing here wires an
   // observer of its own any more.
   const dom = createDomManager(window, document);
 
-  const watcher = createVideoWatcher((primary) => {
+  // The frame’s arm of the manager, ending in the handshake with the
+  // background: the watch handed the manager’s story and the frame’s
+  // own port, and the want as a fresh reading — a session open, a site
+  // switched off — the watch answers for itself.
+  const watcher = createVideoWatcher(dom, up, () => !session && isWatched());
+
+  // The film in hand is the badge’s news: the badge is re-aimed where
+  // the frame may still have a film, and the word to the background —
+  // the count and the want — rides the announcement below.
+  watcher.news.on((primary) => {
     if (session) return;
     retune(primary);
     announce.emit();
-  }, dom);
+  });
 
-  liveCount = () => watcher.getCount();
-
-  // A verdict arriving from the hub is the badge's news with the film the
+  // A verdict arriving from the hub is the badge’s news with the film the
   // watcher holds: the answer is re-asked of the frame as it stands now.
   grant.on(() => retune(watcher.getPrimary()));
 
-  // The wire's strain is the sweep's earliest knock: a film's manifest is
+  // The wire’s strain is the sweep’s earliest knock: a film’s manifest is
   // often fetched before its element is ever inserted, so the hearing
-  // here can open the walk a beat before the eye's own.
+  // here can open the walk a beat before the eye’s own.
   strain.on(() => watcher.poke());
-
-  wantsBadge = () => !session && watcher.getPrimary() !== null && isWatched();
 
   announce.on(() => {
     // One call covers the whole arrangement: the frame tells the hub what
     // it wants and what it found, and the hub — where the book of frames
-    // stands — reconsiders the seat with that knowledge in hand.
-    report();
+    // stands — reconsiders the seat with that knowledge in hand. The
+    // word itself is the watcher’s; the era is the frame’s, because the
+    // session and the settings are news the watch cannot know alone.
+    watcher.report();
   });
 
   const apply = () => {
@@ -212,13 +211,13 @@ const start = async () => {
   };
 
   // The whole slot story, stood up in one call: the keepers — every
-  // document, the top's included, growing the box of whichever child
+  // document, the top’s included, growing the box of whichever child
   // speaks and passing the word up — and, beside them in every framed
   // document, the rider that asks for the room. The climb stays on the
-  // page's own wire — widening an element means widening an element in a
+  // page’s own wire — widening an element means widening an element in a
   // document the hub cannot reach into — and the answer here is the one
   // verb the session needs: slot(open). At the top the verb means
-  // nothing; the top's room is the viewport itself.
+  // nothing; the top’s room is the viewport itself.
   const slots = createSlot(window, document);
 
   badge.activate.on(async (video) => {
@@ -260,9 +259,9 @@ const start = async () => {
 };
 
 // One field agent per frame, whatever route the background took to reach
-// it — the boot flag's check is read here, before the arrangement's first
+// it — the boot flag’s check is read here, before the arrangement’s first
 // await, by any repeat eval of this same bundle. The supported check and
-// the flag's set are the only run of statements the bundle makes twice;
+// the flag’s set are the only run of statements the bundle makes twice;
 // a frame the platform refuses loses nothing but the parse.
 if (!globalThis.__nocturneField) {
   start().catch((error) => {
