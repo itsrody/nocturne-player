@@ -133,7 +133,6 @@ export const createOverlay = ({
 }) => {
   const surface = el('div', { class: 'layer surface' });
   const toast = el('div', { class: 'toast' });
-  const topbar = el('div', { class: 'topbar' });
   const chrome = el('div', { class: 'chrome' });
   const cueBox = el('div', { class: 'cue' });
   const filePicker = el('input', {
@@ -546,11 +545,18 @@ export const createOverlay = ({
     'button exit-button',
   );
 
+  buttons.fullscreen = buildButton('Fullscreen', ICON.fullscreen, () => {
+    onFullscreen();
+    setChromeVisible(false);
+  });
+  buttons.fullscreen.classList.add('is-windowed-only');
+
   // The control bar carries everything the thumb works — transport before
-  // the ruler, and the tail trailing the clock: the gear, then the way out
-  // at its very end. Opening the settings and leaving the film are reaches
-  // along the edge the hand is already on, not walks to the top corner it
-  // never visits while scrubbing. The middle of the picture belongs to the
+  // the ruler, and the tail trailing the clock: the gear, the way out at
+  // its end, and the way back into fullscreen after it. Opening the
+  // settings, leaving the film and changing the screen are reaches along
+  // the edge the hand is already on, not walks to a top corner it never
+  // visits while scrubbing. The middle of the picture belongs to the
   // gestures alone.
   controlBar.setControls(
     [
@@ -558,19 +564,11 @@ export const createOverlay = ({
       buttons.play,
       buildSkipButton(SKIP_SECONDS),
     ],
-    [buttons.menu, buttons.exit],
+    [buttons.menu, buttons.exit, buttons.fullscreen],
   );
-
-  buttons.fullscreen = buildButton('Fullscreen', ICON.fullscreen, () => {
-    onFullscreen();
-    setChromeVisible(false);
-  });
 
   const fullOnly = [buttons.exit, buttons.menu];
   for (const node of fullOnly) node.classList.add('is-full-only');
-  buttons.fullscreen.classList.add('is-windowed-only');
-
-  topbar.append(el('div', { class: 'spacer' }), buttons.fullscreen);
 
   // Whenever the player is out of fullscreen it offers the way back to it.
   // Playing in the box the site gave it — an embedded player's frame — it is
@@ -582,7 +580,7 @@ export const createOverlay = ({
     if (isCompact && isPanelOpen()) closePanels();
   };
 
-  chrome.append(topbar, menu.root, controlBar.root);
+  chrome.append(menu.root, controlBar.root);
 
   // Reading a file the user picked themselves, straight into the cue list.
   // Nothing leaves the device and nothing is parsed as markup.

@@ -58,35 +58,12 @@
 
 /* Each band leaves in the direction it came from, so bringing the controls
    back reads as one movement instead of a flash. */
-.topbar,
 .controlbar {
   transition: transform 340ms var(--ease);
 }
 
-.chrome[hidden] .topbar {
-  transform: translateY(-12px);
-}
-
 .chrome[hidden] .controlbar {
   transform: translateY(16px);
-}
-
-.topbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 14px 0;
-  padding-left: max(30px, env(safe-area-inset-left));
-  padding-right: max(30px, env(safe-area-inset-right));
-  pointer-events: auto;
-}
-
-.spacer {
-  flex: 1;
 }
 
 .button {
@@ -125,14 +102,11 @@
 }
 
 /* Out of fullscreen there is a way back to it; in the small box the site gave
-   the video, the sheets and the way out step aside to make room. */
+   the video, the sheets, the way out and the way back in step aside to make
+   room. */
 .chrome:not([data-windowed]) .is-windowed-only,
 .chrome[data-compact] .is-full-only {
   display: none;
-}
-
-.chrome[data-compact] .topbar {
-  padding: 6px 8px;
 }
 
 .surface {
@@ -180,10 +154,10 @@
   gap: 8px;
 }
 
-/* The gear and the way out draw their ink at the topbar's 22px grade, whose
-   own margins would space them a hand wider than the transport's cluster
-   reads. Six pixels are pulled back on the pair alone — ink to ink they
-   now sit at the cluster's own spacing, and no hit box is touched. */
+/* The gear and the way out draw their ink at the toolbar's old 22px grade,
+   whose own margins would space them a hand wider than the transport's
+   cluster reads. Six pixels are pulled back on the pair alone — ink to ink
+   they now sit at the cluster's own spacing, and no hit box is touched. */
 .controlbar .exit-button {
   margin-left: -6px;
 }
@@ -314,11 +288,10 @@
 
 .toast {
   position: absolute;
-  /* One breath under the topbar's row: a 44px button plus the compact fit's
-     own 6px pads makes 56px, and the breath after it is 8px more. The full
-     fit's row reaches 72px, so the pill rides the padding stripe into
-     neither row's buttons. */
-  top: 64px;
+  /* A breath off the top edge: the frame holds no top row to clear, so the
+     pill hangs its own padding's worth down and drops into place from
+     above. */
+  top: 20px;
   left: 50%;
   transform: translate(-50%, -8px);
   /* Sized for a 12pt voice: the words keep their point size, and the bubble
@@ -373,7 +346,9 @@
    a soft shadow still lift it off a dark scene. */
 .panel {
   position: absolute;
-  top: 60px;
+  /* A breath under the edge, matching the toast's seat: no top row sits
+     above to clear, so the sheets hang their own padding's worth down. */
+  top: 20px;
   right: max(30px, env(safe-area-inset-right));
   width: min(330px, 50vw);
   padding: 10px 12px;
@@ -791,8 +766,7 @@
 /* Hidden controls must not swallow a tap meant for the picture underneath. */
 .chrome[hidden] .play-button,
 .chrome[hidden] .skip-button,
-.chrome[hidden] .seek-area,
-.chrome[hidden] .topbar {
+.chrome[hidden] .seek-area {
   pointer-events: none;
 }
 
@@ -879,7 +853,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .chrome,
-  .topbar,
   .controlbar,
   .toast,
   .cue,
