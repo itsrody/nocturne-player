@@ -58,7 +58,10 @@ const sourceLabel = (source, index) => {
   return match ? `${match[1]}p` : `Source ${index + 1}`;
 };
 
-const createSourceAdapter = (video) => {
+// Exported for the tests: quality.test.js reaches the adapters through
+// createQuality's injected list so the coordinator contract is what is
+// exercised, and these two are the ones a fixture can wire up directly.
+export const createSourceAdapter = (video) => {
   const sources = Array.from(video.querySelectorAll('source'));
   if (sources.length < 2) return null;
 
@@ -77,20 +80,28 @@ const createSourceAdapter = (video) => {
       return found ? found.id : null;
     },
     // The element is reloaded, so the position and the playing state are
-    // carried across by hand.
+    // carried across by hand. The one listener rides both off-ramps:
+    // metadata is the happy landing, error the failed one. Without the
+    // error leg the restore leaked for the life of the element on a dead
+    // source — and a leaked restore is worse than a leak, because a later
+    // rung's loadedmetadata then fired the first rung's stale position and
+    // playing state at it.
     select: (id) => {
       const option = options.find((entry) => entry.id === id);
       if (!option || video.currentSrc === option.src) return false;
 
       const resumeAt = video.currentTime;
       const wasPlaying = !video.paused;
-      const restore = () => {
-        video.removeEventListener('loadedmetadata', restore);
+      const settle = (event) => {
+        video.removeEventListener('loadedmetadata', settle);
+        video.removeEventListener('error', settle);
+        if (event.type !== 'loadedmetadata') return;
         video.currentTime = resumeAt;
         if (wasPlaying) video.play().catch(() => {});
       };
 
-      video.addEventListener('loadedmetadata', restore);
+      video.addEventListener('loadedmetadata', settle);
+      video.addEventListener('error', settle);
       video.src = option.src;
       video.load();
       return true;
@@ -110,7 +121,9 @@ const findYouTubePlayer = (host) => {
   return isFunction(player, 'getAvailableQualityLevels') ? player : null;
 };
 
-const createYouTubeAdapter = (video, host) => {
+// Exported for the tests: quality.test.js wires the fixtures straight up
+// rather than going through ADAPTERS' order.
+export const createYouTubeAdapter = (video, host) => {
   const player = findYouTubePlayer(host);
   if (player === null) return null;
 
@@ -145,6 +158,30 @@ const createYouTubeAdapter = (video, host) => {
     return listed.length > 0 ? listed : fromFormats();
   };
 
+  // The page's own chips say more than the ladder keys can — '2160p
+  // Premium', '1080p60', the HDR names. Not every player answers the data
+  // call, and no confirmed shape backs it, so only a rung carrying an
+  // honest string on both sides is spoken, and the synthesized labels
+  // underneath stay the rule.
+  const spoken = () => {
+    const labels = {};
+    const data = toArray(call(player, 'getAvailableQualityData'));
+    for (const entry of data) {
+      if (entry === null || typeof entry !== 'object') continue;
+      const key = read(entry, 'quality');
+      const label = read(entry, 'qualityLabel');
+      if (
+        typeof key !== 'string' ||
+        typeof label !== 'string' ||
+        label === ''
+      ) {
+        continue;
+      }
+      labels[key] = label;
+    }
+    return labels;
+  };
+
   return {
     name: 'youtube',
     hasAuto: true,
@@ -152,30 +189,41 @@ const createYouTubeAdapter = (video, host) => {
     // to work out why a film is not offering the rung they want.
     diagnose: () =>
       `${advertised().length} listed, ${fromFormats().length} in formats`,
-    list: () =>
-      levels().map((level) => ({
+    list: () => {
+      const labels = spoken();
+      return levels().map((level) => ({
         id: level,
-        label: YOUTUBE_LABELS[level] ?? level,
-      })),
+        label: labels[level] ?? YOUTUBE_LABELS[level] ?? level,
+      }));
+    },
     current: () => {
       const quality = call(player, 'getPlaybackQuality');
       return typeof quality === 'string' ? quality : null;
     },
     // Both calls together: the range is what pins the ladder for the rest of
     // the video, while setPlaybackQuality is what older players listen to.
+    // A promise is kept only where somebody could be listening: an old
+    // player with neither method would give back a chip that switched
+    // nothing, and the sheet wants to say 'the site would not change it'
+    // rather than believe it.
     select: (id) => {
+      const ranged = isFunction(player, 'setPlaybackQualityRange');
+      const pinned = isFunction(player, 'setPlaybackQuality');
+      if (!ranged && !pinned) return false;
       if (id === AUTO_ID) {
-        call(
-          player,
-          'setPlaybackQualityRange',
-          YOUTUBE_LOWEST,
-          YOUTUBE_HIGHEST,
-        );
-        call(player, 'setPlaybackQuality', AUTO_ID);
+        if (ranged) {
+          call(
+            player,
+            'setPlaybackQualityRange',
+            YOUTUBE_LOWEST,
+            YOUTUBE_HIGHEST,
+          );
+        }
+        if (pinned) call(player, 'setPlaybackQuality', AUTO_ID);
         return true;
       }
-      call(player, 'setPlaybackQualityRange', id, id);
-      call(player, 'setPlaybackQuality', id);
+      if (ranged) call(player, 'setPlaybackQualityRange', id, id);
+      if (pinned) call(player, 'setPlaybackQuality', id);
       return true;
     },
   };

@@ -54,6 +54,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The quality sheet stops promising what the site cannot honor.** A
+  `<source>` switch carried the position by hand and armed its restore on
+  `loadedmetadata` — and nothing else. A load that died left the listener
+  standing, and a leaked restore is worse than a leak: a later rung's
+  successful load then fired the failed one's stale position and playing
+  state at it. The one listener now rides both off-ramps, metadata the
+  happy landing, `error` the failed one, and stands down either way. The
+  YouTube adapter returned `true` for a rung it had never verified an old
+  player could take; the two setter methods are asked for first, and a
+  player that has neither is refused at the chip rather than believed.
+  And where the page speaks its own chips — the `2160p Premium` names, the
+  `60` marks, the HDR ones — they are taken when the data call answers
+  with an honest string both sides, the synthesized ladder labels
+  underneath staying the rule.
 - **The system's mirror speaks the player's film, and pays it back at
   release.** The bridge between the player's film and the notification
   and the media keys once set handlers and stood aside; now it says where
