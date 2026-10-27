@@ -11,6 +11,7 @@ import { createTimerSlot } from '../lib/time.js';
 import { asDossier, asStrain, asVerdict, sayReport } from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
+import { createDomManager } from './dom.js';
 import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
 
@@ -162,11 +163,19 @@ const start = async () => {
     else badge.hide();
   };
 
+  // The page's story of itself, one for the whole frame: a single eye on
+  // the document, one beat for every origin of a move — mutations, the
+  // tab seen again, a resize, films drawing nearer, the network's knock
+  // — stood when the first listener reaches it and stood down behind the
+  // last. The watcher below is its first ear; nothing here wires an
+  // observer of its own any more.
+  const dom = createDomManager(window, document);
+
   const watcher = createVideoWatcher((primary) => {
     if (session) return;
     retune(primary);
     announce.emit();
-  });
+  }, dom);
 
   liveCount = () => watcher.getCount();
 
@@ -176,7 +185,7 @@ const start = async () => {
 
   // The wire's strain is the sweep's earliest knock: a film's manifest is
   // often fetched before its element is ever inserted, so the hearing
-  // here can open the walk a beat before the MutationObserver's own.
+  // here can open the walk a beat before the eye's own.
   strain.on(() => watcher.poke());
 
   wantsBadge = () => !session && watcher.getPrimary() !== null && isWatched();

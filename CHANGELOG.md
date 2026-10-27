@@ -68,6 +68,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Every move the page makes is heard through one manager.** The frame's
+  watch on its document — mutations, the tab seen again, a resize, a
+  film drawing nearer, the network's knock — is one debounced beat told
+  by one module, in the dom-watcher shape: the eye stands when the
+  first listener reaches it and stands down behind the last, a burst of
+  asks is one beat, a move on an unseen page sits out until the tab is
+  seen again, and every film the sweep meets rides one shared approach
+  eye (the native `IntersectionObserver` with a `scrollMargin` past the
+  screen, itself silent on a page that never scrolls near). The election
+  keeps only what judging a film is — the budgeted walk, the gate, the
+  share law — and nothing in a frame wires its own document-level
+  observer any more.
 - **The background alone swears the pages in.** The manifest's content
   script — code standing in every frame of every site, waiting for
   nothing — is gone. Nothing runs in a page unless the wire said so: a

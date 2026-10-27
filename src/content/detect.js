@@ -1,5 +1,11 @@
+// One duty, one file: the election. What a film is, which film a page is
+// built around, and the budgeted walk over the document that finds them
+// — judged here. The page's story of itself — mutations, the tab seen
+// again, a resize, a film drawing nearer, the network's knock — is heard
+// through dom.js's manager; this file is only its listener, asked to
+// sweep exactly when a move is said, and never wired to an observer of
+// its own.
 import { createDebug } from '../lib/debug.js';
-import { createTimerSlot } from '../lib/time.js';
 
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
@@ -21,24 +27,7 @@ const debug = createDebug('detect');
 // from being the reason the page stands.
 const MAIN_MIN_SHARE = 0.5;
 const MAIN_DOMINANCE = 2;
-const RESCAN_DELAY_MS = 250;
 const HAVE_METADATA = 1;
-
-// A scroll used to schedule a rescan of its own, every tick of the debounce,
-// for as long as the page kept moving — the same sweep paid over and over on
-// the way to a video it would only reach at the end. What the scroll was
-// really saying is that the neighbourhood of the viewport has changed, which
-// is what the approach observer watches instead: every video the last sweep
-// found is kept under observation with a margin past the screen, and their
-// drawing nearer — alone, and not the scroll itself — asks for the next
-// sweep. A scroll that goes nowhere near a film costs nothing.
-const APPROACH_MARGIN = '25%';
-
-// The margin shipped in Firefox 141 and the extension's floor is 158: the
-// option is always understood, and the coarse scroll listener an older page
-// once paid for instead has nothing left to stand in for.
-const makeApproachObserver = (onApproach) =>
-  new IntersectionObserver(onApproach, { scrollMargin: APPROACH_MARGIN });
 
 // The budget the find-sweep walks under, counted per element visited. Where
 // querySelectorAll('*') materialised a whole tree before a budget could
@@ -108,13 +97,11 @@ export const pickPrimary = (videos) => {
   return best.video;
 };
 
-export const createVideoWatcher = (onPrimaryChange) => {
+export const createVideoWatcher = (onPrimaryChange, dom) => {
   const playable = new Set();
   let primary = null;
-  let observer = null;
   let isRunning = false;
-  let approacher = null;
-  const watched = new Set();
+  let offBeat = null;
 
   // The sweep's walkers, left standing between rescans: where one pass
   // stopped, the next resumes — a tree the budget ran out under is covered
@@ -156,20 +143,21 @@ export const createVideoWatcher = (onPrimaryChange) => {
       if (budget <= 0) break;
     }
     // `spent` says the budget, not the tree, drew the line under this pass;
-    // the walk standing in `walkStack` resumes on the sweep re-armed below.
+    // the walk standing in `walkStack` resumes on the next beat the
+    // manager answers.
     return { found, spent: budget <= 0 };
   };
 
-  // The sweep, a hoisted name so the slot below can name it: rescan and
-  // the moment it runs at need each other for their bodies.
-  const rescanTimer = createTimerSlot(rescan);
-  function rescan() {
-    // A hidden document paints nothing a sweep could serve, and rect and
-    // style reads are forced layout on it; the sweep sits out, and the tab
-    // being seen again is what re-arms it.
+  // The sweep, a hoisted name so start can argue it below. The beat it
+  // answers arrives already clean: the manager has sat it out while the
+  // page was hidden, and this file keeps its one belt for the first
+  // answer it gives itself on start.
+  function sweep() {
     if (document.hidden) return;
     const { found, spent } = collectVideos();
-    if (spent) rescanTimer.set(RESCAN_DELAY_MS);
+    // A piece the budget stopped under asks for its continuation: the
+    // next beat is the next piece, and the walk below answers it.
+    if (spent) dom.ask();
     // The playable set is not cleared and rebuilt here, as it was when one
     // sweep covered the whole document: a pass covers a piece of it, and a
     // clear would drop films a later pass has not reached yet — the elected
@@ -179,22 +167,10 @@ export const createVideoWatcher = (onPrimaryChange) => {
     for (const video of found) {
       if (isPlayable(video)) playable.add(video);
       else playable.delete(video);
-      // Position changes of known films come through the approach observer
-      // rather than through scrolls, so every video the sweep meets is kept
-      // on watch. An element the page has let go of is one it has forgotten:
-      // the watch is dropped with it, which is what keeps the set of watched
-      // elements from growing without end across a long visit.
-      if (approacher !== null && !watched.has(video)) {
-        watched.add(video);
-        approacher.observe(video);
-      }
-    }
-    if (approacher !== null) {
-      for (const video of watched) {
-        if (video.isConnected) continue;
-        approacher.unobserve(video);
-        watched.delete(video);
-      }
+      // Every film the sweep meets rides the approach watch: its
+      // drawing nearer is a move the manager says, where a scroll that
+      // goes nowhere near costs nothing. Asking twice is one watch.
+      dom.keepNear(video);
     }
     for (const video of playable) {
       // A film the page let go of stops being a film by the same honesty
@@ -213,49 +189,32 @@ export const createVideoWatcher = (onPrimaryChange) => {
     onPrimaryChange(primary, playable.size);
   }
 
-  const scheduleRescan = () => {
-    if (rescanTimer.isOn()) return;
-    rescanTimer.set(RESCAN_DELAY_MS);
-  };
-
-  // The tab coming back into view is a sweep's invitation as much as any
-  // event is: sweeps sat out while it was hidden.
-  const onVisibility = () => {
-    if (!document.hidden) scheduleRescan();
-  };
-
   const start = () => {
     if (isRunning) return;
     isRunning = true;
-    observer = new MutationObserver(scheduleRescan);
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-    });
-    document.addEventListener('play', scheduleRescan, true);
-    document.addEventListener('pause', scheduleRescan, true);
-    document.addEventListener('loadedmetadata', scheduleRescan, true);
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('resize', scheduleRescan);
-    approacher = makeApproachObserver(scheduleRescan);
-    rescan();
+    // The one hearing: every move the manager says is a sweep. A film's
+    // own moments — play, pause, metadata landing — are moves the
+    // document's events know first, asked for on the manager's beat.
+    offBeat = dom.onMove(sweep);
+    document.addEventListener('play', dom.ask, true);
+    document.addEventListener('pause', dom.ask, true);
+    document.addEventListener('loadedmetadata', dom.ask, true);
+    // The first answer is not waited out: the walk is made at once, so
+    // a film already in the document is elected without a beat.
+    sweep();
   };
 
   const stop = () => {
     if (!isRunning) return;
     isRunning = false;
-    if (observer) observer.disconnect();
-    observer = null;
-    if (approacher !== null) approacher.disconnect();
-    approacher = null;
-    watched.clear();
+    // The ear's leaving, if it was the frame's last, is the manager
+    // standing its eyes down — at no hand's word here.
+    if (offBeat !== null) offBeat();
+    offBeat = null;
+    document.removeEventListener('play', dom.ask, true);
+    document.removeEventListener('pause', dom.ask, true);
+    document.removeEventListener('loadedmetadata', dom.ask, true);
     walkStack.length = 0;
-    rescanTimer.clear();
-    document.removeEventListener('play', scheduleRescan, true);
-    document.removeEventListener('pause', scheduleRescan, true);
-    document.removeEventListener('loadedmetadata', scheduleRescan, true);
-    document.removeEventListener('visibilitychange', onVisibility);
-    window.removeEventListener('resize', scheduleRescan);
     playable.clear();
     primary = null;
   };
@@ -267,12 +226,12 @@ export const createVideoWatcher = (onPrimaryChange) => {
     getCount: () => playable.size,
     // The hub's knock, from the network side of the house: a film's bytes
     // are already crossing the tab. It is the same one answer every other
-    // event the watcher knows asks for — a sweep, at the slot's own
-    // debounce — and it only means anything while the watch is standing;
-    // a film the site has switched off is not owed the walk.
+    // event the watcher knows asks for — a sweep, on the manager's beat
+    // — and it only means anything while the watch is standing; a film
+    // the site has switched off is not owed the walk.
     poke: () => {
       if (!isRunning) return;
-      scheduleRescan();
+      dom.ask();
     },
   };
 };
