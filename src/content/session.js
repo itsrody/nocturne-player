@@ -197,6 +197,12 @@ const createScope = () => {
     undos.push(() => target.removeEventListener(type, handler, options));
   };
 
+  // For the lifetimes that are not event listeners — an observer, a pointer
+  // lock, anything the page handed out that needs a standing way back.
+  const undo = (drop) => {
+    undos.push(drop);
+  };
+
   const later = (handler, delay) => {
     const timer = setTimeout(() => {
       timers.delete(timer);
@@ -218,7 +224,7 @@ const createScope = () => {
     undos.length = 0;
   };
 
-  return { listen, later, cancel, dispose };
+  return { listen, undo, later, cancel, dispose };
 };
 
 // Gecko keeps a media element playing across a re-parent, but a site shim
@@ -329,23 +335,30 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     // Re-pinning is bounded: a site that fights back with !important of its
     // own would otherwise trade writes with us for as long as the film lasts.
     // After the budget runs out the guard steps aside and the picture is
-    // re-fitted on the ordinary relayout events instead.
+    // re-fitted on the ordinary relayout events instead. Only a write that
+    // actually changed the watched style counts against the budget: our own
+    // crop writes reach this observer too, and a long pinch used to spend a
+    // frame of it per movement without the site doing a thing.
     const pin = () => {
-      if (isSameStyle(pinnedStyle, readStyle(video))) return;
-
-      repinCount += 1;
-      if (repinCount > MAX_REPINS) {
-        if (styleGuard) styleGuard.disconnect();
-        styleGuard = null;
-        console.warn(
-          'Nocturne: the site keeps rewriting the video, leaving it',
-        );
-        return;
-      }
+      const before = readStyle(video);
+      if (isSameStyle(pinnedStyle, before)) return;
 
       pinStyle(video, VIDEO_STYLE);
       if (overlay) overlay.repin();
-      pinnedStyle = readStyle(video);
+      const after = readStyle(video);
+
+      if (!isSameStyle(before, after)) {
+        repinCount += 1;
+        if (repinCount > MAX_REPINS) {
+          if (styleGuard) styleGuard.disconnect();
+          styleGuard = null;
+          console.warn(
+            'Nocturne: the site keeps rewriting the video, leaving it',
+          );
+          return;
+        }
+      }
+      pinnedStyle = after;
     };
 
     video.replaceWith(anchor);
@@ -551,6 +564,16 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
 
     scope.listen(window, 'resize', scheduleRelayout);
     scope.listen(window, 'orientationchange', noteTurn);
+
+    // The stage can change size without the window changing: the site's own
+    // layout around it — a collapsing header, a sticky bar appearing, a side
+    // column closing — owes us no event, and the crop would go on answering
+    // a stage that has shipped. An observer on the stage itself is the
+    // precise net, and it cannot chase its own tail: the crop is a
+    // transform, which changes no layout for the observer to re-see.
+    const stageWatcher = new ResizeObserver(() => scheduleRelayout());
+    stageWatcher.observe(stage);
+    scope.undo(() => stageWatcher.disconnect());
     if (window.screen.orientation) {
       scope.listen(window.screen.orientation, 'change', noteTurn);
     }

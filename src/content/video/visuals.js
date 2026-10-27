@@ -3,6 +3,13 @@ import { clampPan, clampScale, computeCoverScale, snapScale } from './zoom.js';
 const TRANSFORM_TRANSITION = 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)';
 const FILTER_TRANSITION = 'filter 320ms ease';
 
+// A viewer who has asked the system for a calm screen gets the same colour
+// and the same crop, only without the glides between them. Everything here
+// still lands; it just settles at once, which is what the setting asks for.
+const isCalm = () =>
+  typeof matchMedia === 'function' &&
+  matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 // Every filter function is always present and always in the same order, so the
 // browser can interpolate between two states smoothly.
 const buildFilter = ({ saturate, contrast, brightness }) => {
@@ -35,15 +42,16 @@ export const createVisuals = (video, stage) => {
     const isUnzoomed = view.scale === 1 && view.x === 0 && view.y === 0;
     const offset = `translate(${view.x}px, ${view.y}px)`;
     const transform = isUnzoomed ? 'none' : `${offset} scale(${view.scale})`;
-    const transition = isPinching
-      ? FILTER_TRANSITION
-      : `${FILTER_TRANSITION}, ${TRANSFORM_TRANSITION}`;
+    // Pinching must follow the fingers at once, so the glide is one thing
+    // dropped while the fingers are down and restored at lift-off.
+    let transition = `${FILTER_TRANSITION}, ${TRANSFORM_TRANSITION}`;
+    if (isPinching) transition = FILTER_TRANSITION;
+    if (isCalm()) transition = 'none';
 
     video.style.setProperty('filter', filter, 'important');
     video.style.setProperty('transform', transform, 'important');
     video.style.setProperty('transition', transition, 'important');
   };
-
   const stageSize = () => {
     const rect = stage.getBoundingClientRect();
     return { width: rect.width, height: rect.height };
@@ -88,6 +96,11 @@ export const createVisuals = (video, stage) => {
   };
 
   const setScale = (scale) => {
+    // Before the film has said its shape, no scale can be honest — the cover
+    // factor it would be clamped and remembered by is a guess. Nothing is
+    // changed and the pinch is left standing for the first-fit relayout,
+    // which is timed to the first frame actually presented.
+    if (video.videoWidth === 0) return view.scale;
     const applied = place(scale);
     remember(applied);
     return applied;
@@ -98,6 +111,11 @@ export const createVisuals = (video, stage) => {
   // stretched — after the window has changed shape underneath it.
   const relayout = () => {
     if (video.videoWidth === 0) return false;
+    const size = stageSize();
+    // An unmeasured stage would answer a cover of one, and a remembered
+    // zoom would be re-classified against it and lost. Nothing measured,
+    // nothing changed — the intent waits for a shape to fit into.
+    if (size.width <= 0 || size.height <= 0) return false;
     const cover = coverScale();
     if (intent === FIT) {
       place(1);
@@ -132,11 +150,6 @@ export const createVisuals = (video, stage) => {
     endPinch: () => {
       isPinching = false;
       return setScale(view.scale);
-    },
-    reset: () => {
-      view.x = 0;
-      view.y = 0;
-      return setScale(1);
     },
     getScale: () => view.scale,
   };

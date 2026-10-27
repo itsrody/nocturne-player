@@ -68,6 +68,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `60` marks, the HDR ones — they are taken when the data call answers
   with an honest string both sides, the synthesized ladder labels
   underneath staying the rule.
+- **The crop answers the stage the page actually gives it, and the fight
+  budget is spent only on real fights.** A stage grown or shrunk by the
+  site's own layout — a collapsing header, a sticky bar, a closing side
+  column — owes no window event, and the zoom intent went on fitting a
+  stage that had shipped until some other event happened by. An observer
+  on the stage itself is the net, and cannot chase its own tail: the crop
+  is a transform, which changes no layout for it to re-see. The re-pin
+  guard that stands behind the player counted every cycle it woke for,
+  so a long two-finger pinch spent a movement of the fight budget per
+  frame while the site did nothing at all; a cycle now costs nothing
+  unless the page's style was genuinely rewritten. And a pinch the film
+  is too young to answer — dimensions not yet spoken — changes
+  nothing now, instead of quietly reclassifying the viewer's zoom as
+  fit; the unmeasured stage is refused the same way. And a viewer whose
+  system has asked for reduced motion gets the same states without the
+  glides between them.
 - **The system's mirror speaks the player's film, and pays it back at
   release.** The bridge between the player's film and the notification
   and the media keys once set handlers and stood aside; now it says where
