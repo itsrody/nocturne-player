@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createSlotRider } from '../../src/content/frames.js';
-import { chainHosts } from '../../src/lib/chain.js';
-import { createSlotKeeper } from '../../src/content/slot.js';
+import {
+  createSlot,
+  createSlotKeeper,
+  createSlotRider,
+} from '../../src/content/slot.js';
 import { SLOT_TAG } from '../../src/lib/protocol.js';
 // A window trimmed to what these two sides of the slot protocol do with
 // it: listen for messages and deliver them. Deliveries are made by hand
@@ -31,40 +33,6 @@ const makeWindow = () => {
   };
   return home;
 };
-
-test('the chain of origins is the host list, nearest first', () => {
-  assert.deepEqual(
-    chainHosts({
-      host: 'film.example',
-      ancestorOrigins: {
-        length: 3,
-        0: 'https://embed.example',
-        1: 'https://top.example',
-        2: 'null',
-      },
-    }),
-    ['film.example', 'embed.example', 'top.example'],
-  );
-
-  // A guest with no name says nothing for itself; the named ancestors
-  // decide, and the opaque word 'null' is not a URL and carries no host.
-  assert.deepEqual(
-    chainHosts({
-      host: '',
-      ancestorOrigins: { length: 2, 0: 'https://top.example', 1: 'null' },
-    }),
-    ['top.example'],
-  );
-
-  // A page's own chain repeats nobody.
-  assert.deepEqual(
-    chainHosts({
-      host: 'top.example',
-      ancestorOrigins: { length: 1, 0: 'https://top.example' },
-    }),
-    ['top.example'],
-  );
-});
 
 test('a session asks up for the room, and says when the room is free', () => {
   const parent = makeWindow();
@@ -216,4 +184,65 @@ test('the relay aims the word it passes up at the parent', () => {
   assert.equal(passed.length, 1);
   assert.equal(passed[0].data.another, 'a', 'the relayed word is whole');
   assert.equal(passed[0].target, 'https://above.example');
+});
+
+test('one entrance, one verb, the whole chain speaking', () => {
+  globalThis.MutationObserver = class {
+    constructor() {
+      this.observed = null;
+    }
+    observe() {
+      this.observed = true;
+    }
+    disconnect() {
+      this.observed = null;
+    }
+  };
+
+  // The host document and its child frame, wired the way a real page is:
+  // the child's window is the box the host grows. Both ends stand up by
+  // the same entrance, and neither ever sees a ticket.
+  const host = makeWindow();
+  host.top = host;
+  const posted = [];
+  host.parent = { postMessage: () => posted.push('the top said a word') };
+  const child = makeWindow();
+  child.parent = { postMessage: (data) => host.deliver(child, data) };
+  const written = [];
+  const iframe = {
+    contentWindow: child,
+    style: {
+      setProperty: (name, value) => written.push(`${name}:${value}`),
+      getPropertyValue: () => 'width:300px',
+    },
+    getAttribute: () => 'width:300px',
+    setAttribute(name, value) {
+      this.width = value;
+    },
+    removeAttribute() {
+      this.width = '';
+    },
+  };
+  const doc = { querySelectorAll: () => [iframe] };
+
+  const above = createSlot(host, doc);
+  const room = createSlot(child, doc);
+
+  // The top's verb means nothing and says nothing.
+  above.slot(true);
+  assert.deepEqual(posted, []);
+
+  // The child's verb mints its own ticket, says it up one hop, and the
+  // keeper a hop above grows the box for a word it cannot name in
+  // advance.
+  room.slot(true);
+  const stoodBy = written.length;
+  assert.equal(written[0], 'position:fixed');
+
+  // And the same verb says closed, paying the page's own width back —
+  // restoring what it kept, not writing fresh.
+  room.slot(false);
+  assert.equal(written.length, stoodBy, 'the close restored, not rewrote');
+  assert.equal(iframe.width, 'width:300px');
+  assert.deepEqual(posted, []);
 });

@@ -4,14 +4,17 @@ import { test } from 'node:test';
 import {
   asDossier,
   asReport,
+  asSlot,
   asStateQuery,
   asStrain,
   asVerdict,
   askState,
   sayDossier,
   sayReport,
+  saySlot,
   sayStrain,
   sayVerdict,
+  SLOT_TAG,
 } from '../../src/lib/protocol.js';
 
 test('a frame’s report is said and heard as itself', () => {
@@ -110,4 +113,25 @@ test('the popup’s question carries its tab or carries nothing', () => {
   assert.deepEqual(asStateQuery(askState(3)), { tabId: 3 });
   assert.equal(asStateQuery({ type: 'query-state' }), null);
   assert.equal(asStateQuery({ type: 'query-state', tabId: 'mine' }), null);
+});
+
+test('the page wire’s slot word is believed only well-formed', () => {
+  assert.deepEqual(asSlot(saySlot('ticket', true)), {
+    ticket: 'ticket',
+    open: true,
+  });
+  assert.deepEqual(asSlot(saySlot('ticket', false)), {
+    ticket: 'ticket',
+    open: false,
+  });
+  // The admission gate, not the word's whole description: extra fields a
+  // future wire carries ride in as they came.
+  assert.deepEqual(asSlot({ [SLOT_TAG]: 'ticket', open: true, another: 'a' }), {
+    ticket: 'ticket',
+    open: true,
+  });
+  assert.equal(asSlot({ open: true }), null, 'no tag, no word');
+  assert.equal(asSlot({ [SLOT_TAG]: '', open: true }), null);
+  assert.equal(asSlot({ [SLOT_TAG]: 'ticket', open: 'yes' }), null);
+  assert.equal(asSlot('nocturneSlot'), null);
 });

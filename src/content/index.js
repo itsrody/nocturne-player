@@ -11,8 +11,7 @@ import { createTimerSlot } from '../lib/time.js';
 import { asDossier, asStrain, asVerdict, sayReport } from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
-import { createSlotRider, isTopFrame, mintTicket } from './frames.js';
-import { createSlotKeeper } from './slot.js';
+import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
 
 const PERSIST_DELAY_MS = 400;
@@ -81,7 +80,6 @@ const start = async () => {
   // permission a frame outside the top one has to show a badge. The top
   // needs no turn — its own film is the film the page chose.
   const isTop = isTopFrame();
-  const ticket = mintTicket();
   let granted = isTop;
 
   // The slot keeps its climb on the page wire this round — widening an
@@ -204,16 +202,15 @@ const start = async () => {
     announce.emit();
   };
 
-  // Every document — the top's included — keeps its children's slots: the
-  // session's request to grow the page arrives hop by hop, each document
-  // widening the box of the child that spoke to it and passing the word
-  // up. The keeper is frame-neutral; only the rider of the frame below
-  // knows the session that asked.
-  createSlotKeeper(window, document);
-
-  // The frame's rider from the paragraph above: every frame but the top
-  // keeps one, and it only speaks when a session of this frame's holds.
-  const rider = isTop ? null : createSlotRider(window, ticket);
+  // The whole slot story, stood up in one call: the keepers — every
+  // document, the top's included, growing the box of whichever child
+  // speaks and passing the word up — and, beside them in every framed
+  // document, the rider that asks for the room. The climb stays on the
+  // page's own wire — widening an element means widening an element in a
+  // document the hub cannot reach into — and the answer here is the one
+  // verb the session needs: slot(open). At the top the verb means
+  // nothing; the top's room is the viewport itself.
+  const slots = createSlot(window, document);
 
   badge.activate.on(async (video) => {
     if (session) return;
@@ -228,7 +225,7 @@ const start = async () => {
       // player was on the film.
       onExit: (lastVideo) => {
         session = null;
-        rider?.slot(false);
+        slots.slot(false);
         retune(lastVideo);
         announce.emit();
       },
@@ -239,7 +236,7 @@ const start = async () => {
     // A session that went away while the door was still opening leaves no
     // slot held: the exit has already said its word.
     if (session !== openedSession) return;
-    rider?.slot(true);
+    slots.slot(true);
   });
 
   apply();

@@ -47,7 +47,6 @@ export const STATE_QUERY = 'query-state';
 // the chain must agree on the exact spelling; its truth lives on the page
 // side, in slot.js.
 export const SLOT_TAG = 'nocturneSlot';
-
 // --- The builders: how every word is said. ---
 
 // A frame's report. The want is a plain boolean, the count a whole number
@@ -80,6 +79,11 @@ export const sayDossier = (ear) => ({
 
 // The popup's question, carrying the tab it reads.
 export const askState = (tabId) => ({ type: STATE_QUERY, tabId });
+
+// The page wire's one word, the way a rider says it: the hold it names
+// and the answer it wants, one hop up, aimed by origin at the window
+// that owns it.
+export const saySlot = (ticket, open) => ({ [SLOT_TAG]: ticket, open });
 
 // --- The guards: how every word is heard. ---
 
@@ -142,4 +146,14 @@ export const asStateQuery = (word) => {
     return null;
   }
   return { tabId: word.tabId };
+};
+
+// The slot word, believed only well-formed: a ticket that spells
+// something, and an answer that is a real boolean — the two truth
+// values a keeper can act on. Extra fields ride along untouched: the
+// guard is the admission gate, not the word's whole description.
+export const asSlot = (data) => {
+  if (!isWord(data) || !isSpelled(data[SLOT_TAG])) return null;
+  if (data.open !== true && data.open !== false) return null;
+  return { ticket: data[SLOT_TAG], open: data.open };
 };
