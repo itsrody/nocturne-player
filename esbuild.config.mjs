@@ -10,11 +10,23 @@ const staticAssets = [
   { from: `${SOURCE_DIR}/icons`, to: `${OUTPUT_DIR}/icons` },
   { from: `${SOURCE_DIR}/popup/popup.html`, to: `${OUTPUT_DIR}/popup.html` },
   { from: `${SOURCE_DIR}/popup/popup.css`, to: `${OUTPUT_DIR}/popup.css` },
+  {
+    from: `${SOURCE_DIR}/options/options.html`,
+    to: `${OUTPUT_DIR}/options.html`,
+  },
+  {
+    from: `${SOURCE_DIR}/options/options.css`,
+    to: `${OUTPUT_DIR}/options.css`,
+  },
 ];
 
 const bundles = [
   { entry: `${SOURCE_DIR}/content/index.js`, out: `${OUTPUT_DIR}/content.js` },
   { entry: `${SOURCE_DIR}/popup/popup.js`, out: `${OUTPUT_DIR}/popup.js` },
+  {
+    entry: `${SOURCE_DIR}/options/options.js`,
+    out: `${OUTPUT_DIR}/options.js`,
+  },
 ];
 
 // Shipped unminified on purpose: reviewers and users read exactly what runs.

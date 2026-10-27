@@ -71,4 +71,11 @@ resetButton.addEventListener('click', async () => {
   statusLine.textContent = 'Settings reset.';
 });
 
+// The full settings live on their own page — sliders, the diagnostics switch,
+// the whole site list — and the toolbar button opens it without a new
+// permission.
+document.getElementById('open-options').addEventListener('click', () => {
+  browser.runtime.openOptionsPage();
+});
+
 render();

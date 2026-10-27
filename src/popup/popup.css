@@ -110,6 +110,11 @@ input[type='checkbox'] {
   font-size: 13px;
 }
 
+.footer-buttons {
+  display: flex;
+  gap: 6px;
+}
+
 button {
   background: none;
   border: 1px solid var(--line);

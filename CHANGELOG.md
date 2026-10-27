@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **A settings page.** Everything the extension remembers is now reachable
+  from Firefox's own settings UI: the picture's four dials, the gesture
+  feel (double-tap seek, hold speed), the subtitle scale, and the switches
+  — calm screen, native subtitles, and the diagnostics switch with a
+  spoken explanation, the first place `debugMode` has had a face. The
+  page answers as the dials move (storage sees the settled answer), and it
+  agrees with the popup and with its other copies through the settings
+  bus — a control the hand is holding never fights it, and the whole
+  switched-off site list gets a row with an Enable button each. The reset
+  asks twice before it wipes, armed by the first click and disarmed by the
+  second or by time; it has always been the one button that erases
+  everything, and it is heavier for the colour choices the page now holds.
+  The popup keeps its per-site job and opens the page through the toolbar
+  with "More settings…" — no new permission.
 - **The system's media controls run the player.** While the player holds the
   film, the Android notification controls and the desktop media keys speak to
   it: play and pause, stepping forward and back by ten seconds, any position

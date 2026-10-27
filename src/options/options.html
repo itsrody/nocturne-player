@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nocturne Player — Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <header class="header">
+      <img class="logo" src="icons/icon.svg" alt="" width="32" height="32" />
+      <div>
+        <h1>Nocturne Player</h1>
+        <p class="tagline">No data leaves your device.</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Picture</h2>
+        <div class="field">
+          <label for="warmth"
+            >Warmth <output id="warmth-output"></output
+          ></label>
+          <input id="warmth" type="range" min="0" max="0.45" step="0.01" />
+        </div>
+        <div class="field">
+          <label for="brightness"
+            >Brightness <output id="brightness-output"></output
+          ></label>
+          <input id="brightness" type="range" min="0.4" max="2" step="0.01" />
+        </div>
+        <div class="field">
+          <label for="contrast"
+            >Contrast <output id="contrast-output"></output
+          ></label>
+          <input id="contrast" type="range" min="0.5" max="1.5" step="0.01" />
+        </div>
+        <div class="field">
+          <label for="saturate"
+            >Saturation <output id="saturate-output"></output
+          ></label>
+          <input id="saturate" type="range" min="0.5" max="2" step="0.01" />
+        </div>
+        <p class="hint">
+          The picture starts exactly as the site encoded it — these are the
+          tools that stay on top of it.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Gestures</h2>
+        <div class="field">
+          <label for="doubleTapSeconds"
+            >Double-tap seek <output id="doubleTapSeconds-output"></output
+          ></label>
+          <input id="doubleTapSeconds" type="range" min="5" max="60" step="1" />
+        </div>
+        <div class="field">
+          <label for="holdSpeed"
+            >Hold-to-fast-forward speed <output id="holdSpeed-output"></output
+          ></label>
+          <input id="holdSpeed" type="range" min="1.5" max="4" step="0.1" />
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Subtitles</h2>
+        <div class="field">
+          <label for="subtitleScale"
+            >Text size <output id="subtitleScale-output"></output
+          ></label>
+          <input
+            id="subtitleScale"
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.05"
+          />
+        </div>
+        <label class="row toggle" for="are-subtitles-native">
+          <span class="row-label">
+            Leave the site’s own subtitles alone
+            <small class="row-note">Render nothing of ours over them.</small>
+          </span>
+          <input id="are-subtitles-native" type="checkbox" />
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Playback</h2>
+        <label class="row toggle" for="are-effects-reduced">
+          <span class="row-label">
+            Calm screen
+            <small class="row-note"
+              >No glides or transitions while the picture moves.</small
+            >
+          </span>
+          <input id="are-effects-reduced" type="checkbox" />
+        </label>
+        <label class="row toggle" for="debug-mode">
+          <span class="row-label">
+            Show diagnostics
+            <small class="row-note"
+              >Diagnostics in the page console ([detect], [engines], [quality])
+              while you browse — for answering “why is the badge not
+              here?”.</small
+            >
+          </span>
+          <input id="debug-mode" type="checkbox" />
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Switched-off sites</h2>
+        <ul class="sites" id="sites"></ul>
+        <p class="sites-empty hint" id="sites-empty" hidden>
+          No site is switched off.
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <a href="https://github.com/pohoriletts/nocturne-player" target="_blank"
+        >Source code</a
+      >
+      <button type="button" id="reset">Reset everything</button>
+    </footer>
+
+    <script src="options.js"></script>
+  </body>
+</html>
