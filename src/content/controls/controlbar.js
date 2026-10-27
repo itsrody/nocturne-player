@@ -155,6 +155,16 @@ export const createControlBar = (video, seek, { onScrub } = {}) => {
     paint(scrubTime);
   };
 
+  // A hold lost rather than finished — a call, the sheet's take of the
+  // finger — is an abort, not a commit: the film is left where it did
+  // stand, not painted at a place it never arrived at. Head grabs and bar
+  // presses both end in it, so the two paths cannot drift apart.
+  const abandonScrub = () => {
+    isScrubbing = false;
+    root.classList.remove('is-scrubbing');
+    paint(video.currentTime);
+  };
+
   // A tap on the bar itself is answered where the finger settled: the
   // moment under the tap plays, the way the fill's own ruler reads it. The
   // tap's aim is the resting place the eye was watching when the tap was
@@ -179,15 +189,25 @@ export const createControlBar = (video, seek, { onScrub } = {}) => {
   // drag's own start as its rule says. A finger lost mid-drag (a call or
   // leaving the sheet) is an abort: the commit is refused and the film is
   // left where it was grabbed, not painted at a place it never arrived at.
+  // Each hold's own claim — id, last seat, origin, and the one layout read
+  // per hold — sits here beside the other's: one hold belongs to one
+  // finger, and the head's guard reads the area's claim to enforce it.
   let headPointerId = null;
   let headLastX = 0;
   let headOriginY = 0;
   let headWidth = 0;
+  let areaPointerId = null;
+  let areaLastX = 0;
+  let areaOriginX = 0;
+  let areaOriginY = 0;
+  let areaWidth = 0;
 
   const grabHead = (event) => {
-    // The film needs a length before a drag has anywhere to stand; a scrub
-    // another finger is already driving stays the other finger's alone.
-    if (isScrubbing || duration() === 0) return;
+    // The film needs a length before a drag has anywhere to stand. One
+    // hold belongs to one finger: a press the bar has claimed stays hers
+    // even before it has crossed into a scrub, else a second finger could
+    // take the ball and then the first could start a scrub under it.
+    if (areaPointerId !== null || isScrubbing || duration() === 0) return;
     const rect = track.getBoundingClientRect();
     if (rect.width === 0) return;
     event.preventDefault();
@@ -222,9 +242,7 @@ export const createControlBar = (video, seek, { onScrub } = {}) => {
     if (event.pointerId !== headPointerId) return;
     headPointerId = null;
     onScrub?.(false);
-    isScrubbing = false;
-    root.classList.remove('is-scrubbing');
-    paint(video.currentTime);
+    abandonScrub();
   };
 
   head.addEventListener('pointerdown', grabHead);
@@ -240,11 +258,6 @@ export const createControlBar = (video, seek, { onScrub } = {}) => {
   // finger's take is not lost if it slips off the pill mid-drag. Both
   // refuse what the head owns: its grab stops propagation before this can
   // hear it, and a once-only owner is one rule for both readers.
-  let areaPointerId = null;
-  let areaLastX = 0;
-  let areaOriginY = 0;
-  let areaWidth = 0;
-
   const downArea = (event) => {
     if (areaPointerId !== null || isScrubbing || duration() === 0) return;
     const rect = track.getBoundingClientRect();
@@ -252,6 +265,7 @@ export const createControlBar = (video, seek, { onScrub } = {}) => {
     event.preventDefault();
     areaPointerId = event.pointerId;
     areaLastX = event.clientX;
+    areaOriginX = event.clientX;
     areaOriginY = event.clientY;
     areaWidth = rect.width;
     area.setPointerCapture(areaPointerId);
@@ -261,11 +275,16 @@ export const createControlBar = (video, seek, { onScrub } = {}) => {
     if (event.pointerId !== areaPointerId) return;
     const dx = event.clientX - areaLastX;
     areaLastX = event.clientX;
-    // The tap boundary is the everywhere-scrub's own: under it the press
-    // is still a possible tap, so the answer waits for the lift.
+    // The tap boundary is the everywhere-scrub's own, and it is the whole
+    // wander from the press's seat that crosses it — both axes cumulative
+    // from the start, the recognizer's rule. A slice of the travel would
+    // never do: a slow hand moves under the line per event forever, and a
+    // per-event measure would call its whole haul a tap. Under the line
+    // the press is still a possible tap, so the answer waits for the lift.
     if (
       !isScrubbing &&
-      Math.hypot(dx, event.clientY - areaOriginY) < TAP_TOLERANCE_PX
+      Math.hypot(event.clientX - areaOriginX, event.clientY - areaOriginY) <
+        TAP_TOLERANCE_PX
     ) {
       return;
     }
@@ -286,9 +305,7 @@ export const createControlBar = (video, seek, { onScrub } = {}) => {
   const cancelArea = (event) => {
     if (event.pointerId !== areaPointerId) return;
     areaPointerId = null;
-    isScrubbing = false;
-    root.classList.remove('is-scrubbing');
-    paint(video.currentTime);
+    abandonScrub();
   };
 
   area.addEventListener('pointerdown', downArea);
