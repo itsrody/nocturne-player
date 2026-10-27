@@ -9,11 +9,11 @@ import { createVisuals } from './video/visuals.js';
 import { el } from './shell.js';
 import { ZONE } from './gestures/zones.js';
 
-// Controls that show themselves are timed from the moment they show: three
+// Controls that show themselves are timed from the moment they show: two
 // seconds of nothing happening on them, and they step aside again. The
 // countdown is rewound — not restarted from scratch — by a pointer moving
 // over an already-shown chrome, so hover holds it and silence still hides it.
-const CHROME_IDLE_MS = 3000;
+const CHROME_IDLE_MS = 2000;
 // Hold speed is a setting, chosen from the sheet's chips (1.5x–4x). A held
 // picture runs at that rate for as long as the finger stays down, wherever
 // the hold began; the pace before the hold comes back when it lifts.
@@ -279,24 +279,21 @@ export const createOverlay = ({
     chrome.toggleAttribute('hidden', !isVisible);
     if (chromeTimer !== null) clearTimeout(chromeTimer);
     chromeTimer = null;
-    if (!isVisible || video.paused || isPanelOpen()) return;
+    if (!isVisible || isPanelOpen()) return;
     scheduleFade();
   };
 
-  // A mouse gliding over the picture keeps the controls up — but it may not
-  // pay a tap's price for it. So a wake shows only what is actually hidden;
-  // everything else it does is to rewind the idle timer, so chrome the mouse
-  // rests on never fades out from under it, and one left alone fades on the
-  // schedule as ever. Touch fingers do not wake it: tapping the picture is
-  // how a hand brings the controls back, and the drift of a palm brushing
-  // the film must not summon them.
-  const wakeChrome = (event) => {
-    if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
-    if (chromeTimer !== null) clearTimeout(chromeTimer);
-    if (chrome.hasAttribute('hidden')) setChromeVisible(true);
-    else if (!video.paused && !isPanelOpen()) scheduleFade();
-  };
+  // The bar shows for any interaction with the film — a pointer travelling
+  // it, a touch laid on it, a drag working it — and falls three seconds
+  // after the last one. Nothing else decides its place: no band to point
+  // at, no switch to throw. A hand's silence, not its address, is the only
+  // ask for leaving. The idle timer that puts the picture away is rewound
+  // by every wake, so what rests over an open bar holds it.
+  const wakeChrome = () => setChromeVisible(true);
   surface.addEventListener('pointermove', wakeChrome);
+  surface.addEventListener('pointerdown', wakeChrome);
+  // Anything travelling over the chrome itself — the pill, the sheets —
+  // interleaves: the hand over an open bar is speaking to it.
   chrome.addEventListener('pointermove', wakeChrome);
 
   // What the ball's grab reaches, given to the hook above now that it has a
@@ -429,11 +426,10 @@ export const createOverlay = ({
         closePanels();
         return;
       }
-      // Every tap on the picture toggles the controls — middle, sides and
-      // all. The seek bar answers taps itself now: its pill is a real
-      // element that takes its own finger, so nothing here reads bars off
-      // the picture any more.
-      setChromeVisible(chrome.hasAttribute('hidden'));
+      // A tap is interaction: it shows the pill (or holds it where it
+      // stands), never hides it — hiding is the idle's alone. The seek
+      // bar answers its own taps, as it builds them from a real element.
+      setChromeVisible(true);
     },
     multiTap: ({ zone }) => {
       if (isPanelOpen()) {
@@ -442,7 +438,7 @@ export const createOverlay = ({
       }
       const seconds = SIDE_SKIP_SECONDS[zone];
       if (seconds === undefined) {
-        setChromeVisible(chrome.hasAttribute('hidden'));
+        setChromeVisible(true);
         return;
       }
       skip(seconds);
@@ -641,6 +637,7 @@ export const createOverlay = ({
       clearAccount(skipAccount.back);
       clearAccount(skipAccount.forward);
       surface.removeEventListener('pointermove', wakeChrome);
+      surface.removeEventListener('pointerdown', wakeChrome);
       chrome.removeEventListener('pointermove', wakeChrome);
       video.removeEventListener('pause', handlePlaybackChange);
       video.removeEventListener('play', handlePlaybackChange);

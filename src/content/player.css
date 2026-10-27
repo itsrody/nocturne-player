@@ -57,14 +57,16 @@
   pointer-events: none;
 }
 
-/* Each band leaves in the direction it came from, so bringing the controls
-   back reads as one movement instead of a flash. */
+/* The pill rides one plane: hiding carries it down past its seat, showing
+   carries it back up the same road — one motion both ways, with the
+   chrome's own fade softening the far end of each trip so neither reads
+   as an appearance made out of nothing. */
 .controlbar {
   transition: transform 340ms var(--ease);
 }
 
 .chrome[hidden] .controlbar {
-  transform: translateY(16px);
+  transform: translateY(calc(100% + 16px));
 }
 
 .button {
@@ -800,26 +802,4 @@
 
 .skip-button text {
   font-family: inherit;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chrome,
-  .controlbar,
-  .toast,
-  .cue,
-  .button,
-  .chip,
-  .step-button,
-  .play-button,
-  .skip-button,
-  .seek-time,
-  .seek-head {
-    transition-duration: 1ms;
-  }
-
-  .panel.is-open,
-  .menu .colour-page,
-  .menu .subtitle-page {
-    animation: none;
-  }
 }

@@ -141,6 +141,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the picture, only the ruler and the buttons name their touch. The
   sheets and the subtitle cues hang a breath above the taller body, and
   the clock needs no shadow on ink of its own kind.
+- **The bar shows for interaction, and idles away.** Any contact with the
+  film — a pointer travelling it, a touch laid down, a drag working —
+  slides the pill up from its seat, wherever on the picture it happens,
+  and the last of them starts a two-second count. Silence passes it,
+  and the pill slides back down the road it came. There is no band to
+  point at and no toggle to throw: showing is the interaction's job,
+  hiding is the silence's. The pill travels one plane — the chrome's own
+  fade softens the far end of each trip, so neither direction reads as an
+  appearance made out of nothing — and the motion is no millisecond
+  clamp's to mute: a system asked for less motion gets the slide anyway,
+  for its rise and fall is how the picture answers the hand, not
+  ornament.
 
 ### Removed
 
