@@ -8,7 +8,7 @@ import {
   mintTicket,
 } from '../../src/content/frames.js';
 import { createSlotKeeper } from '../../src/content/slot.js';
-import { SLOT_TAG } from '../../src/lib/words.js';
+import { CLAIM_TAG, SLOT_TAG } from '../../src/lib/words.js';
 // A window trimmed to what the two ends of the protocol do with it: listen
 // for messages and deliver them. Deliveries are made by hand instead of by
 // the event loop of a real browser, and the target a post was aimed at is
@@ -16,9 +16,11 @@ import { SLOT_TAG } from '../../src/lib/words.js';
 // where.
 const makeWindow = () => {
   const handlers = [];
+  const partings = [];
   const arrived = [];
   const home = {
     handlers,
+    partings,
     arrived,
     // A window with no children, until a test gives it a family: the judge
     // credits a claim only to a window it finds in its own tree.
@@ -28,18 +30,27 @@ const makeWindow = () => {
     location: { ancestorOrigins: [] },
     addEventListener: (type, handler) => {
       if (type === 'message') handlers.push(handler);
+      else partings.push([type, handler]);
     },
-    deliver: (source, data, target) => {
-      arrived.push({ source, data, target });
+    // The document's own going away — the goodbye's word — is fired by
+    // hand, the way a browser fires pagehide when an element leaves.
+    fire: (type, event) => {
+      for (const [kind, handler] of [...partings]) {
+        if (kind === type) handler(event);
+      }
+    },
+    deliver: (source, data, target, transfer) => {
+      arrived.push({ source, data, target, transfer });
       for (const handler of [...handlers]) {
-        handler({ source, data, origin: target });
+        handler({ source, data, origin: target, ports: transfer });
       }
     },
   };
   // Posts landing on a window carry the window they were posted through as
-  // their source, and the target they were aimed at rides along.
-  home.postMessage = (data, target) =>
-    home.deliver(home.receivesAs ?? home, data, target);
+  // their source, the target they were aimed at, and — when a word carries
+  // a pair's end to its far side — the ports it handed over.
+  home.postMessage = (data, target, transfer) =>
+    home.deliver(home.receivesAs ?? home, data, target, transfer);
   return home;
 };
 
@@ -48,7 +59,8 @@ const makeWindow = () => {
 const joinsThe = (top, chain = ['https://top.example']) => {
   const home = makeWindow();
   const proxy = {
-    postMessage: (data, target) => top.deliver(home, data, target),
+    postMessage: (data, target, transfer) =>
+      top.deliver(home, data, target, transfer),
   };
   home.top = proxy;
   home.receivesAs = proxy;
@@ -69,7 +81,18 @@ const seatOf = (home, ticket) => {
   );
   return { claimant, seated };
 };
-test('the first claim takes the seat and the second waits', () => {
+
+// A pair's word is a task of its own: the entanglement delivers between
+// turns of the event loop, so a test that wants the rail's answer waits
+// out a few ticks before it reads.
+const settled = async () => {
+  for (let tick = 0; tick < 10; tick += 1) {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  }
+};
+test('the first claim takes the seat and the second waits', async () => {
   const top = makeWindow();
   createJudge(top, { ownWant: () => false });
 
@@ -77,20 +100,25 @@ test('the first claim takes the seat and the second waits', () => {
   const two = seatOf(joinsThe(top), mintTicket());
 
   one.claimant.setWant(true);
+  await settled();
   assert.deepEqual(one.seated, [true]);
 
   two.claimant.setWant(true);
+  await settled();
   assert.deepEqual(two.seated, []);
 
   // Releasing the seat hands it to the one that waited.
   one.claimant.setWant(false);
+  await settled();
   assert.deepEqual(two.seated, [true]);
 
   one.claimant.setWant(false);
   two.claimant.setWant(false);
+  one.claimant.end();
+  two.claimant.end();
 });
 
-test('a claim gone quiet loses the seat to a fresh one', () => {
+test('a claim gone quiet loses the seat to a fresh one', async () => {
   let moment = 0;
   const top = makeWindow();
   createJudge(top, { ownWant: () => false, now: () => moment });
@@ -99,19 +127,23 @@ test('a claim gone quiet loses the seat to a fresh one', () => {
   const fresh = seatOf(joinsThe(top), mintTicket());
 
   stale.claimant.setWant(true);
+  await settled();
   assert.deepEqual(stale.seated, [true]);
 
   // The frame that held the seat went quiet: past the window the judge
   // forgets it by, the next claim that arrives takes the seat over.
   moment += 12000;
   fresh.claimant.setWant(true);
+  await settled();
   assert.deepEqual(fresh.seated, [true]);
 
   stale.claimant.setWant(false);
   fresh.claimant.setWant(false);
+  stale.claimant.end();
+  fresh.claimant.end();
 });
 
-test(`the top frame's own film outranks the framed ones`, () => {
+test(`the top frame's own film outranks the framed ones`, async () => {
   let topWants = false;
   const top = makeWindow();
   createJudge(top, { ownWant: () => topWants });
@@ -119,6 +151,7 @@ test(`the top frame's own film outranks the framed ones`, () => {
   const framed = seatOf(joinsThe(top), mintTicket());
 
   framed.claimant.setWant(true);
+  await settled();
   assert.deepEqual(framed.seated, [true]);
 
   // The page's own video appears while the seat is out: the page put it
@@ -126,9 +159,11 @@ test(`the top frame's own film outranks the framed ones`, () => {
   topWants = true;
   framed.claimant.setWant(false);
   framed.claimant.setWant(true);
+  await settled();
   assert.deepEqual(framed.seated, [true, false]);
 
   framed.claimant.setWant(false);
+  framed.claimant.end();
 });
 
 test('a verdict is only taken from the judge and only for our ticket', () => {
@@ -164,6 +199,7 @@ test('a verdict is only taken from the judge and only for our ticket', () => {
   assert.deepEqual(granted, [true, false]);
 
   claimant.setWant(false);
+  claimant.end();
 });
 
 test('the page answers for its films in one voice', () => {
@@ -196,7 +232,7 @@ test('the page answers for its films in one voice', () => {
   claimTwo.end();
 });
 
-test('a claim from nobody\\u2019s child is an answerless door', () => {
+test('a claim from nobody\u2019s child is an answerless door', () => {
   const top = makeWindow();
   const judge = createJudge(top, { ownWant: () => false });
 
@@ -437,4 +473,95 @@ test('the relay aims the word it passes up at the parent', () => {
   assert.equal(passed.length, 1);
   assert.equal(passed[0].data.another, 'a', 'the relayed word is whole');
   assert.equal(passed[0].target, 'https://above.example');
+});
+
+test('the pair adopts, and the words ride it home', async () => {
+  const top = makeWindow();
+  const judge = createJudge(top, { ownWant: () => false });
+
+  const framed = joinsThe(top);
+  const ticket = mintTicket();
+  const seated = [];
+  let films = 4;
+  const claimant = createClaimant(
+    framed,
+    ticket,
+    (granted) => seated.push(granted),
+    { getCount: () => films },
+  );
+
+  claimant.setWant(true);
+  assert.deepEqual(seated, [], 'nothing is believed before the word returns');
+  await settled();
+  // The verdict came back over the pair the claim minted — once, and from
+  // the judge's own taking of the far end.
+  assert.deepEqual(seated, [true]);
+  assert.equal(
+    top.arrived.length,
+    1,
+    'the adopted frame says no further word on the wire',
+  );
+
+  // An adopted voice says its count on the charged end, and the judge's
+  // one answer for the page hears it without a belt to wait for.
+  films = 2;
+  claimant.tell();
+  await settled();
+  assert.equal(judge.totalCount(), 2);
+  assert.equal(top.arrived.length, 1, 'the count rode the pair, not the wire');
+
+  claimant.end();
+});
+
+test('a farewell on the pair frees the seat as the words say', async () => {
+  const top = makeWindow();
+  createJudge(top, { ownWant: () => false });
+
+  const staleHome = joinsThe(top);
+  const stale = seatOf(staleHome, mintTicket());
+  stale.claimant.setWant(true);
+  await settled();
+  assert.deepEqual(stale.seated, [true]);
+
+  // The document goes away the way a browser makes it go away, and the
+  // goodbye rides the pair — the death the seat's own book hears at once.
+  // The next claim takes the seat at the same moment, with no passage of
+  // the forgetting window between the two lives of the seat.
+  staleHome.fire('pagehide', { persisted: false });
+
+  const fresh = seatOf(joinsThe(top), mintTicket());
+  fresh.claimant.setWant(true);
+  await settled();
+  assert.deepEqual(fresh.seated, [true]);
+
+  fresh.claimant.end();
+});
+
+test('a farewell on the ramp answers where the tree still does', async () => {
+  const top = makeWindow();
+  createJudge(top, { ownWant: () => false });
+
+  const ticket = mintTicket();
+  const home = joinsThe(top);
+  const stale = seatOf(home, ticket);
+  stale.claimant.setWant(true);
+  await settled();
+  assert.deepEqual(stale.seated, [true]);
+
+  // The goodbye rides the same wire the claim came up, aimed the same
+  // way, and the tree vouches for the door it arrives by: the claim dies
+  // where it stands, and the seat is free before the next frame speaks.
+  top.deliver(
+    home,
+    { [CLAIM_TAG]: ticket, farewell: true },
+    'https://top.example',
+  );
+
+  const fresh = seatOf(joinsThe(top), mintTicket());
+  fresh.claimant.setWant(true);
+  await settled();
+  assert.deepEqual(fresh.seated, [true]);
+
+  stale.claimant.end();
+  fresh.claimant.end();
 });

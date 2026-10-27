@@ -28,10 +28,13 @@ export const targetOf = (loc, fromTheTop = false) => {
 // Every sender on both ends of this protocol posts through here, so the
 // story of a window that went away with its page is told once. The answer
 // says whether the word left at all, for the one sender that trades on it:
-// the judge forgets a claim whose claimant cannot be told.
-export const postWord = (win, origin, word) => {
+// the judge forgets a claim whose claimant cannot be told. A word may also
+// carry a pair's end for its far side — the handoff of the rail is a word
+// like any other, and is stonewalled the same way, to be re-said by the
+// beat that always follows it.
+export const postWord = (win, origin, word, transfer = []) => {
   try {
-    win.postMessage(word, origin);
+    win.postMessage(word, origin, transfer);
     return true;
   } catch {
     // A wall that went away with the page.

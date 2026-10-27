@@ -68,6 +68,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The rail dies by word, not by window.** A claim on the pages' own
+  wires was kept alive the one way a connectionless wire knows: every
+  claimant re-said itself every two seconds, and the judge believed an
+  absence — a claim unseen for six seconds was a frame gone. The rail
+  runs on a pair of entangled ports now: the claimant mints its channel
+  and carries the far end with its first claim, and from the judge's
+  note of receipt on, the claims, the counts, the verdicts and the
+  goodbye all ride the pair — where a pagehide is a death and not a
+  mystery, and the seat is free while the leaving page is still leaving.
+  The beat stays only as the belt beneath it: two seconds on the ramp
+  where no pair stands, four on the settled rail, walking beneath the
+  judge's six-second window so that forgetting only ever claims what the
+  words on the pair could not say — a frame whose document died without
+  the chance to part. The honesty the new story buys is written into the
+  rail's own header: the pair is a capability that travels through
+  windows the pages own, so a page that catches it in flight holds the
+  claimant's mouth — a claim held or withheld — and the belt is what
+  spells the seat back within a settled beat. And the platform itself
+  has no death notice for a pair — the close event sits awaiting
+  Mozilla's position, standards-positions #914, unanswered as of this
+  writing — so the record of that gap, and the tripwire for dropping the
+  belt the day the event ships, stand in the code.
+
 - **The rail's last per-beat work goes quiet.** A slot word rides the
   claimant's own heartbeat, and every document of the chain that heard
   it walked its whole document — every iframe, every embed, every
