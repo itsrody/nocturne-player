@@ -265,5 +265,14 @@ export const createVideoWatcher = (onPrimaryChange) => {
     stop,
     getPrimary: () => primary,
     getCount: () => playable.size,
+    // The hub's knock, from the network side of the house: a film's bytes
+    // are already crossing the tab. It is the same one answer every other
+    // event the watcher knows asks for — a sweep, at the slot's own
+    // debounce — and it only means anything while the watch is standing;
+    // a film the site has switched off is not owed the walk.
+    poke: () => {
+      if (!isRunning) return;
+      scheduleRescan();
+    },
   };
 };

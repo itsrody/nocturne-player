@@ -5,7 +5,11 @@ const SOURCE_DIR = 'src';
 const MANIFEST_PATH = 'src/manifest.json';
 const SCANNED_EXTENSIONS = ['.js', '.mjs', '.html', '.css'];
 
-// Nothing in this extension may reach the network or read device sensors.
+// Nothing in this extension may reach the network, read device sensors, or
+// touch a request on its way past. The eye at the bus is an exception in
+// the narrower sense only: it observes, and it never answers — webRequest
+// sits in the manifest with webRequestBlocking beside it, but no handler
+// ever returns a BlockingResponse, so the wire itself is never spoken to.
 const FORBIDDEN_PATTERNS = [
   { pattern: /\bfetch\s*\(/, reason: 'network request' },
   { pattern: /\bXMLHttpRequest\b/, reason: 'network request' },
@@ -29,7 +33,17 @@ const FORBIDDEN_PATTERNS = [
   },
 ];
 
-const ALLOWED_PERMISSIONS = ['storage', 'activeTab'];
+// The verbs the manifest is allowed to ask for. <all_urls> is a host
+// entry, not an API: it rides in `permissions` so the eye's URL filter is
+// matched without host gating, the same room the content script's
+// <all_urls> match already books.
+const ALLOWED_PERMISSIONS = [
+  'storage',
+  'activeTab',
+  'webRequest',
+  'webRequestBlocking',
+  '<all_urls>',
+];
 
 const collectFiles = async (dir) => {
   const entries = await readdir(dir, { withFileTypes: true });

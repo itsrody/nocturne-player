@@ -68,6 +68,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The page hears the wire as well as the DOM.** Detection's sweep has
+  run on events alone for a long time now — an observer over the tree,
+  the film's own play and metadata moments, an approach margin in place
+  of scroll polls — but every event it knew was the document's. A
+  background ear at the tab's own bus stands beside the hub now: one
+  `webRequest.onBeforeRequest` listener, aimed at `media` and
+  `xmlhttprequest` requests and matched against a small corpus of
+  stream-shaped words (`master.m3u8`, `manifest.mpd`, segments,
+  `videoplayback`, the `mime=video/` family), because a film's manifest
+  is often read before its element is ever inserted, and MSE content
+  rides the script-ridden fetch family the DOM never names. The request
+  arrives bearing the frame it is bound for — attested by the browser,
+  the same trust the port's envelope carries — so the hub writes the
+  warmth into the book under a key nobody can forge: a strain knocks a
+  framed film's sweep awake once and never again (the stream's own
+  cadence is the heartbeat; no clock enters anywhere), and where no seat
+  stands an `about:blank` or `srcdoc` embed — a frame no content script
+  ever runs in, invisible to every other channel this pipeline has —
+  takes a ghost seat in the book: no port, no want, no count, only the
+  context that a stream runs there. The popup answers that context as
+  its own line — "media streams detected in frames of this page" — and
+  the count stays DOM-verified: a warm seat never counts a film the
+  sweep has not confirmed. The manifest takes the full uBO seat —
+  `webRequest`, `webRequestBlocking`, `<all_urls>` — but the listener
+  returns nothing and answers no request: the blocking permission stands
+  beside an ear that never blocks, never cancels, never redirects, and
+  the collection answer stays "none" — the warmth is session memory in
+  one tab's book, never persisted, never sent anywhere.
+
 - **The seat leaves the pages' wires, for the background's own room.** The
   extension had no background at all — every cross-frame bargain ran
   through windows the pages own, and every safeguard it carried was the

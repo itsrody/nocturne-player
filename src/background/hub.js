@@ -25,8 +25,10 @@
 // which frame's film earns the badge on the page, and how many films the
 // page holds. The book below is answering one question a frame asks with
 // its whole term — may I show the badge — and one the popup asks on demand
-// — how many films the tab holds.
-import { STATE_QUERY, VERDICT } from '../lib/words.js';
+// — how many films the tab holds. A third voice it hears says neither of
+// those: the network's own word, a media-shaped request crossing the tab's
+// bus bound for one of its frames.
+import { STATE_QUERY, STRAIN, VERDICT } from '../lib/words.js';
 
 // The one verb the state answers with is a count, read fresh from the book
 // whenever the question arrives — the book is the hot record, and nothing
@@ -73,6 +75,53 @@ export const createFrameHub = (browser) => {
     }
   };
 
+  // The network's word, heard from the eye at the bus: a media-shaped
+  // request crossed the tab's network bound for this frame. The warm
+  // word is written wherever the frame's seat stands, and where none
+  // does a ghost seat is founded — a frame with no script behind its
+  // document has no port, no want, no count, and only the one truth the
+  // wire carries: a stream runs here.
+  //
+  // The wake rides the first strain of an entry's life, and never
+  // again: a stream in play re-crosses the bus every few seconds by its
+  // own cadence, and each crossing finds the entry already warm — the
+  // word is a door-knock, not a heartbeat, because the frame's sweep
+  // runs at the knock and its own events (the film's element landing in
+  // the DOM, the metadata arriving) are what keep it fresh. The stream
+  // being warm again for a document born again is exactly the knock the
+  // beginner deserves: a reconnect replaces the entry, and the next
+  // strain knocks anew.
+  const strain = (tabId, frameId) => {
+    let table = books.get(tabId);
+    if (table === undefined) {
+      table = { book: new Map(), seatNext: 0 };
+      books.set(tabId, table);
+    }
+    const entry = table.book.get(frameId);
+    if (entry === undefined) {
+      table.book.set(frameId, {
+        port: null,
+        want: false,
+        count: 0,
+        granted: false,
+        seat: null,
+        stream: true,
+      });
+      return;
+    }
+    if (entry.stream) return;
+    entry.stream = true;
+    if (entry.port !== null) {
+      try {
+        entry.port.postMessage({ type: STRAIN });
+      } catch {
+        // A mouth that would not carry the knock is one whose death is
+        // on its way as an event; the warmth stays written, the book
+        // keeps what the wire said.
+      }
+    }
+  };
+
   browser.runtime.onConnect.addListener((port) => {
     // The vouching is the whole entrance exam: a port without a tab and a
     // frame named on its envelope is nobody's frame — an extension page's
@@ -95,8 +144,18 @@ export const createFrameHub = (browser) => {
     // A frame that reconnects — its document was remade while the tab
     // lived on — takes a fresh entry: whatever turn it held belonged to a
     // document that has gone, and it re-enters the queue at the back, the
-    // way the old rail's re-claim did.
-    const entry = { port, want: false, count: 0, granted: false, seat: null };
+    // way the old rail's re-claim did. What it adopts with it is the
+    // frame's warmth: if the wire strained here before — a ghost seat the
+    // stream fed, or a predecessor's — the context is the frame's, not
+    // any document's, and it stays with the seat.
+    const entry = {
+      port,
+      want: false,
+      count: 0,
+      granted: false,
+      seat: null,
+      stream: table.book.get(frameId)?.stream === true,
+    };
     table.book.set(frameId, entry);
 
     port.onMessage.addListener((word) => {
@@ -146,15 +205,24 @@ export const createFrameHub = (browser) => {
     if (sender?.tab !== undefined) return false;
     const book = books.get(word.tabId)?.book;
     let total = 0;
+    let streams = 0;
     if (book !== undefined) {
       for (const entry of book.values()) {
         total += entry.count;
+        // The context line beyond the count: frames the count is still
+        // silent about — either nobody stands behind their document to
+        // sweep it, or the sweep ran and found nothing the DOM names —
+        // where the wire alone says a film streams. A frame with films
+        // to count repeats no line; its context is already spoken.
+        if (entry.stream && entry.count === 0) streams += 1;
       }
     }
-    return Promise.resolve({ videoCount: total });
+    return Promise.resolve({ videoCount: total, streams });
   });
 
-  // The book is returned for the tests, which stand in for the browser and
-  // read the registry by hand; the running extension never needs it.
-  return { books };
+  // The book is returned for the tests, which stand in for the browser
+  // and read the registry by hand — and `strain` with it, for the eye at
+  // the bus to feed. The running extension composes the two in
+  // background/index.js: the tap hears the wire, the hub keeps the book.
+  return { books, strain };
 };

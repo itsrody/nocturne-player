@@ -44,6 +44,17 @@ const describeVideo = async (tab) => {
       const plural = state.videoCount === 1 ? 'video' : 'videos';
       return `${state.videoCount} ${plural} detected on this page.`;
     }
+    // The count is silent, but the network's book is not: a film streams
+    // in a frame of this page whose element the DOM cannot confirm — an
+    // embed with no script of ours inside it, or a stream running without
+    // an element of its own. Answered as its own line of context, never
+    // counted as a video.
+    if (state?.streams > 0) {
+      const streamPlural = state.streams === 1 ? 'stream' : 'streams';
+      const frames = state.streams === 1 ? 'a frame' : 'some frames';
+      const line = `detected in ${frames} of this page.`;
+      return `${state.streams} media ${streamPlural} ${line}`;
+    }
     return 'No video detected on this page yet.';
   } catch {
     return 'Not active on this page.';

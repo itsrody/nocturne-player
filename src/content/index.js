@@ -6,7 +6,7 @@ import {
 } from '../lib/settings.js';
 import { createSignal } from '../lib/signals.js';
 import { createTimerSlot } from '../lib/time.js';
-import { LEGACY_OPENINGS_KEY, REPORT, VERDICT } from '../lib/words.js';
+import { LEGACY_OPENINGS_KEY, REPORT, STRAIN, VERDICT } from '../lib/words.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import {
@@ -96,6 +96,11 @@ const start = async () => {
   let wantsBadge = () => false;
   const grant = createSignal();
   const announce = createSignal();
+  // A moment the hub says and only the watcher hears: the network's word
+  // that a film's bytes are already crossing the tab — before the
+  // element has landed, before the metadata has arrived. Fired by the
+  // word, heard by whoever comes below it.
+  const strain = createSignal();
 
   // The frame's seat of life: one runtime port to the background's hub,
   // opened once and kept for the life of the document. The browser attests
@@ -114,9 +119,15 @@ const start = async () => {
     up.postMessage({ type: REPORT, want: wantsBadge(), count: liveCount() });
   };
 
-  // The seat's news, the hub's alone: one boolean, heard once and answered
-  // with the badge's own arrangement.
+  // Two words ride back, and each is answered where it is known: the
+  // seat's news by the badge's own arrangement, the wire's strain by the
+  // scheduling signal — the sweep's own debounce keeps a burst of
+  // segment-fetch knocks from becoming a burst of walks.
   up.onMessage.addListener((word) => {
+    if (word?.type === STRAIN) {
+      strain.emit();
+      return;
+    }
     if (word?.type !== VERDICT) return;
     granted = Boolean(word.granted);
     grant.emit();
@@ -142,6 +153,11 @@ const start = async () => {
   // A verdict arriving from the hub is the badge's news with the film the
   // watcher holds: the answer is re-asked of the frame as it stands now.
   grant.on(() => retune(watcher.getPrimary()));
+
+  // The wire's strain is the sweep's earliest knock: a film's manifest is
+  // often fetched before its element is ever inserted, so the hearing
+  // here can open the walk a beat before the MutationObserver's own.
+  strain.on(() => watcher.poke());
 
   wantsBadge = () => !session && watcher.getPrimary() !== null && isWatched();
 

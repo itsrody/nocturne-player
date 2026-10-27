@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { createFrameHub } from '../../src/background/hub.js';
-import { STATE_QUERY, VERDICT } from '../../src/lib/words.js';
+import { STATE_QUERY, STRAIN, VERDICT } from '../../src/lib/words.js';
 // The browser, stood up to exactly the shape the hub asks of it: three
 // event bags (connect, message, tabs going away), and a port with the
 // envelope the runtime hands over. Deliveries are synchronous — no
@@ -180,7 +180,7 @@ test('the hub answers the count with one voice, its own', async () => {
     { type: STATE_QUERY, tabId: 1 },
     {},
   );
-  assert.deepEqual(answer, { videoCount: 3 });
+  assert.deepEqual(answer, { videoCount: 3, streams: 0 });
 
   // A frame asking here is answered nothing: the hub alone speaks for
   // the book, and the speaker's envelope is how the two callers apart.
@@ -195,7 +195,7 @@ test('the hub answers the count with one voice, its own', async () => {
     { type: STATE_QUERY, tabId: 2 },
     {},
   );
-  assert.deepEqual(empty, { videoCount: 0 });
+  assert.deepEqual(empty, { videoCount: 0, streams: 0 });
 });
 
 test('a tab going away leaves nothing in the book', () => {
@@ -234,4 +234,84 @@ test('a channel without a vouched sender is shown the door', () => {
   browser.fire.connect(frameless);
   assert.equal(frameless.dropped, true);
   assert.equal(hub.books.size, 0, 'nobody else reached the book');
+});
+
+test('a media strain founds a ghost seat', () => {
+  const browser = makeBrowser();
+  const hub = createFrameHub(browser);
+
+  // An about:blank or srcdoc embed runs no content script — there is no
+  // port, no envelope, no word of its own — but the eye at the bus sees
+  // the request the element made, attested to its frameId all the same.
+  hub.strain(1, 3);
+  const ghost = hub.books.get(1).book.get(3);
+  assert.equal(ghost.port, null);
+  assert.equal(ghost.stream, true);
+  assert.equal(ghost.want, false);
+  assert.equal(ghost.count, 0);
+
+  // The strain is warm by the stream's own continuation, not by a clock:
+  // every later crossing finds the seat already warm and says nothing
+  // new.
+  hub.strain(1, 3);
+  assert.equal(hub.books.get(1).book.get(3).stream, true);
+});
+
+test('a ghost’s context is adopted by whoever comes home', () => {
+  const browser = makeBrowser();
+  const hub = createFrameHub(browser);
+
+  hub.strain(1, 3);
+  const ghost = makePort(1, 3);
+  browser.fire.connect(ghost);
+  const entry = hub.books.get(1).book.get(3);
+  assert.equal(entry.port, ghost);
+
+  // The frame's document has a script standing now, and it kept the
+  // warmth the wire wrote for its seat — the context is the frame's, not
+  // any document's, so the popup's context line reads the same frame it
+  // read before the port ever stood.
+  assert.equal(entry.stream, true);
+
+  // The adoption alone says no wake word: the new document reports its
+  // own state at boot already, and a stream that re-crosses the bus
+  // would find the seat warm — the knock is for entries born cold.
+  assert.deepEqual(ghost.spoken, []);
+});
+
+test('the strain knocks a cold frame’s sweep awake, once per entry', () => {
+  const browser = makeBrowser();
+  const hub = createFrameHub(browser);
+
+  const one = makePort(1, 1);
+  browser.fire.connect(one);
+  hub.strain(1, 1);
+  assert.deepEqual(one.spoken, [{ type: STRAIN }]);
+
+  // A stream in play re-crosses the bus every few seconds; the entry is
+  // already warm, so the continuing cadence pays the port nothing.
+  hub.strain(1, 1);
+  hub.strain(1, 1);
+  assert.equal(one.spoken.length, 1);
+});
+
+test('the popup hears the context line beyond the count', async () => {
+  const browser = makeBrowser();
+  const hub = createFrameHub(browser);
+
+  // Two ghost streams the DOM cannot confirm, and one counted frame
+  // that also runs a stream of its own — the counted frame's context is
+  // already spoken by its count, so it repeats no line.
+  hub.strain(1, 2);
+  hub.strain(1, 3);
+  const counted = makePort(1, 1);
+  browser.fire.connect(counted);
+  counted.say({ type: 'nocturneReport', want: false, count: 2 });
+  hub.strain(1, 1);
+
+  const [answer] = await browser.fire.message(
+    { type: STATE_QUERY, tabId: 1 },
+    {},
+  );
+  assert.deepEqual(answer, { videoCount: 2, streams: 2 });
 });

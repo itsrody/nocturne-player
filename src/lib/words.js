@@ -23,6 +23,12 @@ export const SLOT_TAG = 'nocturneSlot';
 export const REPORT = 'nocturneReport';
 export const VERDICT = 'nocturneVerdict';
 
+// The hub's one word heard from behind a frame, on a wire no frame owns:
+// a media-shaped request crossed the tab's network bound for this frame,
+// whether or not the frame's document has said anything, or has a script
+// standing at all. Content hears it and asks its sweep to run.
+export const STRAIN = 'nocturneStrain';
+
 // The one verb the popup speaks and the hub answers: how many films the
 // whole page holds, tab by tab.
 export const STATE_QUERY = 'query-state';
