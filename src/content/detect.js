@@ -1,5 +1,14 @@
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
+// The player is a player for one film — the one a page is built around. Two
+// cheap readings say that a page has one: the film must own at least half of
+// the screen's area on its own, and where other films are present it must own
+// double what the runner-up owns. A page that is a gallery, a results grid or
+// a row of hover-preview cards elects no film at all — the right answer,
+// because nothing there is the main film, and the badge is quieter than a
+// player opened on a preview.
+const MAIN_MIN_SHARE = 0.5;
+const MAIN_DOMINANCE = 2;
 const RESCAN_DELAY_MS = 250;
 const HAVE_METADATA = 1;
 
@@ -60,8 +69,16 @@ const collectVideos = () => {
   return found;
 };
 
-const isPlayable = (video) => {
+export const isPlayable = (video) => {
   if (!video.isConnected) return false;
+  // A portrait film is a clip by the nature of its shape: shorts, reels and
+  // thumb-flick feeds are what portrait is on the pages a player is offered
+  // to, and a page that is all clips has no main film in it. Refused at the
+  // gate, so the candidacy arithmetic never sees one. Dimensions the element
+  // has not given yet are no verdict either way.
+  if (video.videoWidth > 0 && video.videoHeight > video.videoWidth) {
+    return false;
+  }
   const rect = video.getBoundingClientRect();
   if (rect.width < MIN_WIDTH || rect.height < MIN_HEIGHT) return false;
   const style = getComputedStyle(video);
@@ -78,27 +95,26 @@ const visibleArea = (rect) => {
   return Math.max(0, width) * Math.max(0, height);
 };
 
-// Visible area, not raw area: an unloaded player further down the page reports
-// a default box that would otherwise outrank the video actually on screen.
-const scoreVideo = (video) => {
-  const area = visibleArea(video.getBoundingClientRect());
-  if (area === 0) return 0;
-  const playingWeight = video.paused ? 1 : 3;
-  const readyWeight = video.readyState >= HAVE_METADATA ? 1.5 : 1;
-  return area * playingWeight * readyWeight;
-};
+// Pick must rank on the visible area alone — not a weighted taste. What is
+// on screen decides who the screen belongs to; a preview that plays by
+// itself has no seniority, and a film that is still loading has no fault.
+export const pickPrimary = (videos) => {
+  const ranked = Array.from(videos)
+    .map((video) => ({
+      video,
+      area: visibleArea(video.getBoundingClientRect()),
+    }))
+    .filter(({ area }) => area > 0)
+    .sort((first, second) => second.area - first.area);
 
-const pickPrimary = (videos) => {
-  let best = null;
-  let bestScore = 0;
-  for (const video of videos) {
-    const score = scoreVideo(video);
-    if (score > bestScore) {
-      best = video;
-      bestScore = score;
-    }
+  const best = ranked[0];
+  if (!best) return null;
+  const runner = ranked[1];
+  if (runner && best.area < runner.area * MAIN_DOMINANCE) return null;
+  if (best.area < window.innerWidth * window.innerHeight * MAIN_MIN_SHARE) {
+    return null;
   }
-  return best;
+  return best.video;
 };
 
 export const createVideoWatcher = (onPrimaryChange) => {

@@ -128,6 +128,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   than a cross. The fullscreen button rides the tail after it, and the
   once-halved topbar is cut entirely: the frame carries no chrome above
   the picture, and the toast and sheets reseat to a breath from the top.
+- **The player belongs to one film.** The badge only appears when a page can
+  name one: a film that owns at least half of the screen and, where other
+  films are present, twice what the runner-up owns. A page of previews, a
+  results grid or a row of hover cards elects nothing, so the player opens
+  on nothing by accident; a portrait film — a shorts clip by shape — is
+  refused at the gate, before any arithmetic.
 
 ### Removed
 
