@@ -5,32 +5,39 @@
 // nothing to tear down, and no boot order the pages could postpone
 // behind.
 //
-// Three factories, wired in one direction of dependence. The hub keeps
-// the book; the recruiter asks its book whether a frame already stands;
-// the eye at the bus hears the wire and speaks to both. The eye’s whole
-// duty is the one listener below: a media-shaped request names a frame
-// with a dossier in hand, the recruiter says whether the viewer’s law
-// admits the tab at all (a disabled host boots nothing and founds no
-// ghost either) and boots the field agent into the frame the browser
+// Three ears and hands, wired in one direction of dependence. The eye
+// at the bus hears the wire; the recruiter says whether the viewer’s
+// law admits the tab at all (a disabled host boots nothing and founds
+// no ghost either) and boots the field agent into the frame the browser
 // named — plus one sweep of the relations when the film turns out to be
-// framed — and only the admitted word is written into the book under the
-// key the browser attested.
+// framed — and only the admitted word is written into the book under
+// the key the browser attested.
+import { createBook } from './book/book.js';
+import { decide } from './book/seat.js';
+import { createSessions } from './book/sessions.js';
+import { createStrain } from './book/strain.js';
+import { createReader } from './book/read.js';
+import { answerState } from './book/state.js';
 import { createConscript } from './conscript.js';
-import { createCipherWorker } from './cipher.js';
-import { createFrameHub } from './hub.js';
+import { createCipherWorker } from './cipher/worker.js';
 import { createWireTap } from './network.js';
 import { LEGACY_OPENINGS_KEY } from '../lib/words.js';
 
-// The cipher’s room rides the hub like the book does: the hub is the
-// only mouth the frames speak through, so the worker’s two verbs —
-// read a manifest, give one segment — are the hub’s calls, never the
-// pages'.
-const hub = createFrameHub(browser, createCipherWorker());
-const conscript = createConscript(browser, { standing: hub.standing });
+// The book’s wiring, spliced in by hand: the rooms ask the book and are
+// asked by the words they carry. The cipher’s room rides the book like
+// the book itself does — the sessions are the only mouth the frames
+// speak through, so the worker’s two verbs — read a manifest, give one
+// segment — answer through them, never the pages'.
+const worker = createCipherWorker();
+const book = createBook();
+const read = createReader(worker, book);
+const strain = createStrain({ book, read });
+createSessions({ browser, book, worker, read, decide, answerState });
+const conscript = createConscript(browser, { standing: book.standing });
 
 createWireTap(browser, (tabId, frameId, ear) => {
   conscript.rally(tabId, frameId, ear).then((admitted) => {
-    if (admitted) hub.strain(tabId, frameId, ear);
+    if (admitted) strain(tabId, frameId, ear);
   });
 });
 

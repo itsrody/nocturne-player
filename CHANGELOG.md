@@ -68,6 +68,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The background’s rooms carry their own names.** The hub was one
+  file answering for six duties at once; now each stands in its own
+  file under `book/` — the registry and its births (`book.js`), the
+  seat’s re-think (`seat.js`), the wire’s word (`strain.js`), the
+  cipher’s choreography with its budget (`read.js`), the runtime
+  channel and its ceremonies (`sessions.js`), and the popup’s one
+  answer (`state.js`) — with the wiring spliced into `index.js`
+  itself, where the three ears of the background are composed. The
+  cipher work splits by purity the same way: `cipher/manifest.js`
+  parses and unseals with never a fetch, and `cipher/worker.js` holds
+  the network’s hands and the privacy allowance the scan reads. No
+  behaviour moved: every word, every tally, every ceremony is where it
+  was, the tests composing the same seams — the suite stands where it
+  stood.
 - **The word a stream’s cadence keeps listening.** A frame’s seat often
   warms on a crossing that names no family — a segment the player
   re-fetched while the manifest itself went unheard — and the manifest

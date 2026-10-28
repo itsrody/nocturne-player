@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { createCipherWorker } from '../../src/background/cipher/worker.js';
 import {
-  createCipherWorker,
   decryptSegment,
   hexIv,
   readManifest,
   sequenceIv,
-} from '../../src/background/cipher.js';
+} from '../../src/background/cipher/manifest.js';
 
 // The stream the tests read: one manifest, one key, one fmp4 film — with
 // the addresses resolved the way a real manifest resolves them, relative

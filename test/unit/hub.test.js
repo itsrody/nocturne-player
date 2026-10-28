@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createFrameHub } from '../../src/background/hub.js';
+import { createBook } from '../../src/background/book/book.js';
+import { decide } from '../../src/background/book/seat.js';
+import { createSessions } from '../../src/background/book/sessions.js';
+import { createStrain } from '../../src/background/book/strain.js';
+import { createReader } from '../../src/background/book/read.js';
+import { answerState } from '../../src/background/book/state.js';
 import {
   CIPHER,
   CIPHER_BYTES,
@@ -82,9 +87,23 @@ const makePort = (tabId, frameId) => {
   return port;
 };
 
+// The hub, composed here as `background/index.js` composes it: the book
+// the rooms ask, the words carried, the session room stood. There is no
+// factory behind it any more — a background page composes in its own
+// index — so the tests hold the same splice by hand, and the object
+// they read (`books`, `strain`, `standing`) is the arrangement’s three
+// doors, as the eye and the recruiter have always knocked at them.
+const makeHub = (browser, worker = null) => {
+  const book = createBook();
+  const read = createReader(worker, book);
+  const strain = createStrain({ book, read });
+  createSessions({ browser, book, worker, read, decide, answerState });
+  return { books: book.books, strain, standing: book.standing };
+};
+
 test('the first want takes the seat and the second waits', () => {
   const browser = makeBrowser();
-  createFrameHub(browser);
+  makeHub(browser);
 
   const one = makePort(1, 1);
   const two = makePort(1, 2);
@@ -111,7 +130,7 @@ test('the first want takes the seat and the second waits', () => {
 
 test('a port’s death frees the seat without a clock', () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   const one = makePort(1, 1);
   const two = makePort(1, 2);
@@ -132,7 +151,7 @@ test('a port’s death frees the seat without a clock', () => {
 
 test('the top frame’s own film outranks the framed ones', () => {
   const browser = makeBrowser();
-  createFrameHub(browser);
+  makeHub(browser);
 
   const top = makePort(1, 0);
   const framed = makePort(1, 1);
@@ -152,7 +171,7 @@ test('the top frame’s own film outranks the framed ones', () => {
 
 test('count-only frames count but hold no seat', () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   const counter = makePort(1, 1);
   const wanter = makePort(1, 2);
@@ -175,7 +194,7 @@ test('count-only frames count but hold no seat', () => {
 
 test('the hub answers the count with one voice, its own', async () => {
   const browser = makeBrowser();
-  createFrameHub(browser);
+  makeHub(browser);
 
   const top = makePort(1, 0);
   const framed = makePort(1, 1);
@@ -210,7 +229,7 @@ test('the hub answers the count with one voice, its own', async () => {
 
 test('a tab going away leaves nothing in the book', () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   const staying = makePort(1, 1);
   const passing = makePort(2, 1);
@@ -227,7 +246,7 @@ test('a tab going away leaves nothing in the book', () => {
 
 test('a channel without a vouched sender is shown the door', () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   // An extension page’s own connect — the popup, the options — has no
   // tab on its envelope.
@@ -248,7 +267,7 @@ test('a channel without a vouched sender is shown the door', () => {
 
 test('a media strain founds a ghost seat', () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   // An about:blank or srcdoc embed runs no content script — there is no
   // port, no envelope, no word of its own — but the eye at the bus sees
@@ -269,7 +288,7 @@ test('a media strain founds a ghost seat', () => {
 
 test('a ghost’s context is adopted by whoever comes home', () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   hub.strain(1, 3);
   const ghost = makePort(1, 3);
@@ -291,7 +310,7 @@ test('a ghost’s context is adopted by whoever comes home', () => {
 
 test('the strain knocks a cold frame’s sweep awake, once per entry', () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   const one = makePort(1, 1);
   browser.fire.connect(one);
@@ -307,7 +326,7 @@ test('the strain knocks a cold frame’s sweep awake, once per entry', () => {
 
 test('the popup hears the context line beyond the count', async () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   // Two ghost streams the DOM cannot confirm, and one counted frame
   // that also runs a stream of its own — the counted frame’s context is
@@ -349,7 +368,7 @@ const segmentEar = {
 
 test('the dossier rides the port once, despite the roads', async () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   // The wire first: the strain lands before any port exists, so the
   // entry is founded already carrying its dossier — and the freshly
@@ -376,7 +395,7 @@ test('the dossier rides the port once, despite the roads', async () => {
 
 test('a dossier earned as a ghost is told to whoever comes home', () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   // The wordless first crossing warms the seat; the next crossing that
   // spoke carries the dossier, held by the ghost.
@@ -404,7 +423,7 @@ test('a dossier earned as a ghost is told to whoever comes home', () => {
 
 test('standing answers only where a port is alive', async () => {
   const browser = makeBrowser();
-  const hub = createFrameHub(browser);
+  const hub = makeHub(browser);
 
   // The wire warmed a ghost: no port, so nothing for the recruiter to
   // skip. The boot must land despite the warmth.
@@ -460,7 +479,7 @@ test('a manifest crossing is read, its word told once per entry', async () => {
   };
   const browser = makeBrowser();
   const worker = makeWorker(answer);
-  const hub = createFrameHub(browser, worker);
+  const hub = makeHub(browser, worker);
 
   const one = makePort(1, 1);
   browser.fire.connect(one);
@@ -509,7 +528,7 @@ test('a manifest crossing is read, its word told once per entry', async () => {
   // reads nothing and says nothing.
   const second = makePort(1, 9);
   browser.fire.connect(second);
-  createFrameHub(browser).strain(1, 9, wireEar);
+  makeHub(browser).strain(1, 9, wireEar);
   await settle();
   assert.deepEqual(second.spoken, []);
 });
@@ -517,7 +536,7 @@ test('a manifest crossing is read, its word told once per entry', async () => {
 test('a ghost’s manifest is read when a hand comes home', async () => {
   const browser = makeBrowser();
   const worker = makeWorker({ cipher: 'sample-aes', plan: null });
-  const hub = createFrameHub(browser, worker);
+  const hub = makeHub(browser, worker);
 
   // The wordless seat: a ghost the wire warmed but nobody lives in — no
   // port, so nothing to say the word to, and the read is owed nobody.
@@ -564,7 +583,7 @@ test('a family named late upgrades the frame’s word and is read', async () => 
       segments: [{ url: 'https://cdn.example/seg0.mp4', seq: 41 }],
     },
   });
-  const hub = createFrameHub(browser, worker);
+  const hub = makeHub(browser, worker);
 
   // The seat warms on a crossing that names no family — a segment the
   // player re-fetched while the manifest was crossing unseen — and the
@@ -619,7 +638,7 @@ test('a read that answers nothing is asked again by the cadence', async () => {
     },
     giveSegment: async () => null,
   };
-  const hub = createFrameHub(browser, scripted);
+  const hub = makeHub(browser, scripted);
 
   const one = makePort(1, 1);
   browser.fire.connect(one);
@@ -669,7 +688,7 @@ test('the budget is spent, and the cadence buys nothing after', async () => {
   // continues uninterrupted, nothing said.
   const browser = makeBrowser();
   const worker = makeWorker(null);
-  const hub = createFrameHub(browser, worker);
+  const hub = makeHub(browser, worker);
 
   const one = makePort(1, 1);
   browser.fire.connect(one);
@@ -687,7 +706,7 @@ test('the budget is spent, and the cadence buys nothing after', async () => {
 test('a segment ask is answered with bytes, or with a miss', async () => {
   const browser = makeBrowser();
   const worker = makeWorker();
-  createFrameHub(browser, worker);
+  makeHub(browser, worker);
 
   const one = makePort(1, 1);
   browser.fire.connect(one);
@@ -711,7 +730,7 @@ test('a segment ask is answered with bytes, or with a miss', async () => {
     },
   };
   const other = makeBrowser();
-  createFrameHub(other, falling);
+  makeHub(other, falling);
   const two = makePort(1, 2);
   other.fire.connect(two);
   two.say(askCipherSegment('https://cdn.example/seg0.mp4'));
@@ -732,7 +751,7 @@ test('a segment ask is answered with bytes, or with a miss', async () => {
 
 test('a frame’s line is printed in the background’s own console', () => {
   const browser = makeBrowser();
-  createFrameHub(browser);
+  makeHub(browser);
   const printed = [];
   const original = console.info;
   console.info = (...parts) => printed.push(parts.join(' '));
