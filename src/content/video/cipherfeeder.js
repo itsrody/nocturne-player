@@ -38,7 +38,10 @@ const elementSays = (video, url) => {
 
 // The feeder. `up` is the frame’s port to the hub; `readPlan` answers
 // with the plan the bus said, fresh at every ask — a plan said to a
-// document now remade is no plan to play on.
+// document now remade is no plan to play on — and is asked with the
+// element at hand, because the own engine beside it composes in: an
+// element the hatch already feeds is named planless here, whatever the
+// bus said for its stream.
 export const createCipherFeeder = (up, readPlan) => {
   // The elements the feeder has already owned an attempt on. A WeakSet:
   // an element the page let go of takes its one refusal with it, and no
@@ -62,7 +65,7 @@ export const createCipherFeeder = (up, readPlan) => {
 
   const repair = (video) => {
     if (tried.has(video) || !video.error) return;
-    const plan = readPlan();
+    const plan = readPlan(video);
     if (plan === null) return;
     // The manifesto match: a stream is only taken over when the element
     // is errored on exactly the manifest the wire saw — the feeder’s

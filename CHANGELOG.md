@@ -68,6 +68,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **The house hatches its own engine.** hls.js — the library the
+  site-side players the extension already steers are built on — rides in
+  the package, and where a film errors and no site engine can be found
+  and no sealed plan is on the bus, Nocturne stands its own loader on the
+  element: plain HLS and the `blob:` sites whose own engine died with
+  its MediaSource now play instead of a broken frame. The hatch runs in
+  the page’s own compartment, so its asks read back through the same
+  doors a site loader would — the routing shim, the bearer words, the
+  keeper — and hung under `nocturneHls`, it is found by the quality
+  sweep first of all keys: sizing and subtitle work off real rungs. The
+  takeover is careful as the sealed-stream feeder is: only errored
+  elements, one loader per element at most, and a fatal failure buries
+  the engine and hands the element back as the page gave it.
+
 - **The tokenized stream’s ledger speaks both dialects.** Every
   manifest read has always re-sealed the fresh tokenized addresses;
   now it also forgets the generation it replaces — the read a stream

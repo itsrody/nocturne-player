@@ -36,6 +36,10 @@ export const isPlayerjsInstance = (value) =>
   isFunction(value, 'api') && typeof probe(value, 'api', 'id') === 'string';
 
 const ATTACHED_KEYS = [
+  // The house’s own hatch: the instance the own engine hangs on the
+  // element it took, the first key asked — no loader outranks the one
+  // the house itself stood.
+  'nocturneHls',
   'hls',
   '_hls',
   '__hls',

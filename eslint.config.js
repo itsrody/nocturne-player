@@ -5,7 +5,11 @@ const [baseConfig] = configMetarhia;
 
 export default [
   {
-    ignores: ['dist/*', 'artifacts/*', 'node_modules/*'],
+    // The vendored own engine is upstream code, carried in whole and
+    // read as was written for it: its own repo lints its own style, and
+    // the house's rules are for the house's rooms. It is *not* skipped
+    // by the privacy scan, which is the one reading that must believe it.
+    ignores: ['dist/*', 'artifacts/*', 'node_modules/*', 'src/vendor/*'],
   },
   {
     ...baseConfig,

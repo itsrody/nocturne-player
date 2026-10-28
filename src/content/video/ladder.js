@@ -103,6 +103,23 @@ export const ladderNear = (video) => {
   return null;
 };
 
+// The address the near ladder was keyed by — the master the frame
+// speaks for, whatever road its ask took. The own engine’s fuel: a
+// clash of loaders is read from the same book the sheet’s chips are.
+export const ladderAddressNear = (video) => {
+  const said = [video?.currentSrc, video?.src].filter(
+    (one) => typeof one === 'string' && one !== '' && !one.startsWith('blob:'),
+  );
+  for (const url of said) {
+    if (ladderFor(url) !== null) return url;
+  }
+  for (const url of crossings) {
+    if (ladderFor(url) !== null) return url;
+  }
+  const spoken = Array.from(ladders.keys()).reverse();
+  return spoken[0] ?? null;
+};
+
 // The pin’s voice, wired once by whoever holds the frame’s port.
 export const voiceLadder = (wired) => {
   voice = wired;

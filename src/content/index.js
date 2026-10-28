@@ -26,6 +26,7 @@ import { createCipherFeeder } from './video/cipherfeeder.js';
 import { createRoute } from './video/route.js';
 import { hearLadder, voiceLadder } from './video/ladder.js';
 import { claimReplay } from './video/resume.js';
+import { createOwnEngine } from './video/ownengine.js';
 import { knockWarm, warmEngines } from './video/engines.js';
 import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
@@ -233,7 +234,18 @@ const start = async () => {
   // over when the bus has said a plan for its stream. It is made here —
   // before the watcher, which asks it the repair arm in every sweep —
   // and it keeps its own asks and answers on the frame’s port.
-  const feeder = createCipherFeeder(up, () => plan);
+  // The playback arms, composed at the one hook the walk offers before
+  // its judgement: the feeder takes the sealed streams — a plan said
+  // by the bus; the own engine takes the planless ones — plain HLS and
+  // the `blob:` sites whose closed-over engine died with its own
+  // MediaSource. Both arms keep the one-attempt law, and the feeder
+  // owns its precedence: an element the own engine already feeds is
+  // named planless to the feeder, so a plan arriving late can never
+  // hang a second loader on an element the house has already taken.
+  const own = createOwnEngine();
+  const feeder = createCipherFeeder(up, (video) =>
+    own.owns(video) ? null : plan,
+  );
 
   // The routing arm — FastStream’s own architecture: the film frame’s
   // asks are spoken by the background’s hands, so the network panel
@@ -267,7 +279,14 @@ const start = async () => {
     dom,
     up,
     () => !session && isWatched(),
-    feeder.repair,
+    (video) => {
+      // The arms in precedence order, each its own gate: the hatch only
+      // takes planless streams; the feeder renames what the hatch already
+      // owns (the composed plan-reader above), so a late plan cannot hang
+      // a second loader on an element the house feeds already.
+      own.repair(video, plan !== null);
+      feeder.repair(video);
+    },
   );
 
   // The film in hand is the badge’s news: the badge is re-aimed where

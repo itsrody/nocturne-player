@@ -8,6 +8,12 @@ const TARGET = 'firefox115';
 const staticAssets = [
   { from: `${SOURCE_DIR}/manifest.json`, to: `${OUTPUT_DIR}/manifest.json` },
   { from: `${SOURCE_DIR}/icons`, to: `${OUTPUT_DIR}/icons` },
+  // The vendored own engine: shipped raw, not bundled — the page-world
+  // hatch imports it as a module out of the extension’s own room.
+  {
+    from: `${SOURCE_DIR}/vendor`,
+    to: `${OUTPUT_DIR}/vendor`,
+  },
   { from: `${SOURCE_DIR}/popup/popup.html`, to: `${OUTPUT_DIR}/popup.html` },
   { from: `${SOURCE_DIR}/popup/popup.css`, to: `${OUTPUT_DIR}/popup.css` },
   {
