@@ -11,6 +11,7 @@ import {
   STRAIN,
   VERDICT,
   askCipherSegment,
+  sayLine,
 } from '../../src/lib/protocol.js';
 // The browser, stood up to exactly the shape the hub asks of it: three
 // event bags (connect, message, tabs going away), and a port with the
@@ -584,4 +585,34 @@ test('a segment ask is answered with bytes, or with a miss', async () => {
   // still holds, and no answer is owed to a word the hub never asked.
   one.say({ type: 'nocturneCipherBytes', url: '', bytes: null });
   assert.equal(one.spoken.length, 1);
+});
+
+test('a frame’s line is printed in the background’s own console', () => {
+  const browser = makeBrowser();
+  createFrameHub(browser);
+  const printed = [];
+  const original = console.info;
+  console.info = (...parts) => printed.push(parts.join(' '));
+
+  try {
+    const one = makePort(1, 7);
+    browser.fire.connect(one);
+
+    // The line rides up whole and is stamped with the frame’s own
+    // coordinates at its head — every frame’s words, one scroll.
+    one.say(sayLine('Nocturne: [aes] the plan arrived, 3 segments'));
+    assert.equal(
+      printed.at(-1),
+      'Nocturne: [tab 1 frame 7] Nocturne: [aes] the plan arrived, 3 segments',
+    );
+
+    // The line takes no books and says nothing back: the hub is no
+    // recorder, only a room with a console.
+    const before = printed.length;
+    one.say({ type: 'nocturneLine' });
+    one.say(null);
+    assert.equal(printed.length, before, 'the malformed is refused, not said');
+  } finally {
+    console.info = original;
+  }
 });

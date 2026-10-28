@@ -30,6 +30,7 @@
 // bus bound for one of its frames.
 import {
   asCipherAsk,
+  asLine,
   asReport,
   asStateQuery,
   sayCipher,
@@ -257,6 +258,18 @@ export const createFrameHub = (browser, worker = null) => {
     readCipher(entry, tabId, frameId, entry.wire);
 
     port.onMessage.addListener((word) => {
+      // The frame’s diagnostics line, printed in the background’s own
+      // console with the frame’s coordinates at its head: the one room
+      // where every frame’s words stand in a single scroll, and the one
+      // console the viewer’s devtools can be opened on for the frames
+      // whose own console will not cooperate. The word only ever
+      // arrives while the viewer’s switch is on — off, nothing crosses,
+      // and the hub is no recorder of what it did not hear.
+      const line = asLine(word);
+      if (line !== null) {
+        console.info(`Nocturne: [tab ${tabId} frame ${frameId}] ${line.text}`);
+        return;
+      }
       // The cipher’s ask rides the same port as the report: the frame
       // holds the plan, and the bytes it cannot fetch itself are asked
       // for one address at a time, answered with clonable bytes — or

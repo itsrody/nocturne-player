@@ -14,10 +14,12 @@ import {
   asDossier,
   asStrain,
   asVerdict,
+  sayLine,
 } from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
 import { createDomManager } from './dom.js';
+import { hearLines } from '../lib/debug.js';
 import { createCipherFeeder } from './video/cipherfeeder.js';
 import { knockWarm, warmEngines } from './video/engines.js';
 import { createSlot, isTopFrame } from './slot.js';
@@ -122,6 +124,21 @@ const start = async () => {
   // the frame’s half of this same handshake: its own findings, said on
   // the port it is handed.
   const up = browser.runtime.connect({ name: 'nocturneSeat' });
+
+  // The diagnostics sink, registered while the seat stands: every line
+  // the frame’s own logger says while the viewer’s switch is on is said
+  // up the port whole, so the background’s inspect window carries the
+  // whole house’s lines in one scroll — the pages a console cannot be
+  // opened on included. With the switch off the logger stays silent
+  // before this listener is ever reached, so nothing crosses at all.
+  hearLines((text) => {
+    try {
+      up.postMessage(sayLine(text));
+    } catch {
+      // A mouth gone dead mid-word is a death the disconnect has
+      // already spoken; the line was for a console that closed first.
+    }
+  });
 
   // The dossier this frame hears back, kept only until the next: the
   // background’s evidence from the bus — where the film’s bytes came

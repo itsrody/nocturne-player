@@ -7,6 +7,7 @@ import {
   asCipherBytes,
   asCipherPlan,
   asDossier,
+  asLine,
   asReport,
   asSlot,
   asStateQuery,
@@ -19,6 +20,7 @@ import {
   sayCipherBytes,
   sayCipherPlan,
   sayDossier,
+  sayLine,
   sayReport,
   saySlot,
   sayStrain,
@@ -293,5 +295,35 @@ test('the plan is believed whole and trimmed at its bound', () => {
     ),
     null,
     'a sequence that cannot be is no segment',
+  );
+});
+
+test('a frame’s line rides up whole, and is refused shaped', () => {
+  // The word carries the console’s text as it was said: the hub stamps
+  // its own frame coordinates at the head, so the line itself holds
+  // nothing but the sentence the frame’s console spoke.
+  const said = sayLine('Nocturne: [aes] the plan arrived, 3 segments');
+  assert.deepEqual(said, {
+    type: 'nocturneLine',
+    text: 'Nocturne: [aes] the plan arrived, 3 segments',
+  });
+  assert.deepEqual(asLine(said), {
+    text: 'Nocturne: [aes] the plan arrived, 3 segments',
+  });
+  // And the refusals: no text, an empty one, a word of another type,
+  // and no word at all — a line is a line only when it is one.
+  assert.equal(asLine(null), null);
+  assert.equal(asLine('nocturneLine'), null);
+  assert.equal(asLine({ type: 'nocturneReport', want: true, count: 1 }), null);
+  assert.equal(asLine({ type: 'nocturneLine' }), null, 'no text, no line');
+  assert.equal(
+    asLine({ type: 'nocturneLine', text: '' }),
+    null,
+    'an empty line says nothing',
+  );
+  assert.equal(
+    asLine({ type: 'nocturneLine', text: 42 }),
+    null,
+    'a line that is not a sentence is no line',
   );
 });

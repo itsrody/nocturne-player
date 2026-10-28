@@ -68,6 +68,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Every frame’s diagnostics line stands in the background’s own
+  console.** While the diagnostics switch is on, each line the frame’s
+  console says is said up the seat port whole — exactly the sentence the
+  frame spoke — and the hub prints it stamped with the frame’s
+  coordinates at its head, so the background page’s inspect window
+  carries every frame’s lines in one scroll. This is the one console a
+  devtools window can be opened on without the page’s console ever
+  cooperating, and the hub is a room with a console, never a recorder:
+  nothing is booked, nothing is answered. With the switch off the logger
+  stays silent before the listener is ever reached, so no word crosses
+  the port at all — the page runs exactly as it would run without the
+  diagnostics.
 - **An AES-128 stream the element alone cannot read can now play.** The
   HLS standard’s own whole-segment cipher is not a DRM system — its key
   sits in the manifest as public data — and now the extension can

@@ -81,6 +81,15 @@ export const CIPHER_ASK = 'nocturneCipherAsk';
 // error at the caller.
 export const CIPHER_BYTES = 'nocturneCipherBytes';
 
+// The frame’s diagnostics line, said up while the viewer asks for the
+// answers: the background’s own console is the room where every frame’s
+// lines stand in one scroll — and the one console a devtools window can
+// be opened on without the page’s console ever cooperating. The word
+// carries the line whole, exactly the text the frame’s console said,
+// and nothing else: the hub stamps its own frame coordinates at the
+// head, because the frame’s own words do not know they are a frame’s.
+export const LINE = 'nocturneLine';
+
 // The popup’s one question and the hub’s alone to answer: how many films
 // the whole tab holds, and how many frames stream one the count cannot
 // confirm. A frame asking is answered nothing — the speaker’s envelope
@@ -150,6 +159,11 @@ export const sayCipherBytes = (url, bytes) => ({
   url,
   bytes,
 });
+
+// The frame’s line, said up by the sink standing at the seat port: it
+// crosses exactly as the console said it, because the formatting is the
+// logger’s one business and the hub’s stamp is added at the other end.
+export const sayLine = (text) => ({ type: LINE, text });
 
 // The popup’s question, carrying the tab it reads.
 export const askState = (tabId) => ({ type: STATE_QUERY, tabId });
@@ -274,6 +288,15 @@ export const asCipherBytes = (word) => {
   if (word.bytes === null) return { url: word.url, bytes: null };
   if (!(word.bytes instanceof ArrayBuffer)) return null;
   return { url: word.url, bytes: word.bytes };
+};
+
+// The frame’s line, believed only as a sentence that says something:
+// the whole text the frame’s console spoke, or nothing.
+export const asLine = (word) => {
+  if (!isWord(word) || word.type !== LINE || !isSpelled(word.text)) {
+    return null;
+  }
+  return { text: word.text };
 };
 
 // The popup’s question, believed only with a tab to read.
