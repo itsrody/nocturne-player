@@ -12,9 +12,11 @@ import {
   asCipher,
   asCipherPlan,
   asDossier,
+  asLadder,
   asStrain,
   asVerdict,
   sayLine,
+  sayRouteRung,
 } from '../lib/protocol.js';
 import { createBadge } from './controls/badge.js';
 import { createVideoWatcher } from './detect.js';
@@ -22,6 +24,7 @@ import { createDomManager } from './dom.js';
 import { hearLines } from '../lib/debug.js';
 import { createCipherFeeder } from './video/cipherfeeder.js';
 import { createRoute } from './video/route.js';
+import { hearLadder, voiceLadder } from './video/ladder.js';
 import { knockWarm, warmEngines } from './video/engines.js';
 import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
@@ -187,6 +190,15 @@ const start = async () => {
       debug('the bus named the cipher', cipherWord.cipher, cipherWord.url);
       return;
     }
+    const ladderWord = asLadder(word);
+    if (ladderWord !== null) {
+      hearLadder(ladderWord.url, ladderWord.ladder);
+      debug(
+        `the stream’s ladder heard — ${ladderWord.ladder.length} rungs`,
+        ladderWord.url,
+      );
+      return;
+    }
     const dossierWord = asDossier(word);
     if (dossierWord !== null) {
       heard = dossierWord;
@@ -229,6 +241,14 @@ const start = async () => {
   // here, beside the feeder, and armed where the watcher first
   // confirms a film — the patches never run on a page with no film.
   const route = createRoute(up);
+
+  // The pin’s voice, wired once beside the routing’s birth: a rung the
+  // sheet tags is spoken up as the hub’s own rewording word. A refusal
+  // on the wire — a port already dying — costs the caller nothing; the
+  // pin’s own room swallows it.
+  voiceLadder((id) => {
+    up.postMessage(sayRouteRung(id));
+  });
 
   // The frame’s arm of the manager, ending in the handshake with the
   // background: the watch handed the manager’s story and the frame’s

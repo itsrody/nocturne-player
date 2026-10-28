@@ -76,6 +76,19 @@ export const MAX_PLAN_SEGMENTS = 4096;
 // the page’s side of the wire.
 export const CIPHER_ASK = 'nocturneCipherAsk';
 
+// The stream's own ladder, said down once per generation beside the
+// cipher's word: the variants a master playlist offered, in the
+// stream's own words — the height its RESOLUTION encoded, the
+// bandwidth it was asked at, the address its own playlist sits at. It
+// is the sheet's answer for the sites whose player object the DOM
+// cannot reach: the stream is a ladder the house's read already
+// fetched and parsed, no second ask owed for it. A bound on the rows,
+// like the plan's: a master with more variants than any sheet could
+// draw is a manifest the reader should not quote whole.
+export const LADDER = 'nocturneStreamLadder';
+
+export const MAX_LADDER_ROWS = 32;
+
 // A routed ask, up: the film frame asks the house’s hands to make one of
 // the page’s own media asks — the shim in the frame caught the ask the
 // page’s player built, and the answer comes back as bytes the page never
@@ -111,6 +124,13 @@ export const ROUTE_BYTES = 'nocturneRouteBytes';
 // runtime can say the type, and a page cannot forge a word it never
 // hears.
 export const ROUTE_BOW = 'nocturneRouteBow';
+
+// A rung’s pin, said up by the sheet at the master the hub holds: the
+// enumerated variant the viewer tagged. Or a plain null — the pin
+// lifted, and the master served whole again. The pin takes nothing on
+// the wire but the index; the variant’s address is the ladder’s own
+// truth, and the hub re-reads it from the manifest it is rewording.
+export const ROUTE_RUNG = 'nocturneRouteRung';
 
 // The segment’s answer, down: clonable bytes, or an honest null — a
 // fetch that failed or a segment the plan never knew is a miss, not an
@@ -219,6 +239,28 @@ export const sayRouteBytes = (id, url, status, contentType, bytes, heads) => ({
 // The stand-down, said down: deliberately empty, whatever the reason the
 // hub judged with — the word is the judgement, not its account.
 export const sayRouteBow = () => ({ type: ROUTE_BOW });
+
+// A rung’s pin, said up by the sheet: a rung holding its index, or a
+// plain null for the pin lifted.
+export const sayRouteRung = (id) => ({
+  type: ROUTE_RUNG,
+  id: id === null ? null : String(id),
+});
+
+// The stream’s ladder, said down beside the cipher’s word: the master’s
+// variants, each with its index, its height and bandwidth, its codecs
+// when the manifest named any, and the address of its own playlist.
+export const sayLadder = (url, ladder) => ({
+  type: LADDER,
+  url,
+  ladder: ladder.slice(0, MAX_LADDER_ROWS).map((one) => ({
+    index: one.index,
+    height: one.height ?? 0,
+    bandwidth: one.bandwidth ?? 0,
+    codecs: one.codecs ?? null,
+    url: one.url,
+  })),
+});
 
 // The answer, said down with clonable bytes — or an honest null when
 // the ask came to nothing.
@@ -438,6 +480,48 @@ export const asRouteBytes = (word) => {
 export const asRouteBow = (word) => {
   if (!isWord(word) || word.type !== ROUTE_BOW) return null;
   return {};
+};
+
+// A rung’s pin, believed as an index that says something — or as a
+// plain null, the pin lifted. Anything in between is not the sheet’s
+// word.
+export const asRouteRung = (word) => {
+  if (!isWord(word) || word.type !== ROUTE_RUNG) return null;
+  if (word.id === null || word.id === undefined) return { id: null };
+  if (!isSpelled(word.id)) return null;
+  return { id: String(word.id) };
+};
+
+// The stream’s ladder, believed only whole: the master named, and
+// every row carrying an index, a height, a bandwidth and an address
+// the read resolved — the rows a sheet draws rungs from. Fewer rows
+// than the master said is a manifest that said fewer; more is said
+// nowhere.
+export const asLadder = (word) => {
+  if (!isWord(word) || word.type !== LADDER || !isSpelled(word.url)) {
+    return null;
+  }
+  if (!Array.isArray(word.ladder)) return null;
+  const ladder = [];
+  for (const one of word.ladder) {
+    if (!isWord(one) || !isSpelled(one.url)) return null;
+    if (
+      !isCount(one.index) ||
+      !isCount(one.height) ||
+      !isCount(one.bandwidth)
+    ) {
+      return null;
+    }
+    ladder.push({
+      index: Math.floor(one.index),
+      height: Math.floor(one.height),
+      bandwidth: Math.floor(one.bandwidth),
+      codecs: isSpelled(one.codecs) ? one.codecs : null,
+      url: one.url,
+    });
+    if (ladder.length === MAX_LADDER_ROWS) break;
+  }
+  return { url: word.url, ladder };
 };
 
 // The popup’s question, believed only with a tab to read.

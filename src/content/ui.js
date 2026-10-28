@@ -1,6 +1,7 @@
 import { createMenu } from './controls/menu.js';
 import { createAudioTracks } from './video/audiotracks.js';
 import { createQuality } from './video/quality.js';
+import { onLadder } from './video/ladder.js';
 import { createRecognizer } from './gestures/recognizer.js';
 import { createControlBar } from './controls/controlbar.js';
 import { createSeeker } from './video/seek.js';
@@ -301,6 +302,17 @@ export const createOverlay = ({
   });
 
   subtitleSet.on(menu.setSubtitle);
+
+  // A ladder that lands after the sheet opened repaints it: the hub’s
+  // read of the master finishes on the stream’s own cadence — seconds
+  // after a sheet on an early-opened film sat empty — and the sheet
+  // should show the rungs the moment they exist rather than ask for a
+  // second open. The house reads the ladder room directly: the sheet’s
+  // refresh is the one consumer of the bell, and the address is
+  // already stored wherever the sheet asks from.
+  onLadder(() => {
+    menu.refresh();
+  });
 
   const isPanelOpen = () => menu.isOpen();
 

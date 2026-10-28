@@ -20,13 +20,17 @@
 // is the carrying: which words a frame says arrive through this room,
 // and which words of the house go back down.
 import { replayedOn } from '../../lib/bearers.js';
+import { readManifest, keepVariant } from '../cipher/manifest.js';
+import { sayEngineShape } from '../../lib/media.js';
 import {
   asCipherAsk,
   asLine,
   asReport,
   asRouteAsk,
+  asRouteRung,
   asStateQuery,
   sayCipherBytes,
+  sayLadder,
   sayRouteBow,
   sayRouteBytes,
 } from '../../lib/protocol.js';
@@ -40,9 +44,59 @@ import {
 // that answers the house is a stream the house keeps serving.
 const MAX_MISSES = 8;
 
+// The ladder’s own quote, taken from bytes already on hand: a routed
+// manifest ask was answered by the house’s hands, and its body spells
+// the stream — a master’s variant list, an MPD’s representations. This
+// is the read that cannot miss: no second fetch, no cadence, no budget
+// waiting on a read in flight — the ask the player itself caught is
+// the catch the ladder is quoted at, and it is robust exactly because
+// it rides the answer the player would have read anyway. A body that
+// parses to nothing answers nothing; the read beside it is still the
+// choreography for the seal’s own truth.
+const quoteLadder = (url, answer) => {
+  try {
+    const text = new TextDecoder('utf-8').decode(new Uint8Array(answer.bytes));
+    const read = readManifest(text, url);
+    if (read === null) return null;
+    if (read.isMaster === true || read.mpd === true) return read.variants;
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 // The honest miss the count reads: a status the wire itself invented —
 // zero, nothing crossed — beside no bytes.
 const miss = { status: 0, bytes: null, heads: [] };
+
+// The pin’s own hand at the hub: an answer whose bytes spell a master
+// playlist, reworded to the one variant the sheet pinned — every other
+// STREAM-INF pair out, everything else carried across. A pin whose
+// variant is no longer on the master, a text the read refused, an
+// encoding that would not decode — all answer null, the whole master
+// served unharmed. The reworded length is the reworded bytes’ own: the
+// origin’s content-length row was said for a different body and is
+// named no more.
+const rerune = (rung, url, answer) => {
+  try {
+    const text = new TextDecoder('utf-8').decode(new Uint8Array(answer.bytes));
+    const read = readManifest(text, url);
+    if (read === null || read.isMaster !== true) return null;
+    const wanted = read.variants[Number(rung)];
+    if (wanted === undefined) return null;
+    const kept = keepVariant(text, url, wanted.url);
+    if (kept === null) return null;
+    return {
+      ...answer,
+      bytes: new TextEncoder().encode(kept).buffer,
+      heads: answer.heads.filter(
+        (one) => one.name.toLowerCase() !== 'content-length',
+      ),
+    };
+  } catch {
+    return null;
+  }
+};
 
 // The rooms wired: the book the entries live in, the seat asked after
 // every word that moves an answer, the reader that carries the cipher
@@ -97,6 +151,19 @@ export const createSessions = ({
         console.info(`Nocturne: [tab ${tabId} frame ${frameId}] ${line.text}`);
         return;
       }
+      // A rung’s pin, said up by the sheet once the viewer has tagged a
+      // rung of the stream’s own ladder: the hub rewords its master
+      // answers to that variant until the pin is lifted — the viewer’s
+      // choice, carried on the frame’s own entry, which is the entry’s
+      // not any document’s. Nothing is answered here; the choice lands
+      // at the next manifest read, the way the stream’s own cadence
+      // pays for it.
+      const rung = asRouteRung(word);
+      if (rung !== null) {
+        if (rung.id === null) delete entry.rung;
+        else entry.rung = rung.id;
+        return;
+      }
       // The cipher’s ask rides the same port as the report: the frame
       // holds the plan, and the bytes it cannot fetch itself are asked
       // for one address at a time, answered with clonable bytes — or
@@ -130,6 +197,21 @@ export const createSessions = ({
       // hanging per ask.
       const routed = asRouteAsk(word);
       if (routed !== null) {
+        // The read starts at the catch, not at the bus: a manifest
+        // ask means the frame’s own player is naming its stream, and
+        // this is the earliest, most certain beat the cipher’s
+        // choreography can run at — long before the eye at the bus
+        // may catch the same crossing, if it ever does (an ask the
+        // routing carries needs no second flight over the bus). The
+        // reader’s own guards decide what it costs: the budget, the
+        // in-flight flag, the same cadence re-asks the shim’s next
+        // replay pays. The ask itself rides the answering hands below
+        // regardless — the read and the ask share a door, not a
+        // request.
+        read(entry, tabId, frameId, {
+          url: routed.url,
+          shape: sayEngineShape('xmlhttprequest', routed.url),
+        });
         if (entry.want !== true) {
           try {
             port.postMessage(
@@ -174,15 +256,48 @@ export const createSessions = ({
               // A mouth gone dead mid-word belongs to a death the
               // disconnect has already spoken.
             }
+            // The ladder’s quote at the catch: the ask the player
+            // itself caught was just answered by hands the house
+            // trusts — if its body spells a manifest, the stream’s
+            // own rungs are on hand right here, and the word rides
+            // down without any read at all. Once per entry: a master
+            // re-asked says nothing the sheet has not already hung.
+            if (
+              entry.ladderTold !== true &&
+              answer.bytes !== null &&
+              sayEngineShape('xmlhttprequest', replayed.url) !== null
+            ) {
+              const ladder = quoteLadder(replayed.url, answer);
+              if (ladder !== null && ladder.length > 0) {
+                entry.ladderTold = true;
+                try {
+                  port.postMessage(sayLadder(replayed.url, ladder));
+                } catch {
+                  // A mouth gone dead mid-word belongs to a death the
+                  // disconnect has already spoken.
+                }
+              }
+            }
+
+            // The pinned rung: the hub rewords the answer before the
+            // word rides down, when the sheet has pinned one and the
+            // body spells a master. The reworded body is still clonable
+            // bytes the shim’s own reader trusts — nothing here throws
+            // at the shim.
+            let said = answer;
+            if (entry.rung !== undefined && answer.bytes !== null) {
+              const reruned = rerune(entry.rung, replayed.url, answer);
+              if (reruned !== null) said = reruned;
+            }
             try {
               port.postMessage(
                 sayRouteBytes(
                   replayed.id,
                   replayed.url,
-                  answer.status,
-                  answer.contentType,
-                  answer.bytes,
-                  answer.heads ?? [],
+                  said.status,
+                  said.contentType,
+                  said.bytes,
+                  said.heads ?? [],
                 ),
               );
             } catch {

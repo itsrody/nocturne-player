@@ -53,7 +53,8 @@
 // nothing.
 import { replayedHeads } from '../../lib/bearers.js';
 import { createDebug } from '../../lib/debug.js';
-import { isMediaShaped } from '../../lib/media.js';
+import { isMediaShaped, sayEngineShape } from '../../lib/media.js';
+import { hearCrossing } from './ladder.js';
 import {
   CREDENS,
   asRouteBow,
@@ -322,6 +323,15 @@ export const createRoute = (up, beat = BEAT) => {
         if (!isMediaShaped('xmlhttprequest', asked)) {
           return Reflect.apply(room.native, scope, [input, init]);
         }
+        // A manifest-shaped ask is the frame’s film naming its own
+        // ladder; the storage room beside this one is told the
+        // crossing, whether the ask routes or not — the element’s
+        // `currentSrc` on most engines is a `blob:` name and the
+        // master’s own address is the only word the ladder is
+        // keyed by.
+        if (sayEngineShape('xmlhttprequest', asked) !== null) {
+          hearCrossing(asked);
+        }
         // The method the init said, when the init is the asker’s own
         // sentence — a POST is nobody’s routed ask, whatever it carries.
         if (tag !== '[object Request]') {
@@ -364,7 +374,12 @@ export const createRoute = (up, beat = BEAT) => {
               answer.status === 0 ||
               answer.bytes === null
             ) {
-              debug('the routed ask fell back to the page’s own', asked);
+              debug(
+                'the routed ask fell back to the page’s own',
+                asked,
+                answer === null ? 'the hub said nothing' : answer.status,
+                answer?.bytes === null ? 'no bytes' : 'bytes on hand',
+              );
               return Reflect.apply(room.native, scope, [input, init]);
             }
             debug('the routing carried the film’s ask', asked);
@@ -647,6 +662,12 @@ export const createRoute = (up, beat = BEAT) => {
             ) {
               return Reflect.apply(origSend.value, this, arguments);
             }
+            // The brand’s own door knows the crossing the same way the
+            // fetch door does: a manifest-shaped ask names the stream,
+            // and the ladder storage is told, routing or not.
+            if (sayEngineShape('xmlhttprequest', ask.url) !== null) {
+              hearCrossing(ask.url);
+            }
             const instance = this;
             const waived = instance.wrappedJSObject ?? instance;
             const rspType = String(waived.responseType ?? '');
@@ -686,7 +707,12 @@ export const createRoute = (up, beat = BEAT) => {
                   answer.status === 0 ||
                   answer.bytes === null
                 ) {
-                  debug('the routed ask fell back to the page’s own', ask.url);
+                  debug(
+                    'the routed ask fell back to the page’s own',
+                    ask.url,
+                    answer === null ? 'the hub said nothing' : answer.status,
+                    answer?.bytes === null ? 'no bytes' : 'bytes on hand',
+                  );
                   return Reflect.apply(origSend.value, instance, []);
                 }
                 deliver(instance, answer, rspType, ask.url);

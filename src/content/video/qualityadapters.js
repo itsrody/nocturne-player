@@ -1,5 +1,13 @@
 import { call, isFunction, read, toArray, toPage, write } from './pageapi.js';
 import { findEngines } from './engines.js';
+import { ladderNear, pinRung } from './ladder.js';
+import { createDebug } from '../../lib/debug.js';
+
+// The ladder adapter’s own diagnosis: whether the meeting ran or not
+// is the one thing between "the stream is a ladder" and the sheet
+// showing rungs, and the sweep that named no adapter to the film
+// cannot say which of the four doors was the one that stayed shut.
+const debug = createDebug('quality-adapters');
 
 export const AUTO_ID = 'auto';
 
@@ -543,10 +551,76 @@ const createEngineAdapter = (video, host) => {
   return wired ?? found[0] ?? null;
 };
 
+// --- The stream's own ladder -------------------------------------------------
+
+// The last adapter asked, and the one that answers on the sites every other
+// adapter fails: when no <source> list, no player global and no engine object
+// can be found, the house's own read of the master playlist has already met
+// the ladder — the variants the stream itself names, with the height,
+// bandwidth and address each carries. Nothing on the DOM has to cooperate;
+// selection works through the hub's rewording of the master (`pinRung`),
+// not through any player object, so a bundled engine closed over in the
+// page's own code is no obstacle at all.
+//
+// The adapter asked last because everything before it is *provable* control
+// — a real object the change lands on in place — while a pin here lands on
+// the next manifest read, be that the stream's own cadence or only a reload.
+// Where an engine can do it now, the engine should.
+export const createLadderAdapter = (video) => {
+  // The ladder is met by the element’s own address when the element
+  // said the manifest itself, and by the frame’s own crossings when it
+  // said a `blob:` name instead — the mixer’s habit, and most engines’.
+  const ladder = ladderNear(video);
+  if (ladder === null) {
+    debug(
+      'the stream’s ladder was never met by this element',
+      typeof video.currentSrc === 'string' ? video.currentSrc : '',
+    );
+    return null;
+  }
+
+  // Best first, the chips' order; the id is the variant's index on the
+  // master, which is exactly what the pin speaks.
+  const options = ladder
+    .slice()
+    .sort(byHeightDescending)
+    .map((one) => ({
+      id: String(one.index),
+      label: heightLabel(one.height, `${Math.round(one.bandwidth / 1000)}k`),
+    }));
+
+  return {
+    name: 'stream',
+    hasAuto: true,
+    // The whole of what this adapter can say about itself: how many
+    // variants the master quoted — the ladder's length.
+    diagnose: () => `${options.length} variants on the master`,
+    list: () => options.map(({ id, label }) => ({ id, label })),
+    // The player below this adapter is a box that reads the master; the
+    // house has no way to ask it which variant it chose, and it honestly
+    // does not matter — the pin is a fact on the hub, not a hand on the
+    // player, so the chip reports nothing rather than a guess.
+    current: () => null,
+    select: (id) => {
+      if (id === AUTO_ID) {
+        pinRung(null);
+        return true;
+      }
+      const wanted = options.find((option) => option.id === id);
+      if (wanted === undefined) return false;
+      pinRung(wanted.id);
+      return true;
+    },
+  };
+};
+
 // Cheapest and most certain first: a <source> list is unambiguous, a named
-// player is next, and the sweep of the page's globals is the last thing tried.
+// player is next, and the sweep of the page's globals is the last thing tried —
+// with the stream's own ladder behind them all, answering where no object
+// was ever findable.
 export const ADAPTERS = [
   createSourceAdapter,
   createYouTubeAdapter,
   createEngineAdapter,
+  createLadderAdapter,
 ];

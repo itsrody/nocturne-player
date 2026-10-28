@@ -125,6 +125,113 @@ test('the streams that name no playable decree are named honestly', () => {
   assert.equal(readManifest('#EXTM3U\n', BASE), null);
 });
 
+test('a plain stream’s master still quotes its ladder', async () => {
+  // The whole point the ladder arm was cut for: fc2stream’s own shape —
+  // a master of variants, plain bytes beneath, no seal anywhere. Before
+  // the fix, the read answered nothing at all (`finish` refuses a
+  // no-cipher manifest), and the sheet’s rungs were thrown away with
+  // the cipher that never was. Now the ladder rides a cipher-null
+  // answer, and the sheet has its rungs on the sites the DOM cannot
+  // reach.
+  const master = [
+    '#EXTM3U',
+    '#EXT-X-VERSION:3',
+    '#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=1280x720',
+    '720.m3u8',
+    '#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080',
+    '1080.m3u8',
+  ].join('\n');
+  const variant = [
+    '#EXTM3U',
+    '#EXTINF:6.0,',
+    'seg0.mp4',
+    '#EXT-X-ENDLIST',
+  ].join('\n');
+  globalThis.fetch = (url) =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      text: async () => (url === BASE ? master : variant),
+    });
+  try {
+    const worker = createCipherWorker();
+    const read = await worker.readCipher(BASE, undefined);
+    assert.deepEqual(
+      {
+        cipher: read?.cipher,
+        plan: read?.plan,
+        ladder: read?.ladder?.length,
+      },
+      { cipher: null, plan: null, ladder: 2 },
+    );
+    // And the rungs are the master’s own words, heights included.
+    assert.deepEqual(
+      read.ladder.map((one) => one.height),
+      [720, 1080],
+    );
+  } finally {
+    delete globalThis.fetch;
+  }
+});
+
+test('a DASH MPD is read for its ladder in its own words', async () => {
+  // The other family the non-DRM stream speaks. The Representations
+  // are DASH’s rungs — here in the video set only — and the audio set
+  // beside them is left to the audio row’s own arm. The answer names
+  // what it is (no master to reword, no seals of the m3u8 grammar),
+  // and the ladder of the read quotes it whole.
+  const mpd = [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<MPD xmlns="urn:mpeg:dash:schema:mpd:2011">',
+    '  <Period>',
+    '    <AdaptationSet contentType="video">',
+    '      <Representation id="v0" bandwidth="1000000" width="1280"',
+    '        height="720" codecs="avc1.64001f" mimeType="video/mp4">',
+    '        <BaseURL>720/index.m4v</BaseURL>',
+    '      </Representation>',
+    '      <Representation id="v1" bandwidth="4000000"',
+    '        width="1920" height="1080" codecs="avc1.640028">',
+    '      </Representation>',
+    '    </AdaptationSet>',
+    '    <AdaptationSet contentType="audio">',
+    '      <Representation id="a0" bandwidth="96000" codecs="mp4a.40.2">',
+    '      </Representation>',
+    '    </AdaptationSet>',
+    '  </Period>',
+    '</MPD>',
+  ].join('\n');
+  const worker = createCipherWorker();
+  globalThis.fetch = () =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      text: async () => mpd,
+    });
+  try {
+    const read = await worker.readCipher(
+      'https://site.example/vod/manifest.mpd',
+      undefined,
+    );
+    assert.deepEqual(
+      {
+        cipher: read?.cipher,
+        plan: read?.plan,
+        mpd: read?.ladder?.length,
+      },
+      { cipher: null, plan: null, mpd: 2 },
+    );
+    assert.deepEqual(
+      read.ladder.map((one) => ({ height: one.height, codecs: one.codecs })),
+      [
+        { height: 720, codecs: 'avc1.64001f' },
+        { height: 1080, codecs: 'avc1.640028' },
+      ],
+    );
+  } finally {
+    delete globalThis.fetch;
+  }
+});
+
 test('the counters the cipher is counted by are the manifest’s own', () => {
   // The default answer: the sequence number, as a 128-bit big-endian
   // counter. Forty-one sits in the last byte, nothing anywhere else.

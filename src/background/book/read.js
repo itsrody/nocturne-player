@@ -4,7 +4,7 @@
 // and the word answers only where a good generation stands: a ghost
 // seat (no port behind the document) is never fed, for whatever the
 // plan needs, only a frame with hands of its own can ask for.
-import { sayCipher, sayCipherPlan } from '../../lib/protocol.js';
+import { sayCipher, sayCipherPlan, sayLadder } from '../../lib/protocol.js';
 import { createDebug } from '../../lib/debug.js';
 
 // The read’s voice is the diagnosis the wire had no way to give: every
@@ -53,10 +53,15 @@ export const createReader =
     // The reading flag is the in-flight guard: the cadence’s next
     // crossing must wait out the ask it follows, not stack a second
     // fetch beside it.
-    if (entry.cipherTold || entry.reading || entry.reads >= MAX_READS) {
+    if (entry.cipherTold) {
+      debug('the read told its word already', crossing.url);
+      return;
+    }
+    if (entry.reading || entry.reads >= MAX_READS) {
       debug(
-        'the read answered nothing before and its budget is spent',
-        entry.reads,
+        'the read is in the air, or its budget is spent',
+        entry.reading ? 'in flight' : entry.reads,
+        MAX_READS,
       );
       return;
     }
@@ -80,7 +85,31 @@ export const createReader =
         return;
       }
       entry.cipherTold = true;
-      entry.port.postMessage(sayCipher(answer.cipher, crossing.url));
+      // The cipher word only where the stream sealed one: a plain
+      // stream’s read answers with a null cipher — nothing to name,
+      // nothing of the sheet’s business — and its answer is the
+      // ladder alone.
+      if (answer.cipher !== null) {
+        entry.port.postMessage(sayCipher(answer.cipher, crossing.url));
+      }
+      // The stream's own ladder, said down once per generation: the
+      // sheet's rungs for the players whose ladder object the DOM
+      // cannot reach. A master said more than the sheet needs; the
+      // builder trims. A plain stream says this and nothing else —
+      // its no-seal truth is still a ladder worth quoting. Under the
+      // switch the word names itself: the whole range between "read
+      // the master" and "the sheet showed rungs" ends here, and a
+      // decoder’s eye answers in one line.
+      if (answer.ladder !== undefined && answer.ladder !== null) {
+        debug(
+          `the stream’s ladder said down — ${answer.ladder.length} rungs`,
+          crossing.url,
+        );
+        // The same flag the routed ask’s own quote observes: one
+        // ladder per entry, whichever door first held the bytes.
+        entry.ladderTold = true;
+        entry.port.postMessage(sayLadder(crossing.url, answer.ladder));
+      }
       if (answer.plan !== null) {
         entry.port.postMessage(sayCipherPlan(answer.plan));
       }

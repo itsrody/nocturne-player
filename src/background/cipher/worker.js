@@ -157,13 +157,39 @@ export const createCipherWorker = () => {
       const answer = await fetch(manifestUrl, initOf(heads));
       if (!answer.ok) return null;
       let manifest = readManifest(await answer.text(), manifestUrl);
+      // An MPD answered: the DASH ladder is the whole of what this
+      // read can honestly say — no variant playlist beneath it to
+      // follow, no seals of the house’s grammar to read. A rung of it
+      // is not offered in the words the pin speaks (the limit the
+      // MPD read itself tells), but the rungs still quote.
+      if (manifest?.mpd === true) {
+        return { cipher: null, plan: null, ladder: manifest.variants };
+      }
       if (manifest?.isMaster === true) {
+        // The master’s variant list is the stream’s own ladder — read
+        // before the variant’s own playlist is, said down beside the
+        // cipher’s word, and carried in the answer the read gives back
+        // so the policy wheel’s read made no second fetch owe it.
+        const variants = manifest.variants;
         const variant = manifest.variant;
         if (variant.url === null) return null;
         const inner = await fetch(variant.url, initOf(heads));
         if (!inner.ok) return null;
         manifest = readManifest(await inner.text(), variant.url);
-        if (manifest !== null) manifest.codecs = variant.codecs;
+        if (manifest === null) return null;
+        manifest.codecs = variant.codecs;
+        const answer = finish(manifest, variant.url);
+        // A plain stream answers with no cipher and no plan — and its
+        // ladder still rides. The variant list is the stream’s own
+        // truth, worth a word down whatever stands for its seals; a
+        // null answer here was throwing the sheet’s rungs away on
+        // exactly the sites whose players the DOM cannot reach, the
+        // no-seal streams that never owed the house a key.
+        if (answer === null) {
+          return { cipher: null, plan: null, ladder: variants };
+        }
+        answer.ladder = variants;
+        return answer;
       }
       return finish(manifest, manifestUrl);
     } catch {

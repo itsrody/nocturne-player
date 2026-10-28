@@ -113,6 +113,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The stream quotes its own ladder, and the sheet pins a rung of it.**
+  Quality detection and selection reach the sites no player object could
+  be found on. The house’s own read of a master playlist — the fetch the
+  router already pays — now says the whole variant list down beside the
+  cipher’s word (`sayLadder`, bounded as the plan is), a new storage room
+  keeps the ladders, and a new adapter asked last answers from the
+  stream’s own truth: `1080p`, `720p`, the height or bitrate each
+  RESOLUTION encoded. The ladder is met even where the element says only
+  a `blob:` name the player minted — the routing’s own doors report the
+  manifest crossings the frame paid for, and the ladder rides those, so
+  detection holds wherever the film was read. Selection rides the routed
+  answer itself — a pinned rung is spoken up as `nocturneRouteRung`, and
+  the hub rewords the master it delivers (`keepVariant`) to that one
+  variant’s pair, the content-length row of the old body dropped with
+  it, until the pin is lifted and the whole master is served again. The
+  player’s own ABR reads a ladder of one and plays exactly what the
+  viewer tagged — no engine access needed, and no new network verb
+  anywhere.
+
 - **The background answers the routing room’s own misses.** The last
   robustness sweep of `src/background/`, read against the router the
   rooms serve: a routed ask whose frame carries no want is refused with

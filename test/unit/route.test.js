@@ -3,12 +3,14 @@ import { test } from 'node:test';
 
 import { createCipherWorker } from '../../src/background/cipher/worker.js';
 import {
+  asLadder,
   asRouteAsk,
   asRouteBytes,
   ROUTE_ASK,
   ROUTE_BYTES,
   sayRouteAsk,
   sayRouteBytes,
+  sayRouteRung,
 } from '../../src/lib/protocol.js';
 import { createSessions } from '../../src/background/book/sessions.js';
 import { createBook } from '../../src/background/book/book.js';
@@ -668,6 +670,178 @@ test('the key door stays honest past its own bound', async () => {
   assert.notEqual(again, null);
   assert.equal(keyFetches, firstCount + 1);
   delete globalThis.fetch;
+});
+
+test('the pin rewords the master the hub delivers, once pinned', async () => {
+  // The stream in miniature: one master with two rungs, the worker's own
+  // hand answering the crossing's ask with the master's bytes — the shape
+  // a real routed manifest read rides, status beside heads beside bytes.
+  const master = [
+    '#EXTM3U',
+    '#EXT-X-VERSION:3',
+    '#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=1280x720',
+    '720.m3u8',
+    '#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080',
+    '1080.m3u8',
+  ].join('\n');
+  const masterUrl = 'https://site.example/vod/master.m3u8';
+  const worker = {
+    askBytes: async (url) => {
+      if (url !== masterUrl) {
+        return { status: 0, contentType: null, bytes: null, heads: [] };
+      }
+      return {
+        status: 200,
+        contentType: 'application/vnd.apple.mpegurl',
+        bytes: new TextEncoder().encode(master).buffer,
+        heads: [
+          { name: 'content-length', value: String(master.length) },
+          { name: 'cache-control', value: 'no-cache' },
+        ],
+      };
+    },
+  };
+  const hub = makeHub(worker);
+  const port = makePort(5, 0);
+  hub.over(port);
+  port.say({ type: 'nocturneReport', want: true, count: 1 });
+
+  const ask = (id) => {
+    port.say(sayRouteAsk(id, masterUrl, 'GET', []));
+    return new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+  };
+  const body = (index) =>
+    new TextDecoder('utf-8').decode(
+      asRouteBytes(port.spoken[index])?.bytes ?? new ArrayBuffer(0),
+    );
+
+  // Unpinned: the whole master, the origin's own content-length row still
+  // riding — the player reads the ladder the stream built.
+  await ask(1);
+  const whole = asRouteBytes(port.spoken[port.spoken.length - 1]);
+  assert.equal(whole.status, 200);
+  assert.equal(
+    whole.heads.some((one) => one.name === 'content-length'),
+    true,
+  );
+  assert.match(body(port.spoken.length - 1), /720\.m3u8/);
+  assert.match(body(port.spoken.length - 1), /1080\.m3u8/);
+
+  // Pinned to the second rung: the master delivered names a ladder of
+  // one. The unchosen pair is out entire, and the length row said for a
+  // different body goes with it — the cache-control row survives, for it
+  // was said about the delivery, not the body.
+  port.say(sayRouteRung('1'));
+  await ask(2);
+  const pinned = port.spoken[port.spoken.length - 1];
+  assert.equal(
+    pinned.heads.some((one) => one.name === 'content-length'),
+    false,
+    'the old length named a different body',
+  );
+  assert.equal(
+    pinned.heads.some((one) => one.name === 'cache-control'),
+    true,
+  );
+  const kept = body(port.spoken.length - 1);
+  assert.match(kept, /1080\.m3u8/);
+  assert.doesNotMatch(kept, /720\.m3u8/);
+
+  // The pin lifted: the whole master again, the length row said again.
+  port.say(sayRouteRung(null));
+  await ask(3);
+  const restored = body(port.spoken.length - 1);
+  assert.match(restored, /720\.m3u8/);
+  assert.match(restored, /1080\.m3u8/);
+
+  // A pin whose variant the master never named serves the whole thing
+  // unharmed — the rerun answers the whole truth, not a guess.
+  port.say(sayRouteRung('7'));
+  await ask(4);
+  assert.match(body(port.spoken.length - 1), /720\.m3u8/);
+  assert.match(body(port.spoken.length - 1), /1080\.m3u8/);
+});
+
+test('the read starts at the catch: the ask quotes its ladder', async () => {
+  // The earliest beat the choreography can run at: the frame’s own
+  // player asks for its master through the routing, and the hub starts
+  // the read on that catch alone — no wire crossing between, no sweep
+  // owed. The ladder answers down in the same frame that asked, keyed
+  // by the address the player said.
+  const master = [
+    '#EXTM3U',
+    '#EXT-X-VERSION:3',
+    '#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=1280x720',
+    '720.m3u8',
+    '#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080',
+    '1080.m3u8',
+  ].join('\n');
+  const masterUrl = 'https://site.example/vod/master.m3u8';
+  let reads = 0;
+  const worker = {
+    askBytes: async () => ({
+      status: 200,
+      contentType: 'application/vnd.apple.mpegurl',
+      bytes: new TextEncoder().encode(master).buffer,
+      heads: [],
+    }),
+    // The plain stream’s own shape: no cipher, no plan, the ladder alone.
+    readCipher: async (url) => {
+      reads += 1;
+      const head = url.slice(0, url.length - 10);
+      return {
+        cipher: null,
+        plan: null,
+        ladder: [
+          {
+            index: 0,
+            bandwidth: 1000000,
+            height: 720,
+            codecs: null,
+            url: `${head}720.m3u8`,
+          },
+          {
+            index: 1,
+            bandwidth: 4000000,
+            height: 1080,
+            codecs: null,
+            url: `${head}1080.m3u8`,
+          },
+        ],
+      };
+    },
+  };
+  const hub = makeHub(worker);
+  const port = makePort(6, 0);
+  hub.over(port);
+  port.say({ type: 'nocturneReport', want: true, count: 1 });
+
+  // One ask, one read: the guard ran at the catch.
+  port.say(sayRouteAsk(1, masterUrl, 'GET', []));
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.equal(reads, 1);
+  const ladderWord = port.spoken.map(asLadder).find((met) => met !== null);
+  assert.notEqual(ladderWord, null, 'the ladder rode the catch');
+  assert.equal(ladderWord.url, masterUrl);
+  assert.deepEqual(
+    ladderWord.ladder.map((one) => one.height),
+    [720, 1080],
+  );
+
+  // The budget is the same discipline on this door: the next ask is a
+  // re-ask the cipherTold flag answers for — one generation, one word.
+  port.say(sayRouteAsk(2, masterUrl, 'GET', []));
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.equal(reads, 1);
 });
 
 test('the shim stands for nothing where no frame room stands', () => {
