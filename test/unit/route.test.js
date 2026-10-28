@@ -71,11 +71,30 @@ test('the routed ask is worded whole, and refused where it half-says', () => {
       id: 3,
       url: 'https://site.example/seg.ts',
       method: 'GET',
+      creden: 'same-origin',
       heads: [
         { name: 'Range', value: 'bytes=0-' },
         { name: 'Cookie', value: 'a=1' },
       ],
     },
+  );
+  // The credentials mode the page said rides whole; a mode that lies
+  // is not the page’s word.
+  assert.equal(
+    asRouteAsk(
+      sayRouteAsk(3, 'https://site.example/seg.ts', 'GET', [], 'include'),
+    ).creden,
+    'include',
+  );
+  assert.equal(
+    asRouteAsk({
+      type: ROUTE_ASK,
+      id: 3,
+      url: 'u',
+      method: 'GET',
+      creden: 'all',
+    }),
+    null,
   );
   // A method wider than the house speaks sends the whole ask elsewhere.
   assert.equal(
@@ -127,7 +146,37 @@ test('the routed answer is worded whole, and refused where it', () => {
       status: 200,
       contentType: 'video/mp4',
       bytes: null,
+      heads: [],
     },
+  );
+  // The answer’s own furniture rides where both names and values say
+  // something, and a half-word of it stays home.
+  assert.deepEqual(
+    asRouteBytes(
+      sayRouteBytes(3, 'https://s.example/seg.ts', 206, 'video/mp4', null, [
+        { name: 'Content-Range', value: 'bytes 0-3/4' },
+        { name: 'x-junk', value: '' },
+      ]),
+    ),
+    {
+      id: 3,
+      url: 'https://s.example/seg.ts',
+      status: 206,
+      contentType: 'video/mp4',
+      bytes: null,
+      heads: [{ name: 'Content-Range', value: 'bytes 0-3/4' }],
+    },
+  );
+  assert.equal(
+    asRouteBytes({
+      type: ROUTE_BYTES,
+      id: 3,
+      url: 'u',
+      status: 200,
+      bytes: null,
+      heads: 3,
+    }),
+    null,
   );
   // The status a response cannot bear is nobody’s answer.
   assert.equal(
@@ -222,6 +271,7 @@ test('the hub answers a routed ask only where a film carries', async () => {
         id: 2,
         url: 'https://site.example/seg.ts',
         method: 'GET',
+        creden: 'same-origin',
         heads: [{ name: 'range', value: 'bytes=0-' }],
       },
     },
@@ -268,32 +318,133 @@ test('the hub answers a routed ask only where a film carries', async () => {
   );
 });
 
-test('the background’s hand speaks the page’s ask, and misses', async () => {
-  const initSeen = [];
+test('the stand-down is said after a long miss streak', async () => {
+  const worker = {
+    askBytes: async () => ({
+      status: 0,
+      contentType: null,
+      bytes: null,
+      heads: [],
+    }),
+  };
+  const hub = makeHub(worker);
+  const port = makePort(2, 0);
+  hub.over(port);
+  port.say({ type: 'nocturneReport', want: true, count: 1 });
+  for (let id = 1; id <= 7; id += 1) {
+    port.say(sayRouteAsk(id, 'https://site.example/seg.ts', 'GET', []));
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+    assert.equal(
+      port.spoken.some((word) => word?.type === 'nocturneRouteBow'),
+      false,
+      'seven misses, no bow yet',
+    );
+  }
+  port.say(sayRouteAsk(8, 'https://site.example/seg.ts', 'GET', []));
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.equal(
+    port.spoken.some((word) => word?.type === 'nocturneRouteBow'),
+    true,
+    'the streak rang the bell',
+  );
+});
 
+test('the streak is a streak: one hit resets it', async () => {
+  const worker = {
+    askBytes: async (url, ask) =>
+      ask.id % 5 === 0
+        ? { status: 200, contentType: 'video/mp4', bytes: new ArrayBuffer(2) }
+        : { status: 0, contentType: null, bytes: null, heads: [] },
+  };
+  const hub = makeHub(worker);
+  const port = makePort(3, 0);
+  hub.over(port);
+  port.say({ type: 'nocturneReport', want: true, count: 1 });
+  for (let id = 1; id <= 24; id += 1) {
+    port.say(sayRouteAsk(id, 'https://site.example/seg.ts', 'GET', []));
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+    assert.equal(
+      port.spoken.some((word) => word?.type === 'nocturneRouteBow'),
+      false,
+      'every fifth ask carries the streak back to nothing',
+    );
+  }
+});
+
+test('a want refused after a streak speaks nothing', async () => {
+  // The miss streak counts only where the ask is carried at all: a
+  // frame whose film went away is refused before the count, and no
+  // stand-down ever rides its port for that.
+  const worker = {
+    askBytes: async () => ({
+      status: 0,
+      contentType: null,
+      bytes: null,
+      heads: [],
+    }),
+  };
+  const hub = makeHub(worker);
+  const port = makePort(2, 1);
+  hub.over(port);
+  port.say({ type: 'nocturneReport', want: false, count: 0 });
+  for (let id = 1; id <= 20; id += 1) {
+    port.say(sayRouteAsk(id, 'https://site.example/seg.ts', 'GET', []));
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+  }
+  assert.equal(
+    port.spoken.some((word) => word?.type === 'nocturneRouteBow'),
+    false,
+  );
+});
+
+// The origin’s answer the tests’ own stub says, one `get` read all
+// three rooms ask by name.
+const stubHeader = (name) => {
+  if (name === 'content-type') return 'video/mp4';
+  if (name === 'content-length') return '4';
+  if (name === 'content-range') return 'bytes 0-3/4';
+  return null;
+};
+
+test('the background’s hand speaks the page’s ask, and misses', async () => {
   const stubAnswer = {
     ok: true,
     status: 206,
-    headers: { get: (name) => (name === 'content-type' ? 'video/mp4' : null) },
+    headers: { get: stubHeader },
     arrayBuffer: async () => new ArrayBuffer(4),
   };
+  const asked = [];
   globalThis.fetch = async (url, init) => {
-    initSeen.push({ url, init });
-    return stubAnswer;
+    asked.push({ url, init });
+    return {
+      ok: true,
+      status: 206,
+      headers: { get: stubHeader },
+      arrayBuffer: async () => new ArrayBuffer(4),
+    };
   };
   const worker = createCipherWorker();
   const green = await worker.askBytes('https://site.example/seg.ts', {
     url: 'https://site.example/seg.ts',
     method: 'GET',
     heads: [{ name: 'range', value: 'bytes=0-' }],
+    creden: 'same-origin',
   });
-  assert.deepEqual(initSeen, [
+  assert.deepEqual(asked, [
     {
       url: 'https://site.example/seg.ts',
       init: {
         method: 'GET',
         headers: { range: 'bytes=0-' },
-        credentials: 'include',
+        credentials: 'same-origin',
       },
     },
   ]);
@@ -301,7 +452,30 @@ test('the background’s hand speaks the page’s ask, and misses', async () => 
     status: 206,
     contentType: 'video/mp4',
     bytes: new ArrayBuffer(4),
+    heads: [
+      { name: 'content-length', value: '4' },
+      { name: 'content-range', value: 'bytes 0-3/4' },
+    ],
   });
+
+  // The credentials the page said are the credentials the hand says —
+  // `include` when the page asked with it, `omit` when the page said
+  // its own no, and never a wider reach than the page itself chose.
+  let shared = null;
+  globalThis.fetch = async (url, init) => {
+    shared = { url, init };
+    return stubAnswer;
+  };
+  await worker.askBytes('https://cdn.example/seg.ts', {
+    heads: [{ name: 'range', value: 'bytes=0-' }],
+    creden: 'include',
+  });
+  assert.equal(shared.init.credentials, 'include');
+  await worker.askBytes('https://cdn.example/seg.ts', {
+    heads: [{ name: 'range', value: 'bytes=0-' }],
+    creden: 'omit',
+  });
+  assert.equal(shared.init.credentials, 'omit');
 
   // The origin refusing, and the wire dark, are both the honest miss: a
   // real status beside no bytes, the shape the shim’s fallback reads.
@@ -312,11 +486,16 @@ test('the background’s hand speaks the page’s ask, and misses', async () => 
   });
   const refused = await worker.askBytes('https://site.example/seg.ts', {
     heads: [],
+    creden: 'same-origin',
   });
   assert.deepEqual(refused, {
     status: 206,
     contentType: 'video/mp4',
     bytes: null,
+    heads: [
+      { name: 'content-length', value: '4' },
+      { name: 'content-range', value: 'bytes 0-3/4' },
+    ],
   });
 
   globalThis.fetch = async () => {
@@ -324,8 +503,14 @@ test('the background’s hand speaks the page’s ask, and misses', async () => 
   };
   const dark = await worker.askBytes('https://site.example/seg.ts', {
     heads: [],
+    creden: 'same-origin',
   });
-  assert.deepEqual(dark, { status: 0, contentType: null, bytes: null });
+  assert.deepEqual(dark, {
+    status: 0,
+    contentType: null,
+    bytes: null,
+    heads: [],
+  });
 });
 
 test('the shim stands for nothing where no frame room stands', () => {

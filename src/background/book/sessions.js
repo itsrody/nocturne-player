@@ -27,8 +27,22 @@ import {
   asRouteAsk,
   asStateQuery,
   sayCipherBytes,
+  sayRouteBow,
   sayRouteBytes,
 } from '../../lib/protocol.js';
+
+// The miss streak a frame’s routing may total before the hub says the
+// stand-down: eight answers’ worth of “the origin said no to the
+// house’s hands” is not a network hiccup, it is a stream the house
+// cannot serve — a key server the hand cannot reach, a checksum the
+// origin refuses cross-compartment. The number says *streak*, not
+// lifetime: one success puts the count back to nothing, and a stream
+// that answers the house is a stream the house keeps serving.
+const MAX_MISSES = 8;
+
+// The honest miss the count reads: a status the wire itself invented —
+// zero, nothing crossed — beside no bytes.
+const miss = { status: 0, bytes: null, heads: [] };
 
 // The rooms wired: the book the entries live in, the seat asked after
 // every word that moves an answer, the reader that carries the cipher
@@ -120,23 +134,46 @@ export const createSessions = ({
         // shim’s saying: a word nobody said is replayed by nobody —
         // the policy has two readers and no second truth.
         const replayed = { ...routed, heads: replayedHeads(routed.heads) };
-        Promise.resolve(
-          worker?.askBytes?.(replayed.url, replayed) ?? {
-            status: 0,
-            bytes: null,
-          },
-        )
-          .then((answer) =>
-            port.postMessage(
-              sayRouteBytes(
-                replayed.id,
-                replayed.url,
-                answer.status,
-                answer.contentType,
-                answer.bytes,
-              ),
-            ),
-          )
+        Promise.resolve(worker?.askBytes?.(replayed.url, replayed) ?? miss)
+          .then((answer) => {
+            // The miss streak: a stream whose every answer comes back
+            // a miss — the origin refusing, a key server the hands
+            // cannot reach — is a stream this frame should not be
+            // standing between. The hub counts the streak and, once it
+            // is long enough to mean something, says the stand-down:
+            // the shim bows, the page’s own asks flow, the film plays
+            // the way the page itself could play it. A success puts
+            // the count back to nothing — a stream that answers the
+            // house is a stream the house keeps serving.
+            if (answer.status === 0 || answer.bytes === null) {
+              entry.misses = (entry.misses ?? 0) + 1;
+            } else {
+              entry.misses = 0;
+            }
+            try {
+              if (entry.want === true && entry.misses >= MAX_MISSES) {
+                port.postMessage(sayRouteBow());
+              }
+            } catch {
+              // A mouth gone dead mid-word belongs to a death the
+              // disconnect has already spoken.
+            }
+            try {
+              port.postMessage(
+                sayRouteBytes(
+                  replayed.id,
+                  replayed.url,
+                  answer.status,
+                  answer.contentType,
+                  answer.bytes,
+                  answer.heads ?? [],
+                ),
+              );
+            } catch {
+              // A mouth gone dead mid-answer belongs to a death the
+              // disconnect has already spoken.
+            }
+          })
           .catch(() => {
             try {
               port.postMessage(

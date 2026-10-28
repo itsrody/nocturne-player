@@ -80,18 +80,37 @@ export const CIPHER_ASK = 'nocturneCipherAsk';
 // the page’s own media asks — the shim in the frame caught the ask the
 // page’s player built, and the answer comes back as bytes the page never
 // asked a third origin for. The ask is the page’s own sentence, copied
-// whole: the address, the GET method, and the header pairs the page said
-// itself (filtered by the carry law named beside the shim). An id pairs
-// the ask with its answer — two asks of one address in flight are two
-// asks, not one.
+// whole: the address, the GET method, the header pairs the page said
+// itself (filtered by the carry law named beside the shim), and the
+// credentials mode the page asked with (`omit`, `same-origin`, `include`,
+// the fetch standard’s own three) — the house extends the page’s cookie
+// reach by nothing: a ask that would have carried no third-party cookie
+// still carries none. An id pairs the ask with its answer — two asks of
+// one address in flight are two asks, not one.
 export const ROUTE_ASK = 'nocturneRouteAsk';
 
+// Creden the routed ask may say, the fetch standard’s own three modes.
+// The default is `same-origin` — what a native ask the page said without
+// its own credentials word would carry.
+export const CREDENS = ['omit', 'same-origin', 'include'];
+
 // The routed ask’s answer, down: the ask’s id, the status the origin
-// answered, the one content type the page’s reader needs, and clonable
-// bytes — or an honest null byte with a real status, the miss the
-// shim’s own fallback answers with the page’s native ask. Nothing here
-// throws at anyone.
+// answered, the one content type the page’s reader needs, clonable
+// bytes — and the replayed answer furniture the origin itself said
+// (`content-length`, `content-range`), the rows a byte-range reader
+// reads beside the status. Or an honest null byte with a real status,
+// the miss the shim’s own fallback answers with the page’s native ask.
+// Nothing here throws at anyone.
 export const ROUTE_BYTES = 'nocturneRouteBytes';
+
+// The stand-down, said down once: the hub has judged this frame’s
+// routing unworthy of the wire — an ask-stream every answer of which
+// was a miss — and the shim bows: the natives are restored, the room
+// stands for nothing, and the page’s own asks go on afterwards. The
+// word carries nothing, the strain’s own discipline: nobody but the
+// runtime can say the type, and a page cannot forge a word it never
+// hears.
+export const ROUTE_BOW = 'nocturneRouteBow';
 
 // The segment’s answer, down: clonable bytes, or an honest null — a
 // fetch that failed or a segment the plan never knew is a miss, not an
@@ -171,27 +190,35 @@ export const askCipherSegment = (url) => ({ type: CIPHER_ASK, url });
 
 // A routed ask, said up by the film frame’s shim: the page’s own ask,
 // copied — the address, the method it was said with, the header pairs
-// the house carries (filtered at the saying side), and the id that
-// pairs it with its answer.
-export const sayRouteAsk = (id, url, method, heads) => ({
+// the house carries (filtered at the saying side), the credentials mode
+// the page itself said (none said, `same-origin` stands in), and the id
+// that pairs it with its answer.
+export const sayRouteAsk = (id, url, method, heads, creden) => ({
   type: ROUTE_ASK,
   id,
   url,
   method,
   heads: (heads ?? []).map((one) => ({ name: one.name, value: one.value })),
+  creden: CREDENS.includes(creden) ? creden : 'same-origin',
 });
 
-// The routed ask’s answer, said down: clonable bytes beside the status
-// and the content type the page’s reader needs — or an honest null
-// byte, the miss the shim answers with the page’s own native ask.
-export const sayRouteBytes = (id, url, status, contentType, bytes) => ({
+// The routed ask’s answer, said down: clonable bytes beside the status,
+// the content type the page’s reader needs, and the replayed answer
+// furniture the origin itself said — or an honest null byte, the miss
+// the shim answers with the page’s own native ask.
+export const sayRouteBytes = (id, url, status, contentType, bytes, heads) => ({
   type: ROUTE_BYTES,
   id,
   url,
   status,
   contentType,
   bytes,
+  heads: (heads ?? []).map((one) => ({ name: one.name, value: one.value })),
 });
+
+// The stand-down, said down: deliberately empty, whatever the reason the
+// hub judged with — the word is the judgement, not its account.
+export const sayRouteBow = () => ({ type: ROUTE_BOW });
 
 // The answer, said down with clonable bytes — or an honest null when
 // the ask came to nothing.
@@ -345,7 +372,9 @@ export const asLine = (word) => {
 // GET the media requests are said with, and nothing wider. The header
 // pairs are kept only where both names and values say something: a
 // half-said header is not the page’s word, and a word the page never
-// said is never replayed.
+// said is never replayed. The credentials mode is believed only as one
+// of the standard’s three — a word left out is the default, and a word
+// that lies is not the page’s word.
 export const asRouteAsk = (word) => {
   if (!isWord(word) || word.type !== ROUTE_ASK || !isSpelled(word.url)) {
     return null;
@@ -353,15 +382,27 @@ export const asRouteAsk = (word) => {
   if (typeof word.id !== 'number' || !Number.isFinite(word.id)) return null;
   if (word.method !== 'GET') return null;
   if (!Array.isArray(word.heads)) return null;
+  if (word.creden !== undefined && word.creden !== null) {
+    if (!CREDENS.includes(word.creden)) return null;
+  }
   const heads = word.heads
     .filter((one) => isWord(one) && isSpelled(one.name) && isSpelled(one.value))
     .map((one) => ({ name: one.name, value: one.value }));
-  return { id: Math.floor(word.id), url: word.url, method: 'GET', heads };
+  return {
+    id: Math.floor(word.id),
+    url: word.url,
+    method: 'GET',
+    creden: CREDENS.includes(word.creden) ? word.creden : 'same-origin',
+    heads,
+  };
 };
 
 // The routed ask’s answer, believed only whole: the ask’s own id, a
-// status a real response can bear, and bytes that are a real buffer or
-// an honest null — a miss, never an error at the caller.
+// status a real response can bear, bytes that are a real buffer or an
+// honest null — a miss, never an error at the caller — and the answer’s
+// own replayed furniture, kept only where both names and values say
+// something. The furniture is optional: an answer without it is a whole
+// answer of the older spelling.
 export const asRouteBytes = (word) => {
   if (!isWord(word) || word.type !== ROUTE_BYTES || !isSpelled(word.url)) {
     return null;
@@ -376,13 +417,27 @@ export const asRouteBytes = (word) => {
     return null;
   }
   if (word.bytes !== null && !(word.bytes instanceof ArrayBuffer)) return null;
+  if (word.heads !== undefined && word.heads !== null) {
+    if (!Array.isArray(word.heads)) return null;
+  }
+  const heads = (word.heads ?? [])
+    .filter((one) => isWord(one) && isSpelled(one.name) && isSpelled(one.value))
+    .map((one) => ({ name: one.name, value: one.value }));
   return {
     id: Math.floor(word.id),
     url: word.url,
     status: word.status,
     contentType: isSpelled(word.contentType) ? word.contentType : null,
     bytes: word.bytes,
+    heads,
   };
+};
+
+// The stand-down, believed as itself and nothing more: the runtime’s
+// own word, carrying nothing, asking nothing.
+export const asRouteBow = (word) => {
+  if (!isWord(word) || word.type !== ROUTE_BOW) return null;
+  return {};
 };
 
 // The popup’s question, believed only with a tab to read.

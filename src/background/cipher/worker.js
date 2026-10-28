@@ -201,31 +201,45 @@ export const createCipherWorker = () => {
   // and this is where it is finally spoken. The init is the ask’s own
   // sentence: the method the word said (the guard upstream admits GET
   // and nothing wider), the header pairs the carry law filtered at the
-  // saying side, and credentials included — the ask is crossed
-  // compartments here, but it is the same origin the page itself was
-  // asking, and a stream whose segments answer a cookie the page’s own
-  // ask would have carried plays no other way. A status the origin
-  // refused, and a fetch that threw, answer with the honest miss: a
-  // null byte beside the real status, never an error at the hub.
+  // saying side, and the credentials mode the page itself said — the
+  // ask is crossed compartments here, but the house extends the page’s
+  // cookie reach by nothing: an ask the page said without its own
+  // credentials word carries no third-party cookie from this side
+  // either (the default is `same-origin`, what the native ask would
+  // have carried). A status the origin refused, and a fetch that threw,
+  // answer with the honest miss: a null byte beside the real status,
+  // never an error at the hub. Beside the miss, the origin’s own answer
+  // furniture is read and replayed — the length the bytes truly are and
+  // the range row a byte-range reader reads — nothing more: the origin
+  // said the rest of its answer to the ask itself, not to the page.
   const askBytes = async (url, ask) => {
     const heads = {};
     for (const one of ask.heads) {
       heads[one.name] = one.value;
     }
+    const creden = ['omit', 'same-origin', 'include'].includes(ask.creden)
+      ? ask.creden
+      : 'same-origin';
     try {
       const answer = await fetch(url, {
         method: 'GET',
         headers: Object.keys(heads).length === 0 ? undefined : heads,
-        credentials: 'include',
+        credentials: creden,
       });
+      const readAnswer = (name) => answer.headers.get(name);
+      const said = [
+        ['content-length', readAnswer('content-length')],
+        ['content-range', readAnswer('content-range')],
+      ].filter(([, value]) => typeof value === 'string');
       const bytes = answer.ok ? await answer.arrayBuffer() : null;
       return {
         status: answer.status,
         contentType: answer.headers.get('content-type'),
         bytes,
+        heads: said.map(([name, value]) => ({ name, value })),
       };
     } catch {
-      return { status: 0, contentType: null, bytes: null };
+      return { status: 0, contentType: null, bytes: null, heads: [] };
     }
   };
 
