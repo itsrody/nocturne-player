@@ -43,11 +43,18 @@ const strain = createStrain({ book, read });
 createSessions({ browser, book, worker, read, decide, answerState });
 const conscript = createConscript(browser, { standing: book.standing });
 
-// The proxy room stands beside the eye: the ledger is the dispatch, the
-// book the gate, and a stream whose seals the house has read is played
-// from its own plaintext. The bearer room stands on the ask’s side of
-// the same dispatch: the word the manifest ask bore is laid onto the
-// asks the page forgot it on.
+// The proxy room stands beside the eye, *behind* the router now: a
+// routed ask never crosses its door (the background’s own fetch arrives
+// with no tab behind it), so its dispatch answers only the asks that
+// escaped the shim — the stand-down’s page-native asks after a long
+// miss streak, every fallback, and the asks made before the field
+// agent was booted into the frame. Its role is the unseal floor behind
+// the routing, and its dispatch is unchanged: the ledger seals, the
+// book gates. The bearer room stands on the ask’s side of the same
+// escaped asks: the word the manifest ask bore is laid onto the asks
+// the page forgot it on — the routed asks carry their replay from the
+// hub itself, the escaped asks have no hub hearing and this mouth is
+// the only one they have.
 createProxy(browser, worker, book);
 createBearer(browser, worker, book);
 

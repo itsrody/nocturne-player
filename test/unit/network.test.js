@@ -1,11 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import {
-  createWireTap,
-  isMediaShaped,
-  sayEngineShape,
-} from '../../src/background/network/eye.js';
+import { createWireTap } from '../../src/background/network/eye.js';
+import { isMediaShaped, sayEngineShape } from '../../src/lib/media.js';
 // The eye’s side of the stub browser: the one listener it registers, kept
 // to be fired by hand with the details the platform would hand over, and
 // the filter and spec recorded beside it — the shape of the listener is

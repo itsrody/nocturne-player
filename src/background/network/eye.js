@@ -29,14 +29,6 @@
 // refreshing itself.
 
 import { isMediaShaped, sayEngineShape } from '../../lib/media.js';
-
-// The corpus of media-shaped words, and the family words the crossing’s
-// URL answers with, are pure URL arithmetic and live in `lib/media.js`
-// — the routing shim in the film frame reads the very same word, and a
-// vocabulary the two sides of the wire share has to be sited where the
-// wire can reach it. This file keeps only the listening.
-export { isMediaShaped, sayEngineShape };
-
 // The one tap listener the background page stands up, wired from the hub
 // with the callback the hub exported its ear to. `browser.webRequest` is
 // absent where the permission is not granted or the platform stubbed out —
