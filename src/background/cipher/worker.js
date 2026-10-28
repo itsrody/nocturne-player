@@ -31,7 +31,13 @@
 // was, bare-handed too.
 import { bearerWords } from '../../lib/bearers.js';
 import { MAX_PLAN_SEGMENTS } from '../../lib/protocol.js';
-import { decryptSegment, hexIv, readManifest, sequenceIv } from './manifest.js';
+import {
+  decryptSegment,
+  hexIv,
+  readManifest,
+  sealKeyOf,
+  sequenceIv,
+} from './manifest.js';
 
 // A bound on the ledger’s own size, for the same reason any book keeps
 // one: a persistent background page lives for the browser’s lifetime,
@@ -74,9 +80,14 @@ export const createCipherWorker = () => {
   };
 
   // The plan built from the manifest read. The ledger holds the
-  // stream’s own seal-facts, keyed by the segment’s address; the plan
-  // is only said when the frame could honestly play it — AES-128, an
-  // fmp4 init map, and a playlist that ends.
+  // stream’s own seal-facts, keyed by the segment’s address — in its
+  // canonical word, the spelling every ask is heard by — and the
+  // read replaces its own stream’s generation: the newest manifest is
+  // the stream’s only truth, so the addresses the read leaves behind —
+  // a token the next ask expired — are forgotten together, and no other
+  // stream’s word is hurried. The plan is only said when the frame
+  // could honestly play it — AES-128, an fmp4 init map, and a playlist
+  // that ends.
   const finish = (manifest, manifestUrl) => {
     if (
       manifest === null ||
@@ -85,8 +96,13 @@ export const createCipherWorker = () => {
     ) {
       return null;
     }
+    for (const [address, seal] of ledger) {
+      if (seal.stream === manifestUrl) ledger.delete(address);
+    }
     for (const one of manifest.segments) {
-      if (one.url !== null) ledger.set(one.url, one);
+      if (one.url !== null) {
+        ledger.set(sealKeyOf(one.url), { ...one, stream: manifestUrl });
+      }
     }
     // The ledger’s own bound: the oldest address recorded is the first
     // forgotten when the bound is met — a map remembers its order, so
@@ -147,7 +163,7 @@ export const createCipherWorker = () => {
   const unseal = async (url, received, heads) => {
     const data =
       received instanceof Uint8Array ? received : new Uint8Array(received);
-    const seal = ledger.get(url);
+    const seal = ledger.get(sealKeyOf(url));
     if (seal === undefined || seal.keyUri === null) return data.buffer;
     const key = await fetchKey(seal.keyUri, heads);
     if (key === null) return null;
@@ -176,7 +192,7 @@ export const createCipherWorker = () => {
   // none other. A cleartext address, an unknown one, a sample-aes
   // stream’s business — all are no seal, no filter, no word.
   const seals = (url) => {
-    const seal = ledger.get(url);
+    const seal = ledger.get(sealKeyOf(url));
     return seal !== undefined && seal.method === 'AES-128';
   };
 

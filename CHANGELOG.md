@@ -68,6 +68,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **The tokenized stream’s ledger speaks both dialects.** Every
+  manifest read has always re-sealed the fresh tokenized addresses;
+  now it also forgets the generation it replaces — the read a stream
+  makes after is the stream’s only truth, so the tokens the ask
+  expired leave the ledger together, and no other stream’s word is
+  hurried. And every door is asked by the seal’s canonical word: the
+  default port unnamed, the fragment and the empty query gone, the
+  host small, the hex of a percent-escape said the standard’s way —
+  an address the page’s own loader spells differently is heard for
+  what it says, and a miss answers nothing.
 - **The bearer word and the bearer mouth.** The eye’s ear reads the
   page’s own words on the ask now (`requestHeaders` — evidence still,
   it answers nothing), and the wiring says the word into the book

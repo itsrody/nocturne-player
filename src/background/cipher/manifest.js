@@ -33,6 +33,32 @@ const resolve = (uri, base) => {
   }
 };
 
+// The seal’s canonical word: the same address, said the ledger’s way,
+// so an ask spelled by another hand — the page’s own loader, the
+// manifest’s other resolutions — is heard for what it says. The
+// fragment goes, the scheme and host go small, the default port goes
+// unnamed, the empty query goes, and the hex of every percent-escape
+// is said the standard’s own way (uppercase). A word the URL cannot
+// honestly form stands as itself — the exact spelling, no canonical
+// word invented for it.
+export const sealKeyOf = (url) => {
+  let spoken;
+  try {
+    spoken = new URL(url);
+  } catch {
+    return url;
+  }
+  const path = spoken.pathname.replace(
+    /%([0-9a-fA-F]{2})/g,
+    (_, hex) => `%${hex.toUpperCase()}`,
+  );
+  const search = spoken.search.replace(
+    /%([0-9a-fA-F]{2})/g,
+    (_, hex) => `%${hex.toUpperCase()}`,
+  );
+  return `${spoken.origin}${path}${search}`;
+};
+
 // The manifest read in one pass: the variant list if it is a master,
 // the play order if it is a media playlist. What comes back is the
 // stream’s own truth — which cipher it carries, where the init segment

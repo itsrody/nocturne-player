@@ -6,6 +6,7 @@ import {
   decryptSegment,
   hexIv,
   readManifest,
+  sealKeyOf,
   sequenceIv,
 } from '../../src/background/cipher/manifest.js';
 
@@ -374,6 +375,120 @@ test('the hands carry the stream’s word on every door', async () => {
     { url: SEGMENT_URL, said: SAID },
     { url: KEY_URL, said: SAID },
   ]);
+  delete globalThis.fetch;
+});
+
+test('the seal’s canonical word hears every honest spelling', () => {
+  // The same address, said by other hands: the default port unnamed,
+  // the fragment and the empty query gone, the host small, the hex of
+  // a percent-escape said the standard’s uppercase way, the token
+  // params kept whole. A word the URL cannot form stands as itself.
+  const plain = 'https://stream.example/vod/seg0.mp4';
+  assert.equal(sealKeyOf('https://stream.example:443/vod/seg0.mp4'), plain);
+  assert.equal(
+    sealKeyOf('https://STREAM.example/vod/seg0.mp4#part'),
+    plain,
+    'the host small, the fragment gone',
+  );
+  assert.equal(sealKeyOf('https://stream.example/vod/seg0.mp4?'), plain);
+  assert.equal(
+    sealKeyOf('https://stream.example/vod/a%2fb.mp4'),
+    'https://stream.example/vod/a%2Fb.mp4',
+    'the escape’s hex said the standard’s way',
+  );
+  assert.equal(
+    sealKeyOf(`${plain}?auth=t1&exp=2`),
+    `${plain}?auth=t1&exp=2`,
+    'the token’s own words are kept, whole',
+  );
+});
+
+test('a read replaces its stream’s generation, and no other’s', async () => {
+  // One stream, tokenized: each read of the manifest vends the
+  // segments’ fresh tokens, and the read the stream makes after is the
+  // only truth the ledger keeps. A second stream’s word is not
+  // hurried by any of it.
+  const rawKey = new Uint8Array(16).map((_, at) => (at * 23 + 7) % 256);
+  const first = new Uint8Array(32);
+  for (let at = 0; at < first.length; at += 1) {
+    first[at] = (at * 11 + 5) % 256;
+  }
+  const second = new Uint8Array(32);
+  for (let at = 0; at < second.length; at += 1) {
+    second[at] = (at * 91 + 13) % 256;
+  }
+  const key = await crypto.subtle.importKey('raw', rawKey, 'AES-CBC', false, [
+    'encrypt',
+  ]);
+  // The wire form: the whole cipher with the pad block dropped, the
+  // way the manifest’s own stream carries it.
+  const wireOf = async (plaintext) => {
+    const sealed = await crypto.subtle.encrypt(
+      { name: 'AES-CBC', iv: sequenceIv(41) },
+      key,
+      plaintext,
+    );
+    const wire = new Uint8Array(sealed.byteLength - 16);
+    wire.set(new Uint8Array(sealed).subarray(0, wire.length));
+    return wire;
+  };
+  const oldSeg = 'https://stream.example/vod/old.mp4?auth=t1';
+  const newSeg = 'https://stream.example/vod/new.mp4?auth=t2';
+  const tokened = (segment) =>
+    [
+      '#EXTM3U',
+      '#EXT-X-VERSION:3',
+      '#EXT-X-KEY:METHOD=AES-128,URI="door.key"',
+      '#EXT-X-MEDIA-SEQUENCE:41',
+      '#EXT-X-ENDLIST',
+      segment,
+    ]
+      .map((line) => line)
+      .join('\r\n');
+  const otherBase = 'https://live.example/vod/other.m3u8';
+  const otherSeg = 'https://live.example/vod/other.mp4?auth=t3';
+  const wireSecond = await wireOf(second);
+
+  globalThis.fetch = serve(
+    new Map([
+      [BASE, tokened('old.mp4?auth=t1')],
+      [KEY_URL, rawKey.slice().buffer],
+    ]),
+  );
+  const worker = createCipherWorker();
+  await worker.readCipher(BASE);
+  assert.equal(worker.seals(oldSeg), true);
+  assert.equal(worker.seals(newSeg), false);
+  assert.equal(worker.seals(otherSeg), false);
+
+  // A second stream read: its own truth, apart from the first’s.
+  globalThis.fetch = serve(
+    new Map([[otherBase, tokened('other.mp4?auth=t3')]]),
+  );
+  await worker.readCipher(otherBase);
+  assert.equal(worker.seals(otherSeg), true);
+
+  // The first stream read again: fresh tokens, and the previous
+  // generation — the tokens the ask expired — forgotten with it.
+  globalThis.fetch = serve(
+    new Map([
+      [BASE, tokened('new.mp4?auth=t2')],
+      [KEY_URL, rawKey.slice().buffer],
+      [newSeg, wireSecond.slice().buffer],
+    ]),
+  );
+  await worker.readCipher(BASE);
+  assert.equal(worker.seals(oldSeg), false, 'the expired word is gone');
+  assert.equal(worker.seals(newSeg), true);
+  assert.equal(worker.seals(otherSeg), true, 'no other stream hurried');
+
+  // The forgotten address answers byte for byte, whatever bytes come;
+  // the fresh one unseals.
+  const bytes = new Uint8Array(12).fill(3);
+  const untouched = await worker.unseal(oldSeg, bytes);
+  assert.deepEqual(new Uint8Array(untouched), bytes);
+  const answer = await worker.giveSegment(newSeg);
+  assert.deepEqual(new Uint8Array(answer), second);
   delete globalThis.fetch;
 });
 
