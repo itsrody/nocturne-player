@@ -76,6 +76,23 @@ export const MAX_PLAN_SEGMENTS = 4096;
 // the page’s side of the wire.
 export const CIPHER_ASK = 'nocturneCipherAsk';
 
+// A routed ask, up: the film frame asks the house’s hands to make one of
+// the page’s own media asks — the shim in the frame caught the ask the
+// page’s player built, and the answer comes back as bytes the page never
+// asked a third origin for. The ask is the page’s own sentence, copied
+// whole: the address, the GET method, and the header pairs the page said
+// itself (filtered by the carry law named beside the shim). An id pairs
+// the ask with its answer — two asks of one address in flight are two
+// asks, not one.
+export const ROUTE_ASK = 'nocturneRouteAsk';
+
+// The routed ask’s answer, down: the ask’s id, the status the origin
+// answered, the one content type the page’s reader needs, and clonable
+// bytes — or an honest null byte with a real status, the miss the
+// shim’s own fallback answers with the page’s native ask. Nothing here
+// throws at anyone.
+export const ROUTE_BYTES = 'nocturneRouteBytes';
+
 // The segment’s answer, down: clonable bytes, or an honest null — a
 // fetch that failed or a segment the plan never knew is a miss, not an
 // error at the caller.
@@ -151,6 +168,30 @@ export const sayCipherPlan = (plan) => ({
 
 // One segment’s ask, said up by the frame holding the plan.
 export const askCipherSegment = (url) => ({ type: CIPHER_ASK, url });
+
+// A routed ask, said up by the film frame’s shim: the page’s own ask,
+// copied — the address, the method it was said with, the header pairs
+// the house carries (filtered at the saying side), and the id that
+// pairs it with its answer.
+export const sayRouteAsk = (id, url, method, heads) => ({
+  type: ROUTE_ASK,
+  id,
+  url,
+  method,
+  heads: (heads ?? []).map((one) => ({ name: one.name, value: one.value })),
+});
+
+// The routed ask’s answer, said down: clonable bytes beside the status
+// and the content type the page’s reader needs — or an honest null
+// byte, the miss the shim answers with the page’s own native ask.
+export const sayRouteBytes = (id, url, status, contentType, bytes) => ({
+  type: ROUTE_BYTES,
+  id,
+  url,
+  status,
+  contentType,
+  bytes,
+});
 
 // The answer, said down with clonable bytes — or an honest null when
 // the ask came to nothing.
@@ -297,6 +338,51 @@ export const asLine = (word) => {
     return null;
   }
   return { text: word.text };
+};
+
+// The routed ask, believed only whole: an id paired to its answer, an
+// address that says something, and a method the house carries — the
+// GET the media requests are said with, and nothing wider. The header
+// pairs are kept only where both names and values say something: a
+// half-said header is not the page’s word, and a word the page never
+// said is never replayed.
+export const asRouteAsk = (word) => {
+  if (!isWord(word) || word.type !== ROUTE_ASK || !isSpelled(word.url)) {
+    return null;
+  }
+  if (typeof word.id !== 'number' || !Number.isFinite(word.id)) return null;
+  if (word.method !== 'GET') return null;
+  if (!Array.isArray(word.heads)) return null;
+  const heads = word.heads
+    .filter((one) => isWord(one) && isSpelled(one.name) && isSpelled(one.value))
+    .map((one) => ({ name: one.name, value: one.value }));
+  return { id: Math.floor(word.id), url: word.url, method: 'GET', heads };
+};
+
+// The routed ask’s answer, believed only whole: the ask’s own id, a
+// status a real response can bear, and bytes that are a real buffer or
+// an honest null — a miss, never an error at the caller.
+export const asRouteBytes = (word) => {
+  if (!isWord(word) || word.type !== ROUTE_BYTES || !isSpelled(word.url)) {
+    return null;
+  }
+  if (typeof word.id !== 'number' || !Number.isFinite(word.id)) return null;
+  if (
+    typeof word.status !== 'number' ||
+    word.status < 0 ||
+    word.status > 599 ||
+    !Number.isInteger(word.status)
+  ) {
+    return null;
+  }
+  if (word.bytes !== null && !(word.bytes instanceof ArrayBuffer)) return null;
+  return {
+    id: Math.floor(word.id),
+    url: word.url,
+    status: word.status,
+    contentType: isSpelled(word.contentType) ? word.contentType : null,
+    bytes: word.bytes,
+  };
 };
 
 // The popup’s question, believed only with a tab to read.

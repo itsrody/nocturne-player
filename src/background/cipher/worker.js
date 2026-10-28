@@ -196,5 +196,38 @@ export const createCipherWorker = () => {
     return seal !== undefined && seal.method === 'AES-128';
   };
 
-  return { readCipher, giveSegment, seals, unseal };
+  // The routed ask’s hand: the page’s own ask, made by the background’s
+  // hands — the shim in the film frame caught the ask the player built,
+  // and this is where it is finally spoken. The init is the ask’s own
+  // sentence: the method the word said (the guard upstream admits GET
+  // and nothing wider), the header pairs the carry law filtered at the
+  // saying side, and credentials included — the ask is crossed
+  // compartments here, but it is the same origin the page itself was
+  // asking, and a stream whose segments answer a cookie the page’s own
+  // ask would have carried plays no other way. A status the origin
+  // refused, and a fetch that threw, answer with the honest miss: a
+  // null byte beside the real status, never an error at the hub.
+  const askBytes = async (url, ask) => {
+    const heads = {};
+    for (const one of ask.heads) {
+      heads[one.name] = one.value;
+    }
+    try {
+      const answer = await fetch(url, {
+        method: 'GET',
+        headers: Object.keys(heads).length === 0 ? undefined : heads,
+        credentials: 'include',
+      });
+      const bytes = answer.ok ? await answer.arrayBuffer() : null;
+      return {
+        status: answer.status,
+        contentType: answer.headers.get('content-type'),
+        bytes,
+      };
+    } catch {
+      return { status: 0, contentType: null, bytes: null };
+    }
+  };
+
+  return { readCipher, giveSegment, seals, unseal, askBytes };
 };

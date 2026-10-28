@@ -19,12 +19,15 @@
 // document and none of that work exists anywhere else. What lives here
 // is the carrying: which words a frame says arrive through this room,
 // and which words of the house go back down.
+import { replayedHeads } from '../../lib/bearers.js';
 import {
   asCipherAsk,
   asLine,
   asReport,
+  asRouteAsk,
   asStateQuery,
   sayCipherBytes,
+  sayRouteBytes,
 } from '../../lib/protocol.js';
 
 // The rooms wired: the book the entries live in, the seat asked after
@@ -94,6 +97,51 @@ export const createSessions = ({
           .catch(() => {
             try {
               port.postMessage(sayCipherBytes(segment.url, null));
+            } catch {
+              // A mouth gone dead mid-answer belongs to a death the
+              // disconnect has already spoken.
+            }
+          });
+        return;
+      }
+      // A routed ask: the film frame’s shim caught a media ask the
+      // page’s own player built, and the house’s hands speak it. The
+      // film-only law is told twice — the shim only arms where the
+      // walk confirmed a film, and here the ask is refused again while
+      // this frame’s entry does not carry the want — so no frame can
+      // found a seat and route through a book its viewer never chose.
+      // A worker without the hand answers the miss: the shim falls
+      // back to the page’s own native ask, which is what the fallback
+      // is for.
+      const routed = asRouteAsk(word);
+      if (routed !== null) {
+        if (entry.want !== true) return;
+        // The replay law, applied at the hub’s hearing as well as the
+        // shim’s saying: a word nobody said is replayed by nobody —
+        // the policy has two readers and no second truth.
+        const replayed = { ...routed, heads: replayedHeads(routed.heads) };
+        Promise.resolve(
+          worker?.askBytes?.(replayed.url, replayed) ?? {
+            status: 0,
+            bytes: null,
+          },
+        )
+          .then((answer) =>
+            port.postMessage(
+              sayRouteBytes(
+                replayed.id,
+                replayed.url,
+                answer.status,
+                answer.contentType,
+                answer.bytes,
+              ),
+            ),
+          )
+          .catch(() => {
+            try {
+              port.postMessage(
+                sayRouteBytes(replayed.id, replayed.url, 0, null, null),
+              );
             } catch {
               // A mouth gone dead mid-answer belongs to a death the
               // disconnect has already spoken.

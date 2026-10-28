@@ -111,8 +111,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   forgotten, on a background page that lives for the browser’s
   lifetime.
 
+### Added
+
+- **The film’s asks are spoken by the background’s hands.** The
+  routing shim — FastStream’s own architecture, the page’s player and
+  the browser’s own fetch together, no cipher of the house’s between —
+  catches the film frame’s media asks where the page’s player hands
+  them to the natives (`fetch`, and the XML HTTP brand’s
+  `open`/`send`), says them to the hub’s port, and the answer comes
+  back wrapped in the page’s own realm’s shapes: the network panel
+  shows `background.js` as the initiator, and the page’s own player
+  does all the parsing and unsealing on bytes it believes it fetched.
+  Film-only by the law both sides tell: the shim arms where the frame’s
+  own walk confirmed a film, and the hub refuses a routed ask from any
+  frame whose entry carries no want. Every miss falls back to the
+  page’s own native ask, whole — a shim that cannot deliver never
+  breaks an ask the page could have made itself. The pure URL corpus
+  (`isMediaShaped`, `sayEngineShape`) the eye and the shim both read
+  moved to `src/lib/media.js`, where the wire’s shared vocabulary
+  lives; the eye re-exports the names it always did.
+
 ### Changed
 
+- **The backgrounds’ quiet answers say their own misses.** The read
+  room’s every quiet return was silent by design, and a proxy word
+  that never arrived could only be guessed at: now, under the
+  viewer’s switch, the read names each beat it stops at — no hands in
+  the frame, no family the read reads, a budget spent, a manifest
+  answered no seals, a read that threw — and the proxy names the
+  unseal’s miss beside the hold it already names.
 - **The tap stands at the send-headers door.** The eye’s ear moved
   whole from `onBeforeRequest` to `onBeforeSendHeaders` — the only
   door where the platform accepts `requestHeaders` as a spec value

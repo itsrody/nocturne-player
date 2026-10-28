@@ -31,3 +31,32 @@ export const bearerWords = (heads) =>
       ])
       .filter(carried),
   );
+
+// The routed ask’s replay law, the same one file, one policy wider: a
+// routed ask replays the page’s own reader furniture — what range of
+// bytes it wants, what it will accept, when it last asked (`if-*`) —
+// beside the carried credentials above. The cookie jar and the
+// forwarding context (`cookie`, `origin`, `referer`, `host`) are
+// still nobody’s replay: the browser attaches what the asking side
+// truly is, and the house forges nothing of a page it is standing
+// beside. Both mouths of the routing (the shim at the saying side and
+// the hub at its own hearing) read this one door, so no second copy of
+// the law can drift apart from the first.
+export const REPLAYED = new Set([
+  'accept',
+  'accept-language',
+  'range',
+  'if-none-match',
+  'if-modified-since',
+  'authorization',
+]);
+
+export const isReplayed = (name) => {
+  const said = String(name ?? '').toLowerCase();
+  return REPLAYED.has(said) || said.startsWith('x-');
+};
+
+export const replayedHeads = (heads) =>
+  pairs(heads)
+    .filter(([name]) => isReplayed(name))
+    .map(([name, value]) => ({ name, value }));

@@ -103,8 +103,14 @@ export const createProxy = (browser, worker, book) => {
         )
           .then((plain) => {
             // A miss writes the sealed bytes past: the stream the page
-            // plays is the stream it would anyway have played.
+            // plays is the stream it would anyway have played. Under the
+            // viewer’s switch the miss speaks — a hold says its line at
+            // the door; a miss that stayed silent could only ever be
+            // guessed at whole.
             filter.write(plain ?? sealed);
+            if (plain === null) {
+              debug('the unseal answered a miss', details.url);
+            }
             filter.disconnect();
           })
           .catch(() => {

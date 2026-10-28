@@ -21,6 +21,7 @@ import { createVideoWatcher } from './detect.js';
 import { createDomManager } from './dom.js';
 import { hearLines } from '../lib/debug.js';
 import { createCipherFeeder } from './video/cipherfeeder.js';
+import { createRoute } from './video/route.js';
 import { knockWarm, warmEngines } from './video/engines.js';
 import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
@@ -221,6 +222,14 @@ const start = async () => {
   // and it keeps its own asks and answers on the frame’s port.
   const feeder = createCipherFeeder(up, () => plan);
 
+  // The routing arm — FastStream’s own architecture: the film frame’s
+  // asks are spoken by the background’s hands, so the network panel
+  // shows the house as the initiator and the page’s own player does all
+  // the reading and unsealing on bytes it believes it fetched. Made
+  // here, beside the feeder, and armed where the watcher first
+  // confirms a film — the patches never run on a page with no film.
+  const route = createRoute(up);
+
   // The frame’s arm of the manager, ending in the handshake with the
   // background: the watch handed the manager’s story and the frame’s
   // own port, the want as a fresh reading — a session open, a site
@@ -237,6 +246,10 @@ const start = async () => {
   // the frame may still have a film, and the word to the background —
   // the count and the want — rides the announcement below.
   watcher.news.on((primary) => {
+    // The film is the routing’s own arming condition: the patches stand
+    // from the sweep that first confirms a film, and stay standing for
+    // the document’s life — per-document, once, whatever comes after.
+    if (primary !== null) route.arm();
     if (session) return;
     retune(primary);
     announce.emit();
