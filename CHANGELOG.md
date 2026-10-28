@@ -113,6 +113,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The tap stands at the send-headers door.** The eye’s ear moved
+  whole from `onBeforeRequest` to `onBeforeSendHeaders` — the only
+  door where the platform accepts `requestHeaders` as a spec value
+  (at the request door it is refused with
+  `Invalid enumeration value "requestHeaders"`, an error thrown at
+  listener registration, which kills the background page’s whole
+  boot). The `onBeforeSendHeaders` details carry the eye its same
+  attested facts — `type`, `tabId`, `frameId`, `documentUrl`,
+  `frameAncestors` — so the ear’s shape, the wiring and every room
+  downstream are unchanged; the ear still answers nothing, and the
+  spec it names is `requestHeaders` alone.
 - **The background’s rooms carry their own names.** The hub was one
   file answering for six duties at once; now each stands in its own
   file under `book/` — the registry and its births (`book.js`), the

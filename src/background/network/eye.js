@@ -2,11 +2,18 @@
 // listener — uBO’s observation post, borrowed whole and beats shorter:
 // nothing is blocked, redirected, rewritten, or answered; the listener
 // returns nothing, and the blocking permission beside it in the manifest
-// stands for nobody in *this* room. What it watches for is a shape: the
+// stands for nobody in *this* room. The ear stands at the
+// `onBeforeSendHeaders` door — the only door the platform tells the
+// page’s own words to (`requestHeaders` refused as a spec value at the
+// request door is the platform’s own error, a crash at registration
+// time) — and it reads everything here it ever read before the words
+// were owed: the `onBeforeSendHeaders` details carry the same attested
+// facts the request door did. What it watches for is a shape: the
 // request the network carries *away from* a video — a manifest read, a
 // segment booked, an element’s own source — bound for a frame the URL
-// never says. The room beside this one — `proxy.js` — is where the wire
-// is spoken to, and only there, under its own declared allowance.
+// never says. The rooms beside this one — `proxy.js` and `bearer.js` —
+// are where the wire is spoken to, and only there, under their own
+// declared allowances.
 //
 // The platform says the rest on its own: `type: 'media'` is the browser
 // telling us a `<video>` or `<audio>` element asked for bytes; `type:
@@ -16,7 +23,7 @@
 // the port’s envelope carries, so a strain is written into the hub’s book
 // under a key nobody can forge.
 //
-// And the event, like every `onBeforeRequest`, is a push: nothing here
+// And the event, like every `onBeforeSendHeaders`, is a push: nothing here
 // polls, ever. The stream’s own cadence is the heartbeat — a segment
 // every few seconds re-crosses the bus, and each crossing is the context
 // refreshing itself.
@@ -101,8 +108,9 @@ export const sayEngineShape = (type, url) => {
 // crash.
 export const createWireTap = (browser, onStrain) => {
   if (browser.webRequest === undefined) return;
+  if (browser.webRequest.onBeforeSendHeaders === undefined) return;
 
-  browser.webRequest.onBeforeRequest.addListener(
+  browser.webRequest.onBeforeSendHeaders.addListener(
     (details) => {
       // A request with no tab behind it — service-worker chatter,
       // speculative connections, the browser’s own housekeeping — is no

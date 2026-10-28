@@ -15,7 +15,7 @@ const makeBrowser = () => {
   return {
     taps,
     webRequest: {
-      onBeforeRequest: {
+      onBeforeSendHeaders: {
         addListener: (listener, filter, spec) =>
           taps.push({ listener, filter, spec }),
       },
@@ -162,9 +162,10 @@ test('the tap stands exactly one listener, aimed and unblocking', () => {
     types: ['media', 'xmlhttprequest'],
   });
   // The one extra reading the ear asks for: the page’s own words on
-  // the ask. Reading them is not answering with them — the listener
-  // still never returns a BlockingResponse, and the verb beneath the
-  // spec stays unearned.
+  // the ask — told at the send-headers door, and no other. Reading
+  // them is not answering with them — the listener still never
+  // returns a BlockingResponse, and the verb beneath the spec stays
+  // unearned.
   assert.deepEqual(spec, ['requestHeaders']);
 });
 
