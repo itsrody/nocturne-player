@@ -68,6 +68,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **The bearer word and the bearer mouth.** The eye’s ear reads the
+  page’s own words on the ask now (`requestHeaders` — evidence still,
+  it answers nothing), and the wiring says the word into the book
+  where the crossing names a family: the manifest ask, which is where
+  real streams say their credentials. One policy reads it
+  (`src/lib/bearers.js`): only `authorization` and the site’s own
+  `x-` names are ever carried — the page’s cookie jar and forwarding
+  context are its own mouths’ furniture. Two mouths fetch through it:
+  the cipher worker’s every hand (a header-gated key no longer answers
+  a miss), and the new bearer room, which answers the page’s own
+  outgoing ask with the words the stream’s manifest ask bore — the
+  player that quotes its token once and forgets it on the segments
+  plays in spite of itself. The house’s one declared answering mouth
+  on the page’s own wire, declared as `bearer` in the scan: a miss
+  returns undefined, and the native ask leaves as the page built it.
 - **The proxy room: a sealed segment is unsealed on its way past.**
   The wire has a second ear now — the eye only observes, but where the
   fetching can never be done by the page and the reading is already

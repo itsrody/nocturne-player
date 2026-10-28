@@ -123,14 +123,24 @@ export const createWireTap = (browser, onStrain) => {
         // The family the crossing’s URL names, when it names one: the
         // sweep’s narrowing begins here, from the corpus the eye owns.
         shape: sayEngineShape(details.type, details.url),
+        // The page’s own words on the ask, when the spec asked for
+        // them: the bearer word’s raw material. Evidence only, like
+        // the rest of the ear — the dossier’s whitelist keeps them out
+        // of what rides down to the frame, and the mouths that carry
+        // them answer only by the book’s own word.
+        heads: details.requestHeaders,
       });
     },
     // The types are the whole story: media elements and the script-ridden
     // fetch family. `speculative` above all is left out — Firefox says its
-    // tab and frame travel with it unreliably.
+    // tab and frame travel with it unreliably. The spec beneath the types
+    // names the one extra reading the ear asks for: the page’s own words
+    // on the ask — evidence still, never an answer, and nothing is
+    // returned from this listener ever.
     {
       urls: ['<all_urls>'],
       types: ['media', 'xmlhttprequest'],
     },
+    ['requestHeaders'],
   );
 };

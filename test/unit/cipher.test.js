@@ -321,6 +321,62 @@ test('the unseal answers the proxy’s ask by the same ledger', async () => {
   delete globalThis.fetch;
 });
 
+test('the hands carry the stream’s word on every door', async () => {
+  // A worded stream, read the whole way: the manifest ask, the
+  // segment ask, and the key fetch the decree owes — each one fetched
+  // with the words the page itself said at the manifest ask, and none
+  // of them invented beyond the policy’s carried names.
+  const rawKey = new Uint8Array(16).map((_, at) => (at * 17 + 3) % 256);
+  const plaintext = new Uint8Array(32);
+  for (let at = 0; at < plaintext.length; at += 1) {
+    plaintext[at] = (at * 71 + 2) % 256;
+  }
+  const key = await crypto.subtle.importKey('raw', rawKey, 'AES-CBC', false, [
+    'encrypt',
+  ]);
+  const sealed = await crypto.subtle.encrypt(
+    { name: 'AES-CBC', iv: sequenceIv(41) },
+    key,
+    plaintext,
+  );
+  const wire = new Uint8Array(sealed.byteLength - 16);
+  wire.set(new Uint8Array(sealed).subarray(0, wire.length));
+  const SAID = { authorization: 'Bearer tok' };
+
+  const answers = new Map([
+    [BASE, mediaManifest({ iv: false, sequence: true, end: true })],
+    [KEY_URL, rawKey.slice().buffer],
+    [SEGMENT_URL, wire.slice().buffer],
+  ]);
+  const asks = [];
+  globalThis.fetch = (url, init) => {
+    asks.push({ url: String(url), said: init?.headers ?? null });
+    const one = answers.get(String(url));
+    if (one === undefined) return Promise.resolve({ ok: false });
+    if (typeof one === 'string') {
+      return Promise.resolve({ ok: true, text: async () => one });
+    }
+    return Promise.resolve({
+      ok: true,
+      text: async () => '',
+      arrayBuffer: async () => one.slice(0),
+    });
+  };
+
+  const worker = createCipherWorker();
+  await worker.readCipher(BASE, SAID);
+  const answer = await worker.giveSegment(SEGMENT_URL, SAID);
+  assert.deepEqual(new Uint8Array(answer), plaintext);
+
+  // The word rode every door: the manifest, the segment, the key.
+  assert.deepEqual(asks, [
+    { url: BASE, said: SAID },
+    { url: SEGMENT_URL, said: SAID },
+    { url: KEY_URL, said: SAID },
+  ]);
+  delete globalThis.fetch;
+});
+
 test('a plan is said only for a stream the frame can play', async () => {
   // The word’s whole point: the plan is a promise the frame’s own
   // playback room can keep. The TS transport cannot be fed (Firefox’s

@@ -95,7 +95,12 @@ export const createProxy = (browser, worker, book) => {
         // counts the buffers, never the arithmetic.
         inFlight.delete(details.requestId);
         const sealed = cat(parts);
-        Promise.resolve(worker.unseal(details.url, sealed))
+        // The unseal’s own hands carry the room’s bearer word, for the
+        // key fetch the decree may still owe: the same word every mouth
+        // of the house carries.
+        Promise.resolve(
+          worker.unseal(details.url, sealed, book.said(details.tabId)),
+        )
           .then((plain) => {
             // A miss writes the sealed bytes past: the stream the page
             // plays is the stream it would anyway have played.

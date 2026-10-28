@@ -7,6 +7,7 @@ import { createSessions } from '../../src/background/book/sessions.js';
 import { createStrain } from '../../src/background/book/strain.js';
 import { createReader } from '../../src/background/book/read.js';
 import { answerState } from '../../src/background/book/state.js';
+import { createBearer } from '../../src/background/network/bearer.js';
 import {
   CIPHER,
   CIPHER_BYTES,
@@ -98,8 +99,41 @@ const makeHub = (browser, worker = null) => {
   const read = createReader(worker, book);
   const strain = createStrain({ book, read });
   createSessions({ browser, book, worker, read, decide, answerState });
-  return { books: book.books, strain, standing: book.standing };
+  // The two mouths, wired the way index.js wires them — the bearer’s
+  // room needs the send-headers ear, and a hub room without one is
+  // wired to nothing, the same answering guard the proxy keeps.
+  createBearer(browser, worker, book);
+  return {
+    books: book.books,
+    strain,
+    standing: book.standing,
+    said: book.said,
+  };
 };
+
+test('the bearer word is said per room, normalized, and wiped with it', () => {
+  const book = createBook();
+  // The policy runs at the write: only the words a mouth may carry
+  // stay in the record — the credentials and the site’s own `x-`
+  // names; the page’s cookie jar and forwarding context are never
+  // spoken again by the house’s hands or mouths.
+  book.speak(1, [
+    { name: 'Authorization', value: 'Bearer tok' },
+    { name: 'x-Stream-Token', value: 's1' },
+    { name: 'Cookie', value: 'a=1' },
+    { name: 'Origin', value: 'https://site.example' },
+  ]);
+  assert.deepEqual(book.said(1), {
+    authorization: 'Bearer tok',
+    'x-stream-token': 's1',
+  });
+  assert.equal(book.said(2), undefined, 'no room, no word');
+
+  // The room going away takes the word with it — nothing swept twice,
+  // nothing left saying itself after the tab is gone.
+  book.books.delete(1);
+  assert.equal(book.said(1), undefined);
+});
 
 test('the first want takes the seat and the second waits', () => {
   const browser = makeBrowser();

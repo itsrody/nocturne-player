@@ -32,7 +32,11 @@ export const createReader =
     entry.reads += 1;
     entry.reading = true;
     try {
-      const answer = await worker.readCipher(crossing.url);
+      // The hands carry the room’s bearer word — the page’s own words
+      // on the manifest ask, said into the book by the wiring — so a
+      // stream whose manifest answers only a worded hand is read at
+      // all. A miss fetches bare-handed, as it always was.
+      const answer = await worker.readCipher(crossing.url, book.said(tabId));
       const table = book.books.get(tabId);
       if (table?.book.get(frameId) !== entry) return;
       // A manifest with no cipher decree says nothing: no word, at all —

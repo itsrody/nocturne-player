@@ -87,7 +87,9 @@ export const createSessions = ({
       // threw, for the worker misses are answers, never errors.
       const segment = asCipherAsk(word);
       if (segment !== null) {
-        Promise.resolve(worker?.giveSegment?.(segment.url) ?? null)
+        Promise.resolve(
+          worker?.giveSegment?.(segment.url, book.said(tabId)) ?? null,
+        )
           .then((bytes) => port.postMessage(sayCipherBytes(segment.url, bytes)))
           .catch(() => {
             try {

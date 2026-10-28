@@ -161,7 +161,11 @@ test('the tap stands exactly one listener, aimed and unblocking', () => {
     urls: ['<all_urls>'],
     types: ['media', 'xmlhttprequest'],
   });
-  assert.equal(spec, undefined, 'the tap never answers, so never blocks');
+  // The one extra reading the ear asks for: the page’s own words on
+  // the ask. Reading them is not answering with them — the listener
+  // still never returns a BlockingResponse, and the verb beneath the
+  // spec stays unearned.
+  assert.deepEqual(spec, ['requestHeaders']);
 });
 
 test('the tap names the frame a media request crossed', () => {
@@ -193,6 +197,9 @@ test('the tap names the frame a media request crossed', () => {
       // The family the crossing names rides the ear too: the sweep’s
       // narrowing begins at the bus.
       shape: 'hls',
+      // No words on the ask: the platform said none, the ear is
+      // honest about the absence.
+      heads: undefined,
     },
   ]);
 
@@ -214,6 +221,7 @@ test('the tap names the frame a media request crossed', () => {
     chain: [],
     // The element’s own load is a browser act: no family is named.
     shape: null,
+    heads: undefined,
   });
 
   // Nobody’s request — the browser’s own housekeeping — names no frame.
@@ -224,6 +232,32 @@ test('the tap names the frame a media request crossed', () => {
     url: 'https://elsewhere.example/a.mp4',
   });
   assert.equal(strained.length, 2);
+});
+
+test('the ear carries the page’s own words on the ask, whole', () => {
+  const browser = makeBrowser();
+  const strained = [];
+  createWireTap(browser, (_, __, earPiece) => strained.push(earPiece));
+
+  // The words the page said ride the ear as the platform said them —
+  // raw material, whole; what a mouth may carry of them is not the
+  // ear’s question.
+  browser.taps[0].listener({
+    tabId: 7,
+    frameId: 0,
+    type: 'xmlhttprequest',
+    url: 'https://cdn.example/master.m3u8',
+    requestHeaders: [
+      { name: 'Authorization', value: 'Bearer tok' },
+      { name: 'Cookie', value: 'a=1' },
+      { name: 'content-length', value: '0' },
+    ],
+  });
+  assert.deepEqual(strained[0].heads, [
+    { name: 'Authorization', value: 'Bearer tok' },
+    { name: 'Cookie', value: 'a=1' },
+    { name: 'content-length', value: '0' },
+  ]);
 });
 
 test('a stand-in room with no webRequest stands nothing', () => {

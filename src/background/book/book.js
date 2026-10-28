@@ -13,6 +13,16 @@
 // earned, which are the frame’s, not any document’s. The cipher
 // choreography’s tally and the word-flags come up zero: a birth owes
 // everything afresh.
+//
+// The bearer word sits on the room, not the frame: per tab, the words
+// the page itself said at the stream’s manifest ask — `speak` writes
+// them (normalized by the one policy in `src/lib/bearers.js`, so the
+// record beneath is always only what a mouth may carry), `said` reads
+// them back to every mouth that asks: the worker’s own hands and the
+// bearer room’s answer on the page’s own asks. A tab going away wipes
+// `books` — and the word with it, nothing swept twice.
+import { bearerWords } from '../../lib/bearers.js';
+
 export const createBook = () => {
   const books = new Map();
 
@@ -22,11 +32,22 @@ export const createBook = () => {
   const tableOf = (tabId) => {
     let table = books.get(tabId);
     if (table === undefined) {
-      table = { book: new Map(), seatNext: 0 };
+      table = { book: new Map(), seatNext: 0, bearer: null };
       books.set(tabId, table);
     }
     return table;
   };
+
+  // The bearer word, said where a crossing that names a family has
+  // carried the ask’s own words: normalized here, at the write, so the
+  // record beneath can only ever hold the carried words.
+  const speak = (tabId, heads) => {
+    tableOf(tabId).bearer = bearerWords(heads);
+  };
+
+  // The word read back: no room, no word — undefined is the miss the
+  // mouths already know how to fetch past.
+  const said = (tabId) => books.get(tabId)?.bearer ?? undefined;
 
   // A frame’s entry, born to the context the frame keeps — never to
   // what any document remembered. A predecessor’s stream warmth and
@@ -95,5 +116,5 @@ export const createBook = () => {
     }
   };
 
-  return { books, tableOf, born, found, adopt, standing, tell };
+  return { books, tableOf, born, found, adopt, standing, tell, speak, said };
 };

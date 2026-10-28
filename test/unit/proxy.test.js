@@ -12,9 +12,16 @@ const SEALED_URLS = ['https://cdn.example/seg0.mp4'];
 const plain = new Uint8Array(8).fill(9);
 const sealed = new Uint8Array(16).fill(1);
 
-// The book stood to the one reading the room asks of it: which tabs a
-// crossing has ever warmed.
-const makeBook = () => ({ books: new Map([[1, {}]]) });
+// The word the room said at the stream’s manifest ask, as the book
+// would read it back to the proxy’s unseal.
+const WORD = { authorization: 'Bearer tok' };
+
+// The book stood to the two readings the room asks of it: which tabs a
+// crossing has ever warmed, and the word said per tab.
+const makeBook = () => ({
+  books: new Map([[1, {}]]),
+  said: (tabId) => (tabId === 1 ? WORD : undefined),
+});
 
 // The browser, stood up to the two verbs the proxy asks of it: the
 // response-crossed listener with its filter, and the streaming filter
@@ -58,11 +65,19 @@ const makeBrowser = () => {
 
 // The cipher room, stood to the two verbs the proxy asks: which
 // addresses are sealed, and the answer the unseal promises — a miss
-// answers null, never an error.
-const makeWorker = (answer = plain) => ({
-  seals: (url) => SEALED_URLS.includes(url),
-  unseal: async () => answer,
-});
+// answers null, never an error. The word the unseal is asked with is
+// recorded: the house’s hands are never bare where a word stands.
+const makeWorker = (answer = plain) => {
+  const asked = [];
+  return {
+    asked,
+    seals: (url) => SEALED_URLS.includes(url),
+    unseal: async (url, bytes, heads) => {
+      asked.push({ url, heads });
+      return answer;
+    },
+  };
+};
 
 const crossing = (over = {}) => ({
   tabId: 1,
@@ -82,7 +97,8 @@ const waiting = async () => {
 
 test('a sealed answer is unsealed on its way past', async () => {
   const browser = makeBrowser();
-  createProxy(browser, makeWorker(), makeBook());
+  const worker = makeWorker();
+  createProxy(browser, worker, makeBook());
 
   browser.fire(crossing());
   const filter = browser.held.get('r1');
@@ -96,6 +112,12 @@ test('a sealed answer is unsealed on its way past', async () => {
   await waiting();
   assert.deepEqual(filter.stream, [plain]);
   assert.equal(filter.disconnected, true, 'the answer is said once, whole');
+
+  // And the unseal’s own hands carried the room’s word: the page’s
+  // credentials, out to the key fetch the decree may owe.
+  assert.deepEqual(worker.asked, [
+    { url: 'https://cdn.example/seg0.mp4', heads: WORD },
+  ]);
 });
 
 test('a miss writes the sealed answer past', async () => {

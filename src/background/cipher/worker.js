@@ -21,7 +21,15 @@
 // It is earned, not widened: the hands here fetch a manifest, a key and
 // the segments of a stream the viewer’s own page was already fetching —
 // the same origins, and nowhere else. No beacon, no sensor, no code, no
-// account: the word above names the fetch and only the fetch.
+// account: the word above names the fetch and only the fetch. And the
+// hands are never bare: every fetch here carries the stream’s bearer
+// word — the credentials and the site’s own `x-` names the page itself
+// said at the manifest ask (`src/lib/bearers.js` is the one policy) —
+// because a stream whose key answers a bare hand is a stream the house
+// could never read at all. Nothing is invented, nothing is widened to
+// another origin; a stream no word is said for is fetched as it always
+// was, bare-handed too.
+import { bearerWords } from '../../lib/bearers.js';
 import { MAX_PLAN_SEGMENTS } from '../../lib/protocol.js';
 import { decryptSegment, hexIv, readManifest, sequenceIv } from './manifest.js';
 
@@ -38,14 +46,22 @@ const LEDGER_MAX = 8192;
 // the host permission makes CORS-free for exactly the origins the
 // user’s own player already visits. Nothing here throws at the hub:
 // a failed fetch is a miss, and a miss is an answer.
+// The fetch init the word builds: the carried words as headers, and
+// nothing at all where no word stands — a stream fetched as it always
+// was. The same words every mouth of the house carries, one policy.
+const initOf = (heads) => {
+  const said = bearerWords(heads);
+  return Object.keys(said).length === 0 ? undefined : { headers: said };
+};
+
 export const createCipherWorker = () => {
   const keyCache = new Map();
   const ledger = new Map();
 
-  const fetchKey = async (uri) => {
+  const fetchKey = async (uri, heads) => {
     const onHand = keyCache.get(uri);
     if (onHand !== undefined) return onHand.key;
-    const answer = await fetch(uri);
+    const answer = await fetch(uri, initOf(heads));
     if (!answer.ok) return null;
     const raw = new Uint8Array(await answer.arrayBuffer());
     if (raw.byteLength !== 16) return null;
@@ -104,15 +120,15 @@ export const createCipherWorker = () => {
   // origin refused the background’s hands) is the same miss a failed
   // fetch already is: null answers, and the caller has no catch to
   // wrap anything in.
-  const readCipher = async (manifestUrl) => {
+  const readCipher = async (manifestUrl, heads) => {
     try {
-      const answer = await fetch(manifestUrl);
+      const answer = await fetch(manifestUrl, initOf(heads));
       if (!answer.ok) return null;
       let manifest = readManifest(await answer.text(), manifestUrl);
       if (manifest?.isMaster === true) {
         const variant = manifest.variant;
         if (variant.url === null) return null;
-        const inner = await fetch(variant.url);
+        const inner = await fetch(variant.url, initOf(heads));
         if (!inner.ok) return null;
         manifest = readManifest(await inner.text(), variant.url);
         if (manifest !== null) manifest.codecs = variant.codecs;
@@ -128,12 +144,12 @@ export const createCipherWorker = () => {
   // own counter. An address that is not sealed comes back byte for
   // byte — the coins are the stream’s, and the room is honest about
   // what it did not do.
-  const unseal = async (url, received) => {
+  const unseal = async (url, received, heads) => {
     const data =
       received instanceof Uint8Array ? received : new Uint8Array(received);
     const seal = ledger.get(url);
     if (seal === undefined || seal.keyUri === null) return data.buffer;
-    const key = await fetchKey(seal.keyUri);
+    const key = await fetchKey(seal.keyUri, heads);
     if (key === null) return null;
     const iv = seal.keyIv !== null ? hexIv(seal.keyIv) : sequenceIv(seal.seq);
     if (iv === null) return null;
@@ -143,16 +159,16 @@ export const createCipherWorker = () => {
   // One segment, sealed or not as its own decree says. The init
   // segment (the map) is normally plain, but it is asked through the
   // same door all the same: a miss is a miss either way.
-  const giveSegment = async (url) => {
+  const giveSegment = async (url, heads) => {
     let bytes;
     try {
-      const answer = await fetch(url);
+      const answer = await fetch(url, initOf(heads));
       if (!answer.ok) return null;
       bytes = new Uint8Array(await answer.arrayBuffer());
     } catch {
       return null;
     }
-    return unseal(url, bytes);
+    return unseal(url, bytes, heads);
   };
 
   // The seal check, asked synchronously at the proxy’s door: an

@@ -14,14 +14,17 @@ const SCANNED_EXTENSIONS = ['.js', '.mjs', '.html', '.css'];
 // and the proxy room holds one response at the door, a segment whose
 // address a read manifest seals, and writes the plaintext past.
 //
-// One file may declare its own narrow allowance at the top of itself, in
-// a line the scan reads from the file’s own words: the cipher room
+// One file may declare its own narrow allowance at the top of itself,
+// in a line the scan reads from the file’s own words: the cipher room
 // fetches a manifest, a key and the segments of a stream the viewer’s
 // page was already visiting — the same origins, and nowhere else; the
-// proxy room holds a sealed response at the door and no other. The
-// declaration is the file’s own, so the scan never widens by itself;
-// every other verb in the list below is forbidden in every file, the
-// declared ones included.
+// proxy room holds a sealed response at the door and no other. A
+// third mouth is earned the same narrow way: the bearer room answers
+// an outgoing ask with the words the page itself said at the stream’s
+// manifest ask — credentials and `x-` names only — and only for an
+// address the ledger seals. The declaration is the file’s own, so the
+// scan never widens by itself; every other verb in the list below is
+// forbidden in every file, the declared ones included.
 const FORBIDDEN_PATTERNS = [
   {
     id: 'fetch',
@@ -37,6 +40,11 @@ const FORBIDDEN_PATTERNS = [
     id: 'filterresponse',
     pattern: /\bfilterResponseData\s*\(/,
     reason: 'rewrites a response in flight',
+  },
+  {
+    id: 'bearer',
+    pattern: /\{\s*requestHeaders/,
+    reason: 'answers an outgoing request with rewritten headers',
   },
   { pattern: /\bsendBeacon\b/, reason: 'telemetry beacon' },
   {
