@@ -6,7 +6,7 @@ const MANIFEST_PATH = 'src/manifest.json';
 const SCANNED_EXTENSIONS = ['.js', '.mjs', '.html', '.css'];
 
 // Nothing in this extension may reach the network, read device sensors,
-// or touch a request on its way past. Two exceptions, each declared by
+// or touch a request on its way past. Three exceptions, each declared by
 // its own file and each earned narrow: the eye at the bus observes and
 // it never answers — webRequest sits in the manifest with
 // webRequestBlocking beside it, and no handler of the eye’s ever
@@ -22,9 +22,15 @@ const SCANNED_EXTENSIONS = ['.js', '.mjs', '.html', '.css'];
 // third mouth is earned the same narrow way: the bearer room answers
 // an outgoing ask with the words the page itself said at the stream’s
 // manifest ask — credentials and `x-` names only — and only for an
-// address the ledger seals. The declaration is the file’s own, so the
-// scan never widens by itself; every other verb in the list below is
-// forbidden in every file, the declared ones included.
+// address the ledger seals. The keeper adds the fourth, answered at
+// the door it stands on: a manifest-shaped ask whose frame pinned a
+// rung is killed at its own beat and replaced with the house’s reworded
+// answer — never a segment, never an unpinned stream, and the door
+// kills nothing it cannot replace. The origin’s own bytes pass it by,
+// unchanged and unobserved, wherever the pin does not stand. The
+// declaration is the file’s own, so the scan never widens by itself;
+// every other verb in the list below is forbidden in every file, the
+// declared ones included.
 const FORBIDDEN_PATTERNS = [
   {
     id: 'fetch',

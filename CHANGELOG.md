@@ -113,15 +113,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The keeper kills the pinned master ask, and replaces it with
+  ours — FastStream’s own move, at the door.** A pinned rung stopped
+  depending on the player ever re-asking through the shim: a manifest
+  ask at the bus — an ask the shim never saw, never asked, a frame no
+  object stood behind — is held at the door, fetched by the house’s
+  own hands, reworded to the one rung the sheet pinned, and answered
+  as a data playlist the player reads as the origin’s own word. The
+  narrowness is said whole: only a manifest-shaped address, only a
+  frame the book knows, only a rung actually pinned, and the door
+  kills nothing it cannot replace — an MPD, a miss, a refused read,
+  an unpinned master, every one of them flows on to the rails
+  unharmed. The keepVariant reword now says its kept rung in the
+  absolute form the reading resolved it to, so the kept rung survives
+  whatever carrier answers it. The privacy law itself grew the
+  declaration: a fourth mouth, earned as narrow as the other three.
+
+- **The pin kicks the film — and a closed-over engine replays.** A
+  viewer's rung choice stopped being a hope on the next master fetch:
+  the pin's word goes first, then the element is kicked. A plain
+  element is kicked in place — `load()` with restore listeners
+  standing, the position and playing state carried across the
+  metadata landing by hand. An element whose address is a `blob:` name
+  — an engine closed over its own `MediaSource` — cannot be kicked in
+  place (`load()` on a spent source hangs the film and re-asks
+  nothing), so the force is the replay: the position said down into
+  the frame's own `sessionStorage`, the reload played one beat after
+  the pin's word entered the pipe, and the `document_start` boot rides
+  the reload — the player re-asks its master from byte one of its own
+  life, and the hub's reworded ladder-of-one is what the fresh engine
+  is born on. The note is claimed once by the walk's first election,
+  and only where the element still stands at the start; a note a
+  reload never paid is stale and reads as nothing.
+
 - **The catch is the boot: routed from the first byte.** The field
-  agent’s conscription stopped waiting out `document_idle` — the boot
+  agent's conscription stopped waiting out `document_idle` — the boot
   itself is the catch, now laid at `document_start` into the exact
-  frame whose media ask crossed the bus, and the routing’s arms are
-  laid on the natives before the page’s own player is parsed. The
-  film’s first manifest ask — the request that proved it — is ours to
+  frame whose media ask crossed the bus, and the routing's arms are
+  laid on the natives before the page's own player is parsed. The
+  film's first manifest ask — the request that proved it — is ours to
   rout, the hub starts the read at that catch, and the ladder the
   stream speaks rides the very answer the player is handed. The walk
-  stays the badge’s timing, not the routing’s: it names the element
+  stays the badge's timing, not the routing's: it names the element
   the badge anchors onto (and the want it is judged by), and a frozen
   page whose binding refused the first arm is re-armed where the walk
   first confirms a film — the second arm a second nothing.

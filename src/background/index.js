@@ -29,6 +29,8 @@ import { createCipherWorker } from './cipher/worker.js';
 import { createWireTap } from './network/eye.js';
 import { createProxy } from './network/proxy.js';
 import { createBearer } from './network/bearer.js';
+import { createKeeper } from './network/keeper.js';
+import { createDebug } from '../lib/debug.js';
 import { LEGACY_OPENINGS_KEY } from '../lib/words.js';
 
 // The book’s wiring, spliced in by hand: the rooms ask the book and are
@@ -57,6 +59,20 @@ const conscript = createConscript(browser, { standing: book.standing });
 // the only one they have.
 createProxy(browser, worker, book);
 createBearer(browser, worker, book);
+
+// The keeper’s door stands at the bus, at the ask’s front: a manifest
+// the player itself is about to ask — an ask the in-page shim did not
+// answer, a frame the boot missed, an engine no object ever stood
+// behind — is killed at the door and replaced with the house’s own
+// reworded answer when a pin is on the stream, and flows on unharmed
+// when there is nothing ours to say. FastStream’s own move, at the one
+// place the page can never talk its way past.
+createKeeper({
+  browser,
+  book,
+  worker,
+  debug: createDebug('keeper'),
+});
 
 createWireTap(browser, (tabId, frameId, ear) => {
   // The stream’s bearer word, said where the crossing names a family —

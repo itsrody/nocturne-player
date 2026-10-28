@@ -25,6 +25,7 @@ import { hearLines } from '../lib/debug.js';
 import { createCipherFeeder } from './video/cipherfeeder.js';
 import { createRoute } from './video/route.js';
 import { hearLadder, voiceLadder } from './video/ladder.js';
+import { claimReplay } from './video/resume.js';
 import { knockWarm, warmEngines } from './video/engines.js';
 import { createSlot, isTopFrame } from './slot.js';
 import { createSession } from './session.js';
@@ -281,6 +282,24 @@ const start = async () => {
     // unfrozen by the time its player carne up. Idempotent per
     // document, so a second arm is a second nothing.
     if (primary !== null) route.arm();
+    // The replay note is spent exactly once, on the claim itself: a pin
+    // forced this frame to reload, and the position said down before
+    // the reload is restored onto the element as it first stands — the
+    // metadata landing, so the restore asks a player able to hold it;
+    // and skipped where the element already stands further in, meaning
+    // the frame's own player beat us to the restore.
+    if (primary !== null) {
+      const note = claimReplay();
+      if (note !== null && primary.currentTime === 0) {
+        const land = () => {
+          primary.removeEventListener('loadedmetadata', land);
+          primary.currentTime = note;
+          primary.play().catch(() => {});
+        };
+        if (primary.readyState >= 1) land();
+        else primary.addEventListener('loadedmetadata', land);
+      }
+    }
     if (session) return;
     retune(primary);
     announce.emit();

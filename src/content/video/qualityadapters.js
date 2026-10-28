@@ -1,6 +1,7 @@
 import { call, isFunction, read, toArray, toPage, write } from './pageapi.js';
 import { findEngines } from './engines.js';
 import { ladderNear, pinRung } from './ladder.js';
+import { noteReplay } from './resume.js';
 import { createDebug } from '../../lib/debug.js';
 
 // The ladder adapter’s own diagnosis: whether the meeting ran or not
@@ -10,6 +11,11 @@ import { createDebug } from '../../lib/debug.js';
 const debug = createDebug('quality-adapters');
 
 export const AUTO_ID = 'auto';
+
+// One beat between the pin's word entering the port's pipe and the
+// frame dying under the reload — long enough for the pipe, short
+// enough that the viewer reads it as the film restarting itself.
+const RELOAD_DELAY_MS = 250;
 
 const YOUTUBE_LABELS = {
   tiny: '144p',
@@ -602,13 +608,59 @@ export const createLadderAdapter = (video) => {
     // player, so the chip reports nothing rather than a guess.
     current: () => null,
     select: (id) => {
+      // The pin is spoken up — and the element is kicked, because a
+      // master the player never re-asks is a pin that lands only at
+      // the stream's own next full load. The kick is branched by what
+      // the element says:
+      //
+      // A `blob:` address is a closed-over MSE engine — a plain
+      // `load()` re-runs resource selection on a `MediaSource` the
+      // field already spent once, so nothing is re-asked and the film
+      // hangs. The only force left is the replay: pin first, say the
+      // position down into the frame's own `sessionStorage`, and
+      // reload — the `document_start` boot rides the reload, the
+      // player re-asks its master from byte one of its own life, and
+      // the hub's reworded answer is the ladder the fresh engine is
+      // born on. The reload is delayed one beat, so the pin's word is
+      // sure to be in the port's pipe before the page dies.
+      //
+      // A plain address is an element the house can work in place: the
+      // `load()` bargain — restore listeners standing, metadata
+      // landing carries the position and playing state across, an
+      // error leaves nobody holding the restore.
+      const said = [video.currentSrc, video.src].find(
+        (one) => typeof one === 'string' && one !== '',
+      );
       if (id === AUTO_ID) {
         pinRung(null);
+        if (typeof said === 'string' && said.startsWith('blob:')) {
+          noteReplay(video);
+          setTimeout(() => globalThis.location.reload(), RELOAD_DELAY_MS);
+        } else {
+          video.load();
+        }
         return true;
       }
       const wanted = options.find((option) => option.id === id);
       if (wanted === undefined) return false;
       pinRung(wanted.id);
+      if (typeof said === 'string' && said.startsWith('blob:')) {
+        noteReplay(video);
+        setTimeout(() => globalThis.location.reload(), RELOAD_DELAY_MS);
+      } else {
+        const resumeAt = video.currentTime;
+        const wasPlaying = !video.paused;
+        const settle = (event) => {
+          video.removeEventListener('loadedmetadata', settle);
+          video.removeEventListener('error', settle);
+          if (event.type !== 'loadedmetadata') return;
+          video.currentTime = resumeAt;
+          if (wasPlaying) video.play().catch(() => {});
+        };
+        video.addEventListener('loadedmetadata', settle);
+        video.addEventListener('error', settle);
+        video.load();
+      }
       return true;
     },
   };

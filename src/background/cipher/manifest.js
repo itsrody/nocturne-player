@@ -292,8 +292,15 @@ export const keepVariant = (text, base, keepUrl) => {
     // The rung the pin said landed: a reword that kept nothing at
     // all would be a master of no variants — the stream the player
     // cannot even start. That is not the pin’s word, and the whole
-    // original is the honest answer.
+    // original is the honest answer. The kept line is said in its
+    // absolute form: a master replays at its own address as often as
+    // not — a data door, a shim’s re-spelling — and a rung that
+    // resolves against the address it rides *because* it rode there
+    // is a rung that breaks the moment its carrier changes. Absolute
+    // is where the reading already put it; the page asks for it by
+    // that address the moment it was resolved.
     keptA = true;
+    lines[uriAt] = variant;
     kept.push(line);
   }
   return changed && keptA ? kept.join('\n') : null;

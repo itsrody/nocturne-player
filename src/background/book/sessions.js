@@ -76,8 +76,9 @@ const miss = { status: 0, bytes: null, heads: [] };
 // encoding that would not decode — all answer null, the whole master
 // served unharmed. The reworded length is the reworded bytes’ own: the
 // origin’s content-length row was said for a different body and is
-// named no more.
-const rerune = (rung, url, answer) => {
+// named no more. Exported for one other ear: the keeper at the bus,
+// which rewords the ask it kills-and-replaces with the same hand.
+export const rerune = (rung, url, answer) => {
   try {
     const text = new TextDecoder('utf-8').decode(new Uint8Array(answer.bytes));
     const read = readManifest(text, url);
