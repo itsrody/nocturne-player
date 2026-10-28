@@ -238,8 +238,15 @@ const start = async () => {
   // asks are spoken by the background’s hands, so the network panel
   // shows the house as the initiator and the page’s own player does all
   // the reading and unsealing on bytes it believes it fetched. Made
-  // here, beside the feeder, and armed where the watcher first
-  // confirms a film — the patches never run on a page with no film.
+  // here, beside the feeder, and armed at the agent’s own birth — the
+  // arm no longer waits on the walk: the boot itself is the catch
+  // (the conscript stood this agent up *because* a media ask crossed
+  // the frame), and at `document_start` the natives are laid before
+  // the page’s own player is even parsed — the film’s first manifest
+  // ask, the request that proved it, is ours to rout. One arm per
+  // document, whatever comes after; a miss answered with the honest
+  // miss, and the stand-down bows the whole room where the stream
+  // answers nothing.
   const route = createRoute(up);
 
   // The pin’s voice, wired once beside the routing’s birth: a rung the
@@ -264,11 +271,15 @@ const start = async () => {
 
   // The film in hand is the badge’s news: the badge is re-aimed where
   // the frame may still have a film, and the word to the background —
-  // the count and the want — rides the announcement below.
+  // the count and the want — rides the announcement below. The walk is
+  // the badge’s timing, not the routing’s: it names the film the badge
+  // anchors onto, and the setting-site judge the want is read from —
+  // the routing’s own arms stood before the walk ran at all.
   watcher.news.on((primary) => {
-    // The film is the routing’s own arming condition: the patches stand
-    // from the sweep that first confirms a film, and stay standing for
-    // the document’s life — per-document, once, whatever comes after.
+    // The safety arm for a room the birth could not lay — a frozen
+    // page whose binding refused the first arm at `document_start`,
+    // unfrozen by the time its player carne up. Idempotent per
+    // document, so a second arm is a second nothing.
     if (primary !== null) route.arm();
     if (session) return;
     retune(primary);
@@ -303,6 +314,11 @@ const start = async () => {
   const apply = () => {
     if (isWatched()) {
       watcher.start();
+      // The routing arms with the watch: a watched host’s frame lays
+      // the arms at once — at `document_start` this runs before the
+      // page’s own player asks anything, so its first ask is routed.
+      // (birth below in news.on is the safety arm for a frozen page.)
+      route.arm();
     } else {
       watcher.stop();
       badge.hide();

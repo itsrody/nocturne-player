@@ -65,14 +65,25 @@ export const createConscript = (browser, { standing }) => {
     return chainHosts({ host, ancestorOrigins: ear?.chain ?? [] });
   };
 
-  // One boot: the field agent into one subject of one tab. The catches
-  // are quiet on purpose — a frame gone away mid-boot (a navigation
+  // One boot: the field agent into one subject of one tab. The catch
+  // is quiet on purpose — a frame gone away mid-boot (a navigation
   // racing the strain) is told again by the next crossing, and a room
   // the platform refuses (a file url without the grant, a privileged
-  // page) was never ours to enter.
+  // page) was never ours to enter. The run is at `document_start`,
+  // deliberately: the boot itself is the catch — a page whose first
+  // media ask fired while it was still parsing gets its field agent
+  // standing before the page’s own player does, and the routing’s
+  // arms are laid on the natives before the player’s first manifest
+  // ask is built. Waiting out idle would mean the first ask — the
+  // very request that proved the film — was never ours to rout, and
+  // every later beat would arrive a second late.
   const boot = (tabId, subject) =>
     browser.tabs
-      .executeScript(tabId, { file: FIELD, ...subject, runAt: 'document_idle' })
+      .executeScript(tabId, {
+        file: FIELD,
+        ...subject,
+        runAt: 'document_start',
+      })
       .catch(() => {});
 
   // The conscription proper. Answers whether the wire's tab is admitted

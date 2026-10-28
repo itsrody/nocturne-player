@@ -113,6 +113,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The catch is the boot: routed from the first byte.** The field
+  agent’s conscription stopped waiting out `document_idle` — the boot
+  itself is the catch, now laid at `document_start` into the exact
+  frame whose media ask crossed the bus, and the routing’s arms are
+  laid on the natives before the page’s own player is parsed. The
+  film’s first manifest ask — the request that proved it — is ours to
+  rout, the hub starts the read at that catch, and the ladder the
+  stream speaks rides the very answer the player is handed. The walk
+  stays the badge’s timing, not the routing’s: it names the element
+  the badge anchors onto (and the want it is judged by), and a frozen
+  page whose binding refused the first arm is re-armed where the walk
+  first confirms a film — the second arm a second nothing.
+
 - **The stream quotes its own ladder, and the sheet pins a rung of it.**
   Quality detection and selection reach the sites no player object could
   be found on. The house’s own read of a master playlist — the fetch the

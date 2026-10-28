@@ -79,7 +79,7 @@ test('an admitted top film is booted alone and exactly', async () => {
         file: '/content.js',
         frameId: 0,
         matchAboutBlank: true,
-        runAt: 'document_idle',
+        runAt: 'document_start',
       },
     },
   ]);
@@ -122,12 +122,16 @@ test('a framed newcomer sweeps the relations once', async () => {
         file: '/content.js',
         frameId: 2,
         matchAboutBlank: true,
-        runAt: 'document_idle',
+        runAt: 'document_start',
       },
     },
     {
       tabId: 7,
-      subject: { file: '/content.js', allFrames: true, runAt: 'document_idle' },
+      subject: {
+        file: '/content.js',
+        allFrames: true,
+        runAt: 'document_start',
+      },
     },
   ]);
 });
