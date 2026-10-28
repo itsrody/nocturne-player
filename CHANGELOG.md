@@ -68,6 +68,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The word a stream’s cadence keeps listening.** A frame’s seat often
+  warms on a crossing that names no family — a segment the player
+  re-fetched while the manifest itself went unheard — and the manifest
+  crossing that arrives next used to fall on the floor: the word the
+  frame held said nothing about the family, so the engine sweep narrowed
+  by it never engaged, and the read the generation owed was never owed
+  again. Now a crossing that names a family upgrades a word that named
+  none — the frame hears the dossier once more only where its
+  predecessor was silent about the family — and the manifest read is
+  asked by the stream’s own cadence while the budget holds: one read in
+  earnest and two by re-crossing, no timers anywhere, the word told by
+  its answer rather than its ask. A stream whose first read met a
+  refusing endpoint is read on a later crossing, and a read that never
+  answers spends three tries and says nothing, the frame playing as it
+  always did.
 - **Every frame’s diagnostics line stands in the background’s own
   console.** While the diagnostics switch is on, each line the frame’s
   console says is said up the seat port whole — exactly the sentence the

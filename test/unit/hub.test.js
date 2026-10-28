@@ -335,6 +335,18 @@ const wireEar = {
   shape: 'hls',
 };
 
+// A cadence crossing: a segment the player re-fetched while the
+// manifest itself was crossing unseen. The same envelope, the same
+// frame — but the url names no family, so the word it feeds admits it
+// knows nothing.
+const segmentEar = {
+  url: 'https://cdn.example/seg0.mp4',
+  resource: 'xmlhttprequest',
+  doc: 'https://site.example/watch',
+  chain: ['https://site.example/'],
+  shape: null,
+};
+
 test('the dossier rides the port once, despite the roads', async () => {
   const browser = makeBrowser();
   const hub = createFrameHub(browser);
@@ -538,6 +550,137 @@ test('a ghost’s manifest is read when a hand comes home', async () => {
   assert.deepEqual(
     again.spoken.map((word) => word.type),
     [DOSSIER, CIPHER],
+  );
+});
+
+test('a family named late upgrades the frame’s word and is read', async () => {
+  const browser = makeBrowser();
+  const worker = makeWorker({
+    cipher: 'aes-128',
+    plan: {
+      url: 'https://cdn.example/master.m3u8',
+      codecs: 'avc1.640028,mp4a.40.2',
+      init: 'https://cdn.example/init.mp4',
+      segments: [{ url: 'https://cdn.example/seg0.mp4', seq: 41 }],
+    },
+  });
+  const hub = createFrameHub(browser, worker);
+
+  // The seat warms on a crossing that names no family — a segment the
+  // player re-fetched while the manifest was crossing unseen — and the
+  // protagonist comes home to a word that admits it knows nothing. The
+  // word is worthless for the read: no manifest named, no fetch owed.
+  hub.strain(1, 1, segmentEar);
+  const one = makePort(1, 1);
+  browser.fire.connect(one);
+  await settle();
+  assert.deepEqual(
+    one.spoken.map((word) => word.type),
+    [DOSSIER],
+    'the word the ghost warmed with, shapeless and whole',
+  );
+  assert.deepEqual(one.spoken[0].shape, null);
+  assert.deepEqual(worker.reads, [], 'a shapeless word is not worth a fetch');
+
+  // The manifest crosses later and names the family: the word is said
+  // again — its predecessor was silent about the family, which is the
+  // only saying-again the book does — and the read the generation owes
+  // is finally made, from the crossing itself.
+  hub.strain(1, 1, wireEar);
+  await settle();
+  assert.deepEqual(
+    one.spoken.map((word) => word.type),
+    [DOSSIER, DOSSIER, CIPHER, CIPHER_PLAN],
+  );
+  assert.deepEqual(one.spoken[1].shape, 'hls');
+  assert.deepEqual(worker.reads, ['https://cdn.example/master.m3u8']);
+
+  // The cadence keeps crossing: the read stays told, no knock is owed
+  // a warm seat, and the family is already named — nothing is said
+  // again.
+  hub.strain(1, 1, wireEar);
+  await settle();
+  assert.equal(worker.reads.length, 1);
+  assert.equal(one.spoken.length, 4);
+});
+
+test('a read that answers nothing is asked again by the cadence', async () => {
+  // The background’s hands meet a manifest endpoint that answers
+  // nothing, twice — and then the third crossing’s try lands. The word
+  // is told by that answer, not by any ask before it.
+  const browser = makeBrowser();
+  let tries = 0;
+  const scripted = {
+    reads: [],
+    readCipher: async (url) => {
+      scripted.reads.push(url);
+      tries += 1;
+      return tries < 3 ? null : { cipher: 'aes-128', plan: null };
+    },
+    giveSegment: async () => null,
+  };
+  const hub = createFrameHub(browser, scripted);
+
+  const one = makePort(1, 1);
+  browser.fire.connect(one);
+  hub.strain(1, 1, wireEar);
+  await settle();
+  assert.equal(scripted.reads.length, 1, 'the read in earnest');
+  assert.deepEqual(
+    one.spoken.map((word) => word.type),
+    [DOSSIER, STRAIN],
+  );
+
+  // The cadence re-crosses the bus: a read that answered nothing is
+  // the stream’s own re-ask, no clock of the book’s involved.
+  hub.strain(1, 1, wireEar);
+  await settle();
+  assert.equal(scripted.reads.length, 2, 'the cadence asks again');
+  assert.deepEqual(
+    one.spoken.map((word) => word.type),
+    [DOSSIER, STRAIN],
+  );
+
+  // The third try answers: the word is told exactly once, by it.
+  hub.strain(1, 1, wireEar);
+  await settle();
+  assert.equal(scripted.reads.length, 3);
+  assert.deepEqual(
+    one.spoken.map((word) => word.type),
+    [DOSSIER, STRAIN, CIPHER],
+  );
+  assert.deepEqual(one.spoken[2], {
+    type: CIPHER,
+    cipher: 'aes-128',
+    url: 'https://cdn.example/master.m3u8',
+  });
+
+  // And told, the word is never rehearsed: later crossings buy
+  // nothing more.
+  hub.strain(1, 1, wireEar);
+  await settle();
+  assert.equal(scripted.reads.length, 3);
+  assert.equal(one.spoken.length, 3);
+});
+
+test('the budget is spent, and the cadence buys nothing after', async () => {
+  // An endpoint that never answers: the cadence re-asks while the
+  // budget pays, then the honest silence — the frame’s own play
+  // continues uninterrupted, nothing said.
+  const browser = makeBrowser();
+  const worker = makeWorker(null);
+  const hub = createFrameHub(browser, worker);
+
+  const one = makePort(1, 1);
+  browser.fire.connect(one);
+  for (let at = 0; at < 5; at += 1) {
+    hub.strain(1, 1, wireEar);
+    await settle();
+  }
+  assert.equal(worker.reads.length, 3, 'one read, and the budget’s two more');
+  assert.deepEqual(
+    one.spoken.map((word) => word.type),
+    [DOSSIER, STRAIN],
   );
 });
 

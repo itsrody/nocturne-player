@@ -41,6 +41,15 @@ import {
   sayVerdict,
 } from '../lib/protocol.js';
 
+// The reads a generation is owed: one in earnest, and two more that the
+// stream’s own cadence pays for — a stream in play re-crosses the bus
+// every few seconds, and each crossing is the next chance for a read
+// that answered nothing to be asked again. No clocks anywhere: the
+// cadence is the heartbeat it always was, and the budget is the walk’s
+// old discipline — a promise made at most a small, counted number of
+// times, never forever.
+const MAX_READS = 3;
+
 // The one verb the state answers with is a count, read fresh from the book
 // whenever the question arrives — the book is the hot record, and nothing
 // here caches an answer that a disconnect would leave behind.
@@ -104,23 +113,30 @@ export const createFrameHub = (browser, worker = null) => {
     }
   };
 
-  // The read, told only while the entry still stands: the document that
-  // named the manifest may be remade before the answer keeps, and a
-  // word said to a replaced entry’s port would leak its book life. The
-  // crossing it is read from is the shape-and-url word the wire carried —
-  // the ear itself, or the dossier a ghost held onto until someone came
-  // home to ask.
+  // The read, asked for a generation while the budget still holds. The
+  // word is told by its answer, never by its ask: a read that answers
+  // nothing was not read, so the tally keeps a try up its sleeve and
+  // the stream’s next crossing is the re-ask. The crossing it is read
+  // from is the shape-and-url word the wire carried — the ear itself,
+  // or the dossier a ghost held onto until someone came home to ask.
   const readCipher = async (entry, tabId, frameId, crossing) => {
     if (worker === null || entry.port === null) return;
     if (crossing?.shape !== 'hls' || typeof crossing.url !== 'string') return;
-    if (entry.cipherTold) return;
-    entry.cipherTold = true;
+    // The reading flag is the in-flight guard: the cadence’s next
+    // crossing must wait out the ask it follows, not stack a second
+    // fetch beside it.
+    if (entry.cipherTold || entry.reading || entry.reads >= MAX_READS) return;
+    entry.reads += 1;
+    entry.reading = true;
     try {
       const answer = await worker.readCipher(crossing.url);
       const table = books.get(tabId);
       if (table?.book.get(frameId) !== entry) return;
-      // A manifest with no cipher decree says nothing: no word, at all.
+      // A manifest with no cipher decree says nothing: no word, at all —
+      // and no word said, the tally is spent but the word waits for the
+      // next crossing within the budget.
       if (answer === null) return;
+      entry.cipherTold = true;
       entry.port.postMessage(sayCipher(answer.cipher, crossing.url));
       if (answer.plan !== null) {
         entry.port.postMessage(sayCipherPlan(answer.plan));
@@ -129,6 +145,8 @@ export const createFrameHub = (browser, worker = null) => {
       // The read is a hint by design: a dead fetch is a stream the
       // frame plays as it always did, and a mouthless port is a death
       // the disconnect has already spoken.
+    } finally {
+      entry.reading = false;
     }
   };
 
@@ -169,16 +187,39 @@ export const createFrameHub = (browser, worker = null) => {
         wire: ear === undefined ? null : sayDossier(ear),
         told: false,
         cipherTold: false,
+        reads: 0,
+        reading: false,
       });
       return;
     }
-    // The dossier arriving on a seat already founded: a ghost warmed by
-    // a wordless crossing, or an entry whose port stands but whose
-    // evidence arrives late — both hear it now, once.
-    if (ear !== undefined && entry.wire === null) {
-      entry.wire = sayDossier(ear);
-      tellDossier(entry);
+    // The ear arriving on a seat already founded: a ghost warmed by a
+    // wordless crossing, or an entry whose port stands but whose
+    // evidence arrives late — both hear it now. And a crossing that
+    // names a family upgrades a word that named none: the manifest
+    // crossing a warm seat reads from is often its second, the first
+    // heard shape being a segment the eye met in the stream’s own
+    // cadence. The word is said again only where its predecessor was
+    // silent about the family — the frame’s record keeps the latest
+    // whole, and the sweep that narrows by it is never answered by a
+    // memory that admits it knows nothing.
+    if (ear !== undefined) {
+      const word = sayDossier(ear);
+      const standing = entry.wire;
+      if (
+        standing === null ||
+        (word.shape !== null && standing.shape === null)
+      ) {
+        entry.wire = word;
+        entry.told = false;
+        tellDossier(entry);
+      }
     }
+    // The manifest’s own word, read while the generation still owes a
+    // try: every crossing the wire hears is the next chance for a read
+    // that answered nothing — the cadence is the re-ask’s clock, and
+    // the read’s own guards decide what an ask costs. A warm entry
+    // earns no second knock; the word alone is worth the re-tell.
+    readCipher(entry, tabId, frameId, ear);
     if (entry.stream) return;
     entry.stream = true;
     if (entry.port !== null) {
@@ -190,13 +231,6 @@ export const createFrameHub = (browser, worker = null) => {
         // keeps what the wire said.
       }
     }
-    // The manifest’s own word, read once per generation: a crossing
-    // that named the hls family is worth the fetch — the background’s
-    // hands are the only ones that can read the manifest’s key decree
-    // without the page’s own CORS. A ghost seat (no port behind the
-    // document) is never fed: whatever answers the plan needs, only a
-    // frame with hands of its own can ask for them.
-    readCipher(entry, tabId, frameId, ear);
   };
 
   // The recruiter’s skip-sign: is a field agent’s port standing in this
@@ -248,6 +282,8 @@ export const createFrameHub = (browser, worker = null) => {
       wire: table.book.get(frameId)?.wire ?? null,
       told: false,
       cipherTold: false,
+      reads: 0,
+      reading: false,
     };
     table.book.set(frameId, entry);
     tellDossier(entry);
