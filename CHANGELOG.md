@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **The badge seats the player.** Pressing the badge now takes the
+  original player’s own seat: the film plays where the page had it, in
+  the box the page gave it, with the page’s flow — its text, its
+  suggestions — alive around it, and the screen no longer taken by force.
+  Fullscreen is one act away, on the player’s own fullscreen button, and
+  backing out of that escalation returns the player to its seat rather
+  than out of the film. A film with no box to sit in — detached, or a
+  sliver of pixels — still opens on the stage over the viewport as
+  before, and the exit restores the site’s own player exactly as it was
+  found, address and all.
+
 - **A settings page.** Everything the extension remembers is now reachable
   from Firefox’s own settings UI: the picture’s four dials, the gesture
   feel (double-tap seek, hold speed), the subtitle scale, and the switches

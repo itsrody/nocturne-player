@@ -384,6 +384,11 @@ const start = async () => {
     const openedSession = createSession(video, {
       settings: current,
       onPersist: persist,
+      // The press takes the film's own seat: the player plays where the
+      // page had it, in the box the page gave it, with the page's flow
+      // intact around it — fullscreen is one act away, on the player's own
+      // button.
+      presentation: 'inline',
       // The page may have moved on while the player was open, so the badge
       // goes back on whichever video the player was showing last. But only
       // when the frame may still have it: the site may have been switched
@@ -402,6 +407,11 @@ const start = async () => {
     // A session that went away while the door was still opening leaves no
     // slot held: the exit has already said its word.
     if (session !== openedSession) return;
+    // Seated inline, the film keeps the frame it played in — the room is
+    // already as big as the page meant it to be, and no widening ask rides
+    // out. A film that fell back to the stage over the viewport is the
+    // only one that pulls the widening machine.
+    if (openedSession.presentation() === 'inline') return;
     slots.slot(true);
   });
 

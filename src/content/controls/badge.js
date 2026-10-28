@@ -8,16 +8,21 @@ const GAP_PX = 8;
 const MIN_VISIBLE_RATIO = 0.35;
 const ANCHOR_NAME = '--nocturne-film';
 
-// Fullscreen arrows rather than a logo: what the button does is make this
-// video fill the screen, and that is what a viewer is looking for. It stays
-// up for as long as the video is in view: on a phone there is no hover, and a
-// button that waited for a tap to appear was one most people never saw.
+// Fullscreen arrows rather than a logo: what the press does is take the
+// player's seat with the film, and the screen is one act away — the
+// player's own fullscreen button, once the player is seated. The arrows
+// answer the question a viewer asks of any film: how do I make this
+// bigger. It stays up for as long as the video is in view: on a phone
+// there is no hover, and a button that waited for a tap to appear was one
+// most people never saw.
 const buildButton = () =>
-  el('button', { class: 'badge', type: 'button', title: 'Fullscreen' }, [
+  el(
+    'button',
+    { class: 'badge', type: 'button', title: 'Watch in Nocturne' },
     el('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
       el('path', { d: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5' }),
     ]),
-  ]);
+  );
 
 export const createBadge = () => {
   const shell = createShadowHost(badgeCss, {

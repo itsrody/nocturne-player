@@ -5,6 +5,7 @@ import { findApiAncestor } from './video/pageapi.js';
 import { createMediaBridge } from './video/mediasession.js';
 import { lockPageFullscreen } from './fullscreenlock.js';
 import { createGuardBudget } from './ground.js';
+import { readSeatBox, seatStyle } from './seating.js';
 import playerCss from './player.css';
 
 // The names a site's own player hangs off the element wrapping the video.
@@ -275,7 +276,10 @@ const watchForTeardown = (video, scope, onTornDown) => {
 // upright TikTok or Reels video on its side the moment the player opened, and
 // a film shot wide is one turn of the wrist away, which Android offers even
 // with auto-rotate switched off.
-export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
+export const createSession = (
+  firstVideo,
+  { onExit, settings, onPersist, presentation = 'stage' },
+) => {
   const stage = document.createElement('div');
   // The wrapper the pull-to-dismiss moves, and everything the player shows
   // lives in (see FRAME_STYLE).
@@ -287,6 +291,11 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     warm: el('div', { class: 'layer warm' }),
   };
   let isActive = false;
+  // Seated inline, the stage stands in the page's own flow at the film's
+  // old address, rather than over the viewport. Fullscreen asks, and the
+  // leaving-fullscreen exits, read this differently — set at the open,
+  // before anything listens for them.
+  let seated = false;
   let shown = null;
   let lastVideo = firstVideo;
   let relayoutFrame = 0;
@@ -501,18 +510,36 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
   };
 
   actions.exit.on(exit);
+  // The player's fullscreen button. From the stage over the viewport it is
+  // a re-take; seated inline it is the one-act escalation out of the seat —
+  // a fullscreen ask covers the stage element itself, wherever the stage
+  // stands, so no second road is needed for the seat.
   actions.fullscreen.on(() => {
     requestFullscreen(stage).then(scheduleRelayout);
   });
 
-  const openStage = () => {
+  const openStage = (seat) => {
     stage.dataset.nocturnePlayer = '';
-    pinStyle(stage, STAGE_STYLE);
+    // The two manners share one body: over the viewport the stage is the
+    // fixed black face it has always been; at the seat it wears the film's
+    // measured box and lives in the page's own flow (`seatStyle` for the
+    // craft of that spelling). The frame, the host and the layers are set
+    // up alike either way.
+    pinStyle(stage, seat === null ? STAGE_STYLE : seatStyle(seat));
     pinStyle(frame, FRAME_STYLE);
     stage.append(frame);
     frame.append(ui.host);
     ui.shadow.append(layers.warm);
-    document.body.append(stage);
+    if (seat === null) {
+      document.body.append(stage);
+      return;
+    }
+    // The stage takes the film's place one act before `show()` moves the
+    // film: planted in front of the video, it holds the address while
+    // `show()`'s own `replaceWith` lands the anchor comment right behind it
+    // — so the restore address, and the guard that keeps the anchor alive,
+    // work word for word as they do on the stage over the viewport.
+    firstVideo.before(stage);
   };
 
   const restoreFullscreen = () => {
@@ -537,6 +564,14 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
         heldOrientation = readOrientation();
         return;
       }
+      // Seated inline, fullscreen was an escalation the viewer made from
+      // the seat, and walking out of it is the way back down — not the way
+      // out. The player stays seated and brings its controls up, where the
+      // exit remains its own question.
+      if (seated) {
+        if (shown) shown.showControls();
+        return;
+      }
       scope.later(() => {
         if (!isActive) return;
         if (isBackgrounded()) return;
@@ -549,13 +584,15 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
       }, RECOVER_DELAY_MS);
     });
 
-    // Coming back from a floating window or from another app: re-take the
-    // screen and re-fit the picture to whatever shape it is now.
+    // Coming back from a floating window or from another app: the stage
+    // over the viewport re-takes the screen, and both manners re-fit the
+    // picture to whatever shape it is now. A seat has no screen to take —
+    // it lost nothing by going to the background.
     scope.listen(document, 'visibilitychange', () => {
       if (document.hidden) return;
       scope.later(() => {
         if (!isActive) return;
-        restoreFullscreen();
+        if (!seated) restoreFullscreen();
         scheduleRelayout();
       }, RECOVER_DELAY_MS);
     });
@@ -581,8 +618,17 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     if (isActive) return false;
     isActive = true;
 
+    // The seat is read while the film still occupies the box the page gave
+    // it — after the move there is no box left to read. A film that asks
+    // for the seat but has none (no parent, or a box too small to sit in)
+    // is met by the stage over the viewport instead, which is the one
+    // manner those films can actually be watched in.
+    const wantsSeat = presentation === 'inline';
+    const seat = wantsSeat ? readSeatBox(firstVideo) : null;
+    seated = wantsSeat && seat !== null && seat.fittable;
+
     unlockPageFullscreen = lockPageFullscreen();
-    openStage();
+    openStage(seated ? { width: seat.width, height: seat.height } : null);
     // The picture first: a film that is playing opens with nothing drawn over
     // it, and a tap brings the controls up. One that is paused shows them, or
     // the screen would be a still frame with no hint of what to do next.
@@ -592,9 +638,12 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     });
     watchForReturn();
 
-    // The button that opens the player is drawn as a fullscreen icon, so it
-    // takes the screen, every time.
-    await requestFullscreen(stage);
+    // Over the viewport, the button that opens the player is drawn as a
+    // fullscreen icon, so it takes the screen every time. Seated inline the
+    // open asks for no screen at all: the film plays where the page had it,
+    // and the screen is one act away — the player's own fullscreen button,
+    // whose ask covers the stage wherever the stage happens to stand.
+    if (!seated) await requestFullscreen(stage);
     scheduleRelayout();
     return true;
   };
@@ -606,5 +655,9 @@ export const createSession = (firstVideo, { onExit, settings, onPersist }) => {
     shadow: ui.shadow,
     layers,
     isActive: () => isActive,
+    // The manner the open settled on: asked-for and given, or fallen back
+    // to over the viewport. The caller reads it to know which rooms are
+    // owed — a seat widens nothing, a stage pulls the widening machine.
+    presentation: () => (seated ? 'inline' : 'stage'),
   };
 };
