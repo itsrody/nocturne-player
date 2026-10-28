@@ -111,6 +111,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   forgotten, on a background page that lives for the browser’s
   lifetime.
 
+### Changed
+
+- **The routing shim, driven, holds its own four words.** The ask-routing
+  room was hardened by driven tests against a fake page realm, and the
+  harness caught two real defects before any page could: the brand guard
+  read the XML HTTP brand only when `typeof` said `object`, while every
+  real page’s `XMLHttpRequest` constructor is `typeof` `function` — the
+  brand’s door would have stood for nothing on every real page — and a
+  re-arm after a failed lay could have wrapped the shim in its own
+  patched `fetch`, because the original native was read back from the
+  page each time. The native is now kept once at first arming
+  (`__nocturneNative`), both disarm paths restore it whole, the guard
+  admits functions, and eleven driven tests walk the held ask, the miss,
+  the abort, the disarm and the once-per-document word.
+
 ### Added
 
 - **The film’s asks are spoken by the background’s hands.** The

@@ -119,7 +119,14 @@ export const createRoute = (up) => {
 
     // --- The ask shape’s own door: the page’s binding. ---
 
-    const native = scope['fetch'];
+    // The native ask’s own word is kept once, at first arming: every
+    // later arm — and every disarm that follows them — reads back the
+    // page’s own binding, never a shim’s, so a re-arm can never wrap
+    // itself in itself.
+    if (scope.__nocturneNative === undefined) {
+      scope.__nocturneNative = scope['fetch'];
+    }
+    const native = scope.__nocturneNative;
     if (typeof native === 'function' && typeof exportFunction === 'function') {
       // The ask must be a plain address — a literal string or a URL —
       // and a GET, and media-shaped, or the native ask takes it whole.
@@ -183,7 +190,9 @@ export const createRoute = (up) => {
       } catch {
         // A binding the window refuses to have redefined (a frozen
         // page, an un-waivable compartment) is not patched: the page's
-        // own ask stands, and the room says so, honestly.
+        // own ask stands, restored whole, and the room says so,
+        // honestly.
+        scope['fetch'] = native;
         scope.__nocturneRoute = false;
         return;
       }
@@ -194,7 +203,7 @@ export const createRoute = (up) => {
     const brand = scope['XMLHttpRequest'];
     if (
       brand === null ||
-      typeof brand !== 'object' ||
+      (typeof brand !== 'object' && typeof brand !== 'function') ||
       typeof exportFunction !== 'function'
     ) {
       debug('the routing is armed with the page ask’s door alone');
@@ -432,7 +441,9 @@ export const createRoute = (up) => {
     const laidAbort = quitted === null || lay('abort', quitted);
     if (!(laidOpen && laidSend && laidSet && laidAbort)) {
       // A patch that would not land leaves the natives whole — the
-      // room disarms entirely rather than stand half-spoken.
+      // room disarms entirely rather than stand half-spoken: the page’s own
+      // ask door is restored, and the room stands for nothing at all.
+      scope['fetch'] = native;
       scope.__nocturneRoute = false;
       return;
     }
