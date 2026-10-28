@@ -2,9 +2,11 @@
 // listener — uBO’s observation post, borrowed whole and beats shorter:
 // nothing is blocked, redirected, rewritten, or answered; the listener
 // returns nothing, and the blocking permission beside it in the manifest
-// stands for nobody here. What it watches for is a shape: the request the
-// network carries *away from* a video — a manifest read, a segment booked,
-// an element’s own source — bound for a frame the URL never says.
+// stands for nobody in *this* room. What it watches for is a shape: the
+// request the network carries *away from* a video — a manifest read, a
+// segment booked, an element’s own source — bound for a frame the URL
+// never says. The room beside this one — `proxy.js` — is where the wire
+// is spoken to, and only there, under its own declared allowance.
 //
 // The platform says the rest on its own: `type: 'media'` is the browser
 // telling us a `<video>` or `<audio>` element asked for bytes; `type:

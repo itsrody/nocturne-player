@@ -5,16 +5,20 @@ const SOURCE_DIR = 'src';
 const MANIFEST_PATH = 'src/manifest.json';
 const SCANNED_EXTENSIONS = ['.js', '.mjs', '.html', '.css'];
 
-// Nothing in this extension may reach the network, read device sensors, or
-// touch a request on its way past. The eye at the bus is an exception in
-// the narrower sense only: it observes, and it never answers — webRequest
-// sits in the manifest with webRequestBlocking beside it, but no handler
-// ever returns a BlockingResponse, so the wire itself is never spoken to.
+// Nothing in this extension may reach the network, read device sensors,
+// or touch a request on its way past. Two exceptions, each declared by
+// its own file and each earned narrow: the eye at the bus observes and
+// it never answers — webRequest sits in the manifest with
+// webRequestBlocking beside it, and no handler of the eye’s ever
+// returns a BlockingResponse, so the wire itself is never spoken to —
+// and the proxy room holds one response at the door, a segment whose
+// address a read manifest seals, and writes the plaintext past.
 //
 // One file may declare its own narrow allowance at the top of itself, in
 // a line the scan reads from the file’s own words: the cipher room
 // fetches a manifest, a key and the segments of a stream the viewer’s
-// page was already visiting — the same origins, and nowhere else. The
+// page was already visiting — the same origins, and nowhere else; the
+// proxy room holds a sealed response at the door and no other. The
 // declaration is the file’s own, so the scan never widens by itself;
 // every other verb in the list below is forbidden in every file, the
 // declared ones included.
@@ -28,6 +32,11 @@ const FORBIDDEN_PATTERNS = [
     id: 'xmlhttprequest',
     pattern: /\bXMLHttpRequest\b/,
     reason: 'network request',
+  },
+  {
+    id: 'filterresponse',
+    pattern: /\bfilterResponseData\s*\(/,
+    reason: 'rewrites a response in flight',
   },
   { pattern: /\bsendBeacon\b/, reason: 'telemetry beacon' },
   {

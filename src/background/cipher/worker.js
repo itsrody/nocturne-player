@@ -25,6 +25,12 @@
 import { MAX_PLAN_SEGMENTS } from '../../lib/protocol.js';
 import { decryptSegment, hexIv, readManifest, sequenceIv } from './manifest.js';
 
+// A bound on the ledger’s own size, for the same reason any book keeps
+// one: a persistent background page lives for the browser’s lifetime,
+// and streams a lifetime loads should not outlive their parts
+// uncounted. The oldest recorded address is the first forgotten.
+const LEDGER_MAX = 8192;
+
 // The worker: one key per generation fetched once and imported once,
 // a ledger of where each segment sits and what seals it, and the two
 // verbs the hub routes to it — read the manifest, fetch and unseal
@@ -65,6 +71,13 @@ export const createCipherWorker = () => {
     }
     for (const one of manifest.segments) {
       if (one.url !== null) ledger.set(one.url, one);
+    }
+    // The ledger’s own bound: the oldest address recorded is the first
+    // forgotten when the bound is met — a map remembers its order, so
+    // the forgetting never must.
+    while (ledger.size > LEDGER_MAX) {
+      const oldest = ledger.keys().next().value;
+      ledger.delete(oldest);
     }
     const playable =
       manifest.cipher === 'aes-128' &&
@@ -110,11 +123,27 @@ export const createCipherWorker = () => {
     }
   };
 
+  // The unseal, of bytes already on hand: the ledger’s decree, the
+  // key’s own answer (fetched once, cached since), and the standard’s
+  // own counter. An address that is not sealed comes back byte for
+  // byte — the coins are the stream’s, and the room is honest about
+  // what it did not do.
+  const unseal = async (url, received) => {
+    const data =
+      received instanceof Uint8Array ? received : new Uint8Array(received);
+    const seal = ledger.get(url);
+    if (seal === undefined || seal.keyUri === null) return data.buffer;
+    const key = await fetchKey(seal.keyUri);
+    if (key === null) return null;
+    const iv = seal.keyIv !== null ? hexIv(seal.keyIv) : sequenceIv(seal.seq);
+    if (iv === null) return null;
+    return decryptSegment(keyCache.get(seal.keyUri).raw, data, iv);
+  };
+
   // One segment, sealed or not as its own decree says. The init
   // segment (the map) is normally plain, but it is asked through the
   // same door all the same: a miss is a miss either way.
   const giveSegment = async (url) => {
-    const seal = ledger.get(url);
     let bytes;
     try {
       const answer = await fetch(url);
@@ -123,13 +152,17 @@ export const createCipherWorker = () => {
     } catch {
       return null;
     }
-    if (seal === undefined || seal.keyUri === null) return bytes.buffer;
-    const key = await fetchKey(seal.keyUri);
-    if (key === null) return null;
-    const iv = seal.keyIv !== null ? hexIv(seal.keyIv) : sequenceIv(seal.seq);
-    if (iv === null) return null;
-    return decryptSegment(keyCache.get(seal.keyUri).raw, bytes, iv);
+    return unseal(url, bytes);
   };
 
-  return { readCipher, giveSegment };
+  // The seal check, asked synchronously at the proxy’s door: an
+  // address the ledger holds sealed with the whole-segment scheme, and
+  // none other. A cleartext address, an unknown one, a sample-aes
+  // stream’s business — all are no seal, no filter, no word.
+  const seals = (url) => {
+    const seal = ledger.get(url);
+    return seal !== undefined && seal.method === 'AES-128';
+  };
+
+  return { readCipher, giveSegment, seals, unseal };
 };

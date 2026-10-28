@@ -5,7 +5,7 @@ import {
   createWireTap,
   isMediaShaped,
   sayEngineShape,
-} from '../../src/background/network.js';
+} from '../../src/background/network/eye.js';
 // The eye’s side of the stub browser: the one listener it registers, kept
 // to be fired by hand with the details the platform would hand over, and
 // the filter and spec recorded beside it — the shape of the listener is

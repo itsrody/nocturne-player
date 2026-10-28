@@ -5,13 +5,17 @@
 // nothing to tear down, and no boot order the pages could postpone
 // behind.
 //
-// Three ears and hands, wired in one direction of dependence. The eye
-// at the bus hears the wire; the recruiter says whether the viewer’s
-// law admits the tab at all (a disabled host boots nothing and founds
-// no ghost either) and boots the field agent into the frame the browser
-// named — plus one sweep of the relations when the film turns out to be
-// framed — and only the admitted word is written into the book under
-// the key the browser attested.
+// Three ears and hands, wired in one direction of dependence. The two
+// ears of the network: the eye that only observes — what spoke for the
+// bytes, where they came from — and the proxy room that answers, the
+// house’s one declared rewriting verb, holding only a sealed segment’s
+// response at the door and handing back the plaintext the manifest’s
+// own decree names. The recruiter says whether the viewer’s law admits
+// the tab at all (a disabled host boots nothing and founds no ghost
+// either) and boots the field agent into the frame the browser named —
+// plus one sweep of the relations when the film turns out to be framed
+// — and only the admitted word is written into the book under the key
+// the browser attested.
 import { createBook } from './book/book.js';
 import { decide } from './book/seat.js';
 import { createSessions } from './book/sessions.js';
@@ -20,7 +24,8 @@ import { createReader } from './book/read.js';
 import { answerState } from './book/state.js';
 import { createConscript } from './conscript.js';
 import { createCipherWorker } from './cipher/worker.js';
-import { createWireTap } from './network.js';
+import { createWireTap } from './network/eye.js';
+import { createProxy } from './network/proxy.js';
 import { LEGACY_OPENINGS_KEY } from '../lib/words.js';
 
 // The book’s wiring, spliced in by hand: the rooms ask the book and are
@@ -34,6 +39,11 @@ const read = createReader(worker, book);
 const strain = createStrain({ book, read });
 createSessions({ browser, book, worker, read, decide, answerState });
 const conscript = createConscript(browser, { standing: book.standing });
+
+// The proxy room stands beside the eye: the ledger is the dispatch, the
+// book the gate, and a stream whose seals the house has read is played
+// from its own plaintext.
+createProxy(browser, worker, book);
 
 createWireTap(browser, (tabId, frameId, ear) => {
   conscript.rally(tabId, frameId, ear).then((admitted) => {

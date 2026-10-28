@@ -264,6 +264,63 @@ test('the worker reads a manifest and gives its segments back', async () => {
   delete globalThis.fetch;
 });
 
+test('the unseal answers the proxy’s ask by the same ledger', async () => {
+  // The proxy’s two verbs over one stream: an address the ledger holds
+  // sealed names itself at the door, and the bytes on hand are
+  // unsealed through the ledger’s own decree, the key fetched once
+  // and cached since.
+  const rawKey = new Uint8Array(16).map((_, at) => (at * 19 + 2) % 256);
+  const plaintext = new Uint8Array(32);
+  for (let at = 0; at < plaintext.length; at += 1) {
+    plaintext[at] = (at * 53 + 1) % 256;
+  }
+  const key = await crypto.subtle.importKey('raw', rawKey, 'AES-CBC', false, [
+    'encrypt',
+  ]);
+  const sealed = await crypto.subtle.encrypt(
+    { name: 'AES-CBC', iv: sequenceIv(41) },
+    key,
+    plaintext,
+  );
+  const wire = new Uint8Array(sealed.byteLength - 16);
+  wire.set(new Uint8Array(sealed).subarray(0, wire.length));
+  const plainInit = new Uint8Array(24).fill(5);
+
+  globalThis.fetch = serve(
+    new Map([
+      [BASE, mediaManifest({ iv: false, sequence: true, end: true })],
+      [KEY_URL, rawKey.slice().buffer],
+      [SEGMENT_URL, wire.slice().buffer],
+    ]),
+  );
+  const worker = createCipherWorker();
+  await worker.readCipher(BASE);
+
+  // The seal at the door: the whole-segment addresses name themselves,
+  // the plain init and every stranger address are no seal at all.
+  assert.equal(worker.seals(SEGMENT_URL), true);
+  assert.equal(worker.seals(SECOND_URL), true);
+  assert.equal(worker.seals(INIT_URL), false, 'the init is plain');
+  assert.equal(worker.seals('https://elsewhere.example/seg.mp4'), false);
+
+  // The unseal, of bytes on hand: the plaintext, as the pad trick says.
+  const plain = await worker.unseal(SEGMENT_URL, wire);
+  assert.deepEqual(new Uint8Array(plain), plaintext);
+
+  // An address the ledger never read passes byte for byte: the room is
+  // honest about what it did not do.
+  const untouched = await worker.unseal(INIT_URL, plainInit);
+  assert.deepEqual(new Uint8Array(untouched), plainInit);
+
+  // The key was fetched once: with every door now refusing, the ask
+  // still unseals from the cache — a second key fetch would answer a
+  // miss and the element one nothing at all.
+  globalThis.fetch = serve(new Map([]));
+  const again = await worker.unseal(SEGMENT_URL, wire);
+  assert.deepEqual(new Uint8Array(again), plaintext);
+  delete globalThis.fetch;
+});
+
 test('a plan is said only for a stream the frame can play', async () => {
   // The word’s whole point: the plan is a promise the frame’s own
   // playback room can keep. The TS transport cannot be fed (Firefox’s

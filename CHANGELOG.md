@@ -66,6 +66,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - A record of the platform floor’s decisions and rejections lives in
   `docs/platform-158.md`.
 
+### Added
+
+- **The proxy room: a sealed segment is unsealed on its way past.**
+  The wire has a second ear now — the eye only observes, but where the
+  fetching can never be done by the page and the reading is already
+  ours, the response is held at the door: a segment whose address the
+  cipher room’s ledger holds sealed is buffered whole, unsealed, and
+  handed to the page’s own player as the plaintext the manifest’s
+  decree named. The house’s one declared rewriting verb
+  (`filterResponseData`, earning the `webRequestBlocking` permission
+  its place in the manifest), and the narrowness is its whole book:
+  the fetch family only, addresses the ledger seals, tabs the book
+  knows, a small counted budget of buffers, and a miss writes the
+  sealed bytes past — the stream the page would anyway have played.
+  The page’s own player runs undisturbed — its MSE pipeline, its
+  quality ladder, its error recovery — and the cipher room’s ledger
+  keeps its own bound too: the oldest address recorded is the first
+  forgotten, on a background page that lives for the browser’s
+  lifetime.
+
 ### Changed
 
 - **The background’s rooms carry their own names.** The hub was one
