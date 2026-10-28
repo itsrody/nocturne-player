@@ -19,7 +19,7 @@
 // document and none of that work exists anywhere else. What lives here
 // is the carrying: which words a frame says arrive through this room,
 // and which words of the house go back down.
-import { replayedHeads } from '../../lib/bearers.js';
+import { replayedOn } from '../../lib/bearers.js';
 import {
   asCipherAsk,
   asLine,
@@ -124,16 +124,32 @@ export const createSessions = ({
       // walk confirmed a film, and here the ask is refused again while
       // this frame’s entry does not carry the want — so no frame can
       // found a seat and route through a book its viewer never chose.
-      // A worker without the hand answers the miss: the shim falls
-      // back to the page’s own native ask, which is what the fallback
-      // is for.
+      // A refusal is also answered: the honest miss, spoken straight
+      // back, so the shim’s fallback takes it the same beat — a want
+      // the film let go of must never turn into thirty seconds of
+      // hanging per ask.
       const routed = asRouteAsk(word);
       if (routed !== null) {
-        if (entry.want !== true) return;
+        if (entry.want !== true) {
+          try {
+            port.postMessage(
+              sayRouteBytes(routed.id, routed.url, 0, null, null),
+            );
+          } catch {
+            // A mouth gone dead mid-answer belongs to a death the
+            // disconnect has already spoken.
+          }
+          return;
+        }
         // The replay law, applied at the hub’s hearing as well as the
-        // shim’s saying: a word nobody said is replayed by nobody —
-        // the policy has two readers and no second truth.
-        const replayed = { ...routed, heads: replayedHeads(routed.heads) };
+        // shim’s saying: the ask’s own words replayed, the room’s
+        // carried word filling where the ask forgot. One policy file,
+        // and the hub does not hold a second copy of the law — a word
+        // nobody said is replayed by nobody.
+        const replayed = {
+          ...routed,
+          heads: replayedOn(routed.heads, book.said(tabId)),
+        };
         Promise.resolve(worker?.askBytes?.(replayed.url, replayed) ?? miss)
           .then((answer) => {
             // The miss streak: a stream whose every answer comes back

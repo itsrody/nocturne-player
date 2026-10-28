@@ -113,6 +113,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The background answers the routing room’s own misses.** The last
+  robustness sweep of `src/background/`, read against the router the
+  rooms serve: a routed ask whose frame carries no want is refused with
+  the honest miss spoken straight back, where before the room said
+  nothing and the page’s player hung a full thirty-second beat per ask;
+  the routed ask now replays the room’s carried word — the credentials
+  and the site’s own `x-` names the page said at the manifest ask and
+  its segments forgot — through the new `replayedOn` door in
+  `src/lib/bearers.js`, the bearer policy’s third reader and no second
+  truth (the ask’s own words win, the room’s word only fills); and the
+  worker’s key cache answers to the ledger’s own discipline at keys’
+  scale — a bound of sixty-four imported keys, the oldest import the
+  first forgotten, an eviction no loss but the honest re-fetch to the
+  address the decree already named. The rooms themselves were read
+  whole (the eye, the proxy, the bearer, the book, the conscript) and
+  needed nothing else for the router: no wider wire, no extra ear.
+
 - **The routing shim, driven, holds its own four words.** The ask-routing
   room was hardened by driven tests against a fake page realm, and the
   harness caught two real defects before any page could: the brand guard

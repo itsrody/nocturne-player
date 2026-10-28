@@ -54,7 +54,12 @@
 import { replayedHeads } from '../../lib/bearers.js';
 import { createDebug } from '../../lib/debug.js';
 import { isMediaShaped } from '../../lib/media.js';
-import { asRouteBow, asRouteBytes, sayRouteAsk } from '../../lib/protocol.js';
+import {
+  CREDENS,
+  asRouteBow,
+  asRouteBytes,
+  sayRouteAsk,
+} from '../../lib/protocol.js';
 import { pageWindow, toPage } from './pageapi.js';
 
 // The diagnostics voice of the routing: the asks the shim caught, the
@@ -81,8 +86,7 @@ const SHAPES = new Set(['', 'text', 'arraybuffer', 'json', 'blob']);
 // The credentials mode the page may say, the fetch standard’s three,
 // each spelled by its own word or by its absence (`same-origin`, what
 // an ask said without a credentials word carries).
-const credenOf = (said) =>
-  ['omit', 'same-origin', 'include'].includes(said) ? said : 'same-origin';
+const credenOf = (said) => (CREDENS.includes(said) ? said : 'same-origin');
 
 // The routed ask’s assembled answer is worded in the page’s own header
 // interface, built from the answer’s own furniture: the content type

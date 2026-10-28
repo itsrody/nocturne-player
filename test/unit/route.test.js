@@ -17,6 +17,7 @@ import { decide } from '../../src/background/book/seat.js';
 import { answerState } from '../../src/background/book/state.js';
 import { createRoute } from '../../src/content/video/route.js';
 import { isReplayed, replayedHeads } from '../../src/lib/bearers.js';
+import { sequenceIv } from '../../src/background/cipher/manifest.js';
 
 // The hub, stood to exactly the shape the session room asks of it — the
 // same splice `hub.test.js` holds, minus the mouths that never carry a
@@ -38,6 +39,7 @@ const makeHub = (worker = null) => {
       for (const listener of connectListeners) listener(port);
     },
     said: book.said,
+    speak: book.speak,
   };
 };
 
@@ -242,16 +244,28 @@ test('the hub answers a routed ask only where a film carries', async () => {
   hub.over(port);
 
   // Before the want: the shim could be armed by nothing the page shows,
-  // but the law is told at the hub’s side too — a routed ask from a
-  // frame the walk never confirmed founds nothing here.
+  // but the law is told at the hub’s side too — and a refusal is
+  // answered, the honest miss spoken straight back, so the shim’s
+  // fallback takes it the same beat instead of hanging a whole ask on
+  // a frame the house will never speak for.
   port.say(sayRouteAsk(1, 'https://site.example/seg.ts', 'GET', []));
-  assert.deepEqual(port.spoken, [], 'no film, no routed ask carried');
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.deepEqual(asRouteBytes(port.spoken[0]), {
+    id: 1,
+    url: 'https://site.example/seg.ts',
+    status: 0,
+    contentType: null,
+    bytes: null,
+    heads: [],
+  });
   assert.deepEqual(answered, []);
 
   // The film confirmed: the want carries, and the ask is spoken by the
   // background’s hands, answered with clonable bytes beside the status.
   port.say({ type: 'nocturneReport', want: true, count: 1 });
-  assert.deepEqual(port.spoken, [{ type: 'nocturneVerdict', granted: true }]);
+  assert.deepEqual(port.spoken[1], { type: 'nocturneVerdict', granted: true });
 
   port.say(
     sayRouteAsk(2, 'https://site.example/seg.ts', 'GET', [
@@ -279,7 +293,7 @@ test('the hub answers a routed ask only where a film carries', async () => {
   // The answer, worded by the protocol’s own guard and read field by
   // field — the bytes are a buffer the port carried, and the test’s own
   // buffers are compared by shape, never by identity.
-  const first = asRouteBytes(port.spoken[1]);
+  const first = asRouteBytes(port.spoken[2]);
   assert.deepEqual(
     {
       id: first?.id,
@@ -300,22 +314,25 @@ test('the hub answers a routed ask only where a film carries', async () => {
   // The want gone: the ask is refused again — a film the page let go of
   // is no film for the house’s hands. The report’s own verdict still
   // says its piece (the seat’s news answers whatever the want said);
-  // the ask after it is answered nothing.
+  // the routed ask after it is never spoken to the worker, only the
+  // miss that frees the shim’s fallback at once.
   port.say({ type: 'nocturneReport', want: false, count: 0 });
   port.say(sayRouteAsk(3, 'https://site.example/seg.ts', 'GET', []));
   await new Promise((resolve) => {
     setImmediate(resolve);
   });
-  assert.equal(port.spoken.length, 3, 'no film, no second answer');
-  assert.equal(
-    asRouteBytes(port.spoken[2]) !== null,
-    false,
-    'the third word is the verdict, not an answer',
-  );
-  assert.deepEqual(
-    { granted: port.spoken[2]?.granted, type: port.spoken[2]?.type },
-    { granted: false, type: 'nocturneVerdict' },
-  );
+  assert.equal(port.spoken.length, 5, 'no film, but the refusal answers');
+  // The refusal is answered with the honest miss — the shim’s
+  // fallback takes it the same beat, never a hung ask while the want
+  // is gone.
+  assert.deepEqual(asRouteBytes(port.spoken[4]), {
+    id: 3,
+    url: 'https://site.example/seg.ts',
+    status: 0,
+    contentType: null,
+    bytes: null,
+    heads: [],
+  });
 });
 
 test('the stand-down is said after a long miss streak', async () => {
@@ -511,6 +528,146 @@ test('the background’s hand speaks the page’s ask, and misses', async () => 
     bytes: null,
     heads: [],
   });
+});
+
+test('the routed ask answers the room’s carried word where the', async () => {
+  // The weakness the bearer room answers on the page’s own asks — the
+  // manifest said the credentials, the segments’ asks forgot them —
+  // is answered at the hub’s hearing too: the ask’s own words win,
+  // the room’s carried word fills.
+  const answered = [];
+  const worker = {
+    askBytes: async (url, ask) => {
+      answered.push(ask.heads);
+      return {
+        status: 200,
+        contentType: 'video/mp4',
+        bytes: new ArrayBuffer(2),
+        heads: [],
+      };
+    },
+  };
+  const hub = makeHub(worker);
+  const port = makePort(4, 0);
+  hub.over(port);
+  port.say({ type: 'nocturneReport', want: true, count: 1 });
+  // The room’s word, said where the manifest ask carried it. The file’s
+  // own policy normalizes the carried names to the lower spelling the
+  // HTTP standard reads them by — and the jar never rides.
+  hub.speak(4, [
+    { name: 'Authorization', value: 'Bearer tok' },
+    { name: 'Cookie', value: 'never' },
+  ]);
+
+  port.say(sayRouteAsk(1, 'https://site.example/seg.ts', 'GET', []));
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.deepEqual(answered[0], [
+    { name: 'authorization', value: 'Bearer tok' },
+  ]);
+  // An ask that said its own carried word keeps it exactly as said —
+  // the room’s word never replaces the ask’s own sentence.
+  port.say(
+    sayRouteAsk(2, 'https://cdn.example/seg.ts', 'GET', [
+      { name: 'range', value: 'bytes=0-' },
+      { name: 'authorization', value: 'Bearer mine' },
+    ]),
+  );
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.deepEqual(answered[1], [
+    { name: 'range', value: 'bytes=0-' },
+    { name: 'authorization', value: 'Bearer mine' },
+  ]);
+});
+
+test('the key door stays honest past its own bound', async () => {
+  // Sixty-six keys told: the cache’s bound forgets the oldest, and a
+  // forgotten key is a refetch to the decree’s own address — the
+  // decryption never learns the difference. The stream is a real one
+  // in miniature: a key decree per segment, each sealed with its own
+  // key at its own sequence’s IV, the pad-trick shape the worker
+  // decrypts.
+  const keys = new Map();
+  const wires = new Map();
+  for (let seq = 0; seq < 66; seq += 1) {
+    const rawKey = new Uint8Array(16).fill(seq);
+    const key = await crypto.subtle.importKey('raw', rawKey, 'AES-CBC', false, [
+      'encrypt',
+    ]);
+    const sealed = await crypto.subtle.encrypt(
+      { name: 'AES-CBC', iv: sequenceIv(seq) },
+      key,
+      new Uint8Array(32).fill(seq),
+    );
+    const wire = new Uint8Array(sealed.byteLength - 16);
+    wire.set(new Uint8Array(sealed).subarray(0, wire.length));
+    keys.set(
+      `https://site.example/key${seq}/key${seq}.key`,
+      rawKey.slice().buffer,
+    );
+    wires.set(`https://site.example/seg${seq}.ts`, wire.slice().buffer);
+  }
+  const lines = ['#EXTM3U', '#EXT-X-VERSION:3', '#EXT-X-MEDIA-SEQUENCE:0'];
+  for (let seq = 0; seq < 66; seq += 1) {
+    lines.push(
+      `#EXT-X-KEY:METHOD=AES-128,URI="key${seq}/key${seq}.key"`,
+      '#EXTINF:6.0,',
+      `seg${seq}.ts`,
+    );
+  }
+  lines.push('#EXT-X-ENDLIST');
+  const manifest = lines.join('\n');
+  let keyFetches = 0;
+  globalThis.fetch = (url) => {
+    if (keys.has(url)) {
+      keyFetches += 1;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => keys.get(url),
+      });
+    }
+    if (wires.has(url)) {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => wires.get(url),
+      });
+    }
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      text: async () => manifest,
+    });
+  };
+  const worker = createCipherWorker();
+  // The read seals the march of sixty-six addresses, each its own key.
+  const read = await worker.readCipher(
+    'https://site.example/play.m3u8',
+    undefined,
+  );
+  assert.notEqual(read, null);
+  // Each segment unsealed against its own key: 66 imports, the cache
+  // holding its latest 64 after the bound trims the oldest.
+  for (let seq = 0; seq < 66; seq += 1) {
+    const bytes = await worker.giveSegment(
+      `https://site.example/seg${seq}.ts`,
+      {},
+    );
+    assert.notEqual(bytes, null, seq);
+    assert.deepEqual(new Uint8Array(bytes), new Uint8Array(32).fill(seq));
+  }
+  const firstCount = keyFetches;
+  assert.equal(firstCount, 66, 'every key imported once');
+  // A segment whose key was evicted is decrypted again — the refetch
+  // path, honest after the bound.
+  const again = await worker.giveSegment('https://site.example/seg0.ts', {});
+  assert.notEqual(again, null);
+  assert.equal(keyFetches, firstCount + 1);
+  delete globalThis.fetch;
 });
 
 test('the shim stands for nothing where no frame room stands', () => {

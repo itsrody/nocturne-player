@@ -29,8 +29,10 @@
 // could never read at all. Nothing is invented, nothing is widened to
 // another origin; a stream no word is said for is fetched as it always
 // was, bare-handed too.
+// The credentials mode the page may say, said once by the protocol —
+// the routed ask’s guard holds the same truth.
 import { bearerWords } from '../../lib/bearers.js';
-import { MAX_PLAN_SEGMENTS } from '../../lib/protocol.js';
+import { CREDENS, MAX_PLAN_SEGMENTS } from '../../lib/protocol.js';
 import {
   decryptSegment,
   hexIv,
@@ -44,6 +46,13 @@ import {
 // and streams a lifetime loads should not outlive their parts
 // uncounted. The oldest recorded address is the first forgotten.
 const LEDGER_MAX = 8192;
+
+// The key cache’s own bound, the ledger’s bound at keys’ scale: a
+// browser-session of streams told sixty-odd ways need not keep every
+// key of every stream forever, and an evicted key only means the
+// honest re-fetch to the address the decree already named. The oldest
+// import is the first forgotten, the ledger’s own discipline.
+const MAX_KEYS = 64;
 
 // The worker: one key per generation fetched once and imported once,
 // a ledger of where each segment sits and what seals it, and the two
@@ -76,6 +85,13 @@ export const createCipherWorker = () => {
       'decrypt',
     ]);
     keyCache.set(uri, { raw, key });
+    // The bound: oldest import first out. An import evicted is not a
+    // loss — the next ask for its decree fetches it again from the
+    // address the ledger itself holds.
+    while (keyCache.size > MAX_KEYS) {
+      const oldest = keyCache.keys().next().value;
+      keyCache.delete(oldest);
+    }
     return key;
   };
 
@@ -217,9 +233,7 @@ export const createCipherWorker = () => {
     for (const one of ask.heads) {
       heads[one.name] = one.value;
     }
-    const creden = ['omit', 'same-origin', 'include'].includes(ask.creden)
-      ? ask.creden
-      : 'same-origin';
+    const creden = CREDENS.includes(ask.creden) ? ask.creden : 'same-origin';
     try {
       const answer = await fetch(url, {
         method: 'GET',

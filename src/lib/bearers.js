@@ -60,3 +60,22 @@ export const replayedHeads = (heads) =>
   pairs(heads)
     .filter(([name]) => isReplayed(name))
     .map(([name, value]) => ({ name, value }));
+
+// The routed ask’s replay, with the room’s own word underneath. The
+// ask itself wins — a name the page said at the ask is replayed as
+// the ask said it — and a carried name the ask forgot fills the gap,
+// the same weakness the bearer room answers on the page’s own asks:
+// a player that says its credentials at the manifest ask and forgets
+// them at the segments’. This is the door the hub’s hearing reads;
+// the shim’s saying side reads `replayedHeads` alone, because a room
+// word is the background’s knowledge and the shim speaks the page’s
+// own sentence only.
+export const replayedOn = (askHeads, roomWord) => {
+  const said = replayedHeads(askHeads);
+  for (const [name, value] of Object.entries(bearerWords(roomWord ?? {}))) {
+    if (!said.some((one) => one.name.toLowerCase() === name)) {
+      said.push({ name, value });
+    }
+  }
+  return said;
+};
