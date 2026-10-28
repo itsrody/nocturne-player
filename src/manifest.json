@@ -29,7 +29,7 @@
     "scripts": ["background.js"],
     "persistent": true
   },
-  "web_accessible_resources": ["vendor/hls.mjs"],
+  "web_accessible_resources": ["vendor/hls.mjs", "vendor/prebuf.mjs"],
   "icons": {
     "48": "icons/icon.svg",
     "96": "icons/icon.svg",

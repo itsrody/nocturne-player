@@ -3,7 +3,11 @@
 // element cannot play what the page gave it, the house stands its own
 // loader — the vendored hls.js — on the element, and fuels it with the
 // manifest address the frame already knows. The element never leaves
-// the document; the film merely changes whose loader reads it.
+// the document; the film merely changes whose loader reads it. The
+// loader itself is the second vendored room, the pre-buffer: fragments
+// read in parallel behind the playhead, held on a bounded shelf, so
+// the film plays at the speed of memory where a single stream’s speed
+// would have been the ceiling.
 //
 // The hatch runs in the **page’s own compartment** — by module
 // injection, not by sandbox code — and that choice is load-bearing
@@ -32,21 +36,26 @@ import { pageWindow, toPage } from './pageapi.js';
 const debug = createDebug('own-engine');
 
 // The page-side of the hatch: a module script importing the vendored
-// loader once and hanging the whole spawn under the one name the own
-// engine asks for. The piece runs in the page’s world — see the file’s
-// head for why — and its own words are kept plain: a fatal failure
-// buries the instance, restores the element’s own address, and leaves
-// the page exactly as it was met.
-export const hatchText = (moduleUrl) =>
+// loader — and the pre-buffer shelf, whose loader wrapper the engine
+// loads through — once per document, and hanging the whole spawn under
+// the one name the own engine asks for. The piece runs in the page’s
+// world — see the file’s head for why — and its own words are kept
+// plain: a fatal failure buries the instance *and* the shelf’s parallel
+// orders, restores the element’s own address, and leaves the page
+// exactly as it was met.
+export const hatchText = (engineUrl, shelfUrl) =>
   [
-    `import Hls from '${moduleUrl}';`,
+    `import Hls from '${engineUrl}';`,
+    `import { createPrebufLoader } from '${shelfUrl}';`,
+    'const Loader = createPrebufLoader(Hls);',
     'window.nocturneHatch = (video, address, original) => {',
-    '  const engine = new Hls({});',
+    '  const engine = new Hls(Loader ? { loader: Loader } : {});',
     '  engine.on(Hls.Events.ERROR, (event, data) => {',
     '    if (!data || !data.fatal) return;',
     '    try { engine.destroy(); } catch {}',
     '    try { if (original) video.src = original; } catch {}',
     '    try { delete video.nocturneHls; } catch {}',
+    '    try { Loader.dispose(); } catch {}',
     '  });',
     '  video.nocturneHls = engine;',
     '  engine.attachMedia(video);',
@@ -55,12 +64,18 @@ export const hatchText = (moduleUrl) =>
     '};',
   ].join('\n');
 
-// The vendored loader’s address out of the extension’s own room: a
-// caller without the runtime (a test runner) answers null, and the
-// default hatching asks nothing of nobody.
-export const moduleUrl = () => {
+// The vendored rooms’ addresses out of the extension’s own room: the
+// engine and the shelf beside it. A caller without the runtime (a test
+// runner) answers null, and the default hatching asks nothing of
+// nobody.
+export const moduleUrls = () => {
   try {
-    return globalThis.browser?.runtime?.getURL?.('vendor/hls.mjs') ?? null;
+    const runtime = globalThis.browser?.runtime;
+    if (typeof runtime?.getURL !== 'function') return null;
+    return {
+      engine: runtime.getURL('vendor/hls.mjs'),
+      shelf: runtime.getURL('vendor/prebuf.mjs'),
+    };
   } catch {
     // No runtime here to ask: an honest null.
     return null;
@@ -73,11 +88,11 @@ export const moduleUrl = () => {
 // the next beat, which is the only retry the takeover keeps.
 const defaultSpawn = (() => {
   let landed = null;
-  const injectPiece = (url) =>
+  const injectPiece = (urls) =>
     new Promise((settled) => {
       const script = document.createElement('script');
       script.type = 'module';
-      script.textContent = hatchText(url);
+      script.textContent = hatchText(urls.engine, urls.shelf);
       script.addEventListener('error', () => settled(false));
       try {
         (document.head ?? document).appendChild(script);
@@ -93,9 +108,9 @@ const defaultSpawn = (() => {
       settled(true);
     });
   return (videoReference, absolute, original) => {
-    const url = moduleUrl();
-    if (url === null) return Promise.resolve(null);
-    landed ??= injectPiece(url);
+    const urls = moduleUrls();
+    if (urls === null) return Promise.resolve(null);
+    landed ??= injectPiece(urls);
     return landed.then((pieceLanded) => {
       if (pieceLanded !== true) return null;
       try {

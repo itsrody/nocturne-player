@@ -81,6 +81,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   takeover is careful as the sealed-stream feeder is: only errored
   elements, one loader per element at most, and a fatal failure buries
   the engine and hands the element back as the page gave it.
+- **Films buffer in parallel.** The house’s own engine reads through a
+  pre-buffer: while one fragment order is filled, the next few are
+  ordered at once — four at a time — and held on a bounded shelf in
+  memory, so a slow site only ever caps one fragment, never the film;
+  the engine asks for what the shelf already holds and it answers
+  instantly from memory, and a live stream’s rolling window or a level
+  switch cancels the orders the playhead left behind instead of
+  spending on them. The shelf rides the engine’s own loader contract
+  and fetches nothing the playlist did not name; eviction takes the
+  bytes furthest behind the playhead first, and the shelf is emptied
+  alongside the engine when a film ends in a fatal failure.
 
 - **The tokenized stream’s ledger speaks both dialects.** Every
   manifest read has always re-sealed the fresh tokenized addresses;
